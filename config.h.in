@@ -1,0 +1,26 @@
+/* Define if we have GCC's visibility attribute */
+#cmakedefine HAVE_GCC_VISIBILITY
+
+/* Define if we have windows.h */
+#cmakedefine HAVE_WINDOWS_H
+
+/* Define if we have dlfcn.h */
+#cmakedefine HAVE_DLFCN_H
+
+/* Define if we have nanosleep */
+#cmakedefine HAVE_NANOSLEEP
+
+/* Define if we can use LoadLibrary and related functions */
+#cmakedefine HAS_LOADLIBRARY
+
+/* Define if we have dlopen and related functions */
+#cmakedefine HAS_DLOPEN
+
+/* Define if we have sndfile */
+#cmakedefine HAS_SNDFILE
+
+/* Define if we have vorbisfile */
+#cmakedefine HAS_VORBISFILE
+
+/* Define if we have mpg123 */
+#cmakedefine HAS_MPG123
