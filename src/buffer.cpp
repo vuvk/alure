@@ -25,7 +25,7 @@ static alureStream *InitStream(alureStream *instream, ALsizei chunkLength, ALsiz
     }
 
     chunkLength -= chunkLength%blockAlign;
-    if(chunkLength < 0)
+    if(chunkLength <= 0)
     {
         last_error = "Chunk length too small";
         return NULL;
