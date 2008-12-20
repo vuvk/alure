@@ -56,8 +56,8 @@ int main(int argc, char **argv)
 
 
     do {
+        ALint state = AL_PLAYING;
         ALint processed = 0;
-        ALint state = 0;
 
         alureSleep(0.01);
 
@@ -69,20 +69,18 @@ int main(int argc, char **argv)
             alSourceUnqueueBuffers(src, processed, bufs);
 
             processed = alureBufferDataFromStream(stream, processed, bufs);
-            if(processed > 0)
+            if(processed <= 0)
             {
-                alSourceQueueBuffers(src, processed, bufs);
-                if(alGetError() == AL_NO_ERROR && state != AL_PLAYING)
-                    alSourcePlay(src);
-                continue;
+                do {
+                    alureSleep(0.01);
+                    alGetSourcei(src, AL_SOURCE_STATE, &state);
+                } while(alGetError() == AL_NO_ERROR && state == AL_PLAYING);
+                break;
             }
-
-            do {
-                alureSleep(0.01);
-                alGetSourcei(src, AL_SOURCE_STATE, &state);
-            } while(alGetError() == AL_NO_ERROR && state == AL_PLAYING);
-            break;
+            alSourceQueueBuffers(src, processed, bufs);
         }
+        if(state != AL_PLAYING)
+            alSourcePlay(src);
     } while(alGetError() == AL_NO_ERROR);
 
     alDeleteSources(1, &src);
