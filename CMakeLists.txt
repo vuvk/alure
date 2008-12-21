@@ -292,6 +292,17 @@ TARGET_LINK_LIBRARIES(alureplay ${LIBNAME} ${OPENAL_LIBRARIES} stdc++)
 ADD_EXECUTABLE(alurestream examples/alurestream.c)
 TARGET_LINK_LIBRARIES(alurestream ${LIBNAME} ${OPENAL_LIBRARIES} stdc++)
 
+
+FIND_PROGRAM(NATDOCS_BIN NaturalDocs)
+IF(NATDOCS_BIN)
+    ADD_CUSTOM_TARGET(docs
+                      "${NATDOCS_BIN}" -i "${ALURE_SOURCE_DIR}/src" -o HTML "${ALURE_SOURCE_DIR}/docs/html" -p "${ALURE_SOURCE_DIR}/docs/naturaldocs"
+                      COMMENT "Building NaturalDocs documentation..." VERBATIM)
+ELSE(NATDOCS_BIN)
+    MESSAGE(STATUS "\nNaturalDocs not found; building documentation is disabled")
+ENDIF(NATDOCS_BIN)
+
+
 #add an install target here
 IF(APPLE)
     SET(INCPATH OpenAL)
@@ -299,6 +310,9 @@ ELSE(APPLE)
     SET(INCPATH AL)
 ENDIF(APPLE)
 
+INSTALL(DIRECTORY "${ALURE_SOURCE_DIR}/docs/html"
+        DESTINATION share/doc/alure
+)
 INSTALL(TARGETS ${LIBNAME}
         RUNTIME DESTINATION bin
         LIBRARY DESTINATION ${LIB_INSTALL_DIR}
