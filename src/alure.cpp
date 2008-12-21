@@ -165,6 +165,10 @@ void init_alure()
 
 extern "C" {
 
+/* Function: alureGetErrorString
+ *
+ * Returns a string describing the last error encountered.
+ */
 ALURE_API const ALchar* ALURE_APIENTRY alureGetErrorString(void)
 {
     const ALchar *ret = last_error;
@@ -173,7 +177,16 @@ ALURE_API const ALchar* ALURE_APIENTRY alureGetErrorString(void)
 }
 
 
-ALURE_API const ALCchar** ALURE_APIENTRY alureGetDeviceNames(ALboolean all, ALCsizei *count)
+/* Function: alureGetDeviceNames
+ *
+ * Gets an array of device name strings from OpenAL. This encapsulates
+ * AL_ENUMERATE_ALL_EXT (if supported and 'all' is true) and standard
+ * enumeration, with 'count' being set to the number of returned device
+ * names. Returns NULL on error.
+ *
+ * See Also: <alureFreeDeviceNames>
+ */
+ALURE_API const ALCchar** ALURE_APIENTRY alureGetDeviceNames(ALCboolean all, ALCsizei *count)
 {
     init_alure();
 
@@ -216,6 +229,12 @@ ALURE_API const ALCchar** ALURE_APIENTRY alureGetDeviceNames(ALboolean all, ALCs
     return retlist;
 }
 
+/* Function: alureFreeDeviceNames
+ *
+ * Frees the device name array returned from alureGetDeviceNames.
+ *
+ * See Also: <alureGetDeviceNames>
+ */
 ALURE_API ALvoid ALURE_APIENTRY alureFreeDeviceNames(const ALCchar **names)
 {
     init_alure();
@@ -224,6 +243,15 @@ ALURE_API ALvoid ALURE_APIENTRY alureFreeDeviceNames(const ALCchar **names)
 }
 
 
+/* Function: alureInitDevice
+ *
+ * Opens the named device, creates a context with the given attributes, and
+ * sets that context as current. The name and attribute list would be the same
+ * as what's passed to alcOpenDevice and alcCreateContext respectively. Returns
+ * AL_FALSE on error.
+ *
+ * See Also: <alureShutdownDevice>
+ */
 ALURE_API ALboolean ALURE_APIENTRY alureInitDevice(const ALCchar *name, const ALCint *attribs)
 {
     init_alure();
@@ -267,6 +295,13 @@ ALURE_API ALboolean ALURE_APIENTRY alureInitDevice(const ALCchar *name, const AL
     return AL_TRUE;
 }
 
+/* Function: alureShutdownDevice
+ *
+ * Destroys the current context and closes its associated device. Returns
+ * AL_FALSE on error.
+ *
+ * See Also: <alureInitDevice>
+ */
 ALURE_API ALboolean ALURE_APIENTRY alureShutdownDevice(void)
 {
     init_alure();
@@ -294,6 +329,11 @@ ALURE_API ALboolean ALURE_APIENTRY alureShutdownDevice(void)
 }
 
 
+/* Function: alureSleep
+ *
+ * Rests the calling thread for the given number of seconds. Returns AL_FALSE
+ * on error.
+ */
 ALURE_API ALboolean ALURE_APIENTRY alureSleep(ALfloat duration)
 {
     init_alure();

@@ -829,7 +829,7 @@ struct mp3Stream : public nullStream {
 
 
 template <typename T>
-static alureStream *make_stream(const T &fdata)
+alureStream *create_stream(const T &fdata)
 {
     std::auto_ptr<alureStream> stream(NULL);
 
@@ -872,26 +872,386 @@ static alureStream *make_stream(const T &fdata)
     return stream.release();
 }
 
-template <>
-alureStream *create_stream(const char *const &fdata)
-{ return make_stream(fdata); }
+static alureStream *InitStream(alureStream *instream, ALsizei chunkLength, ALsizei numBufs, ALuint *bufs)
+{
+    std::auto_ptr<alureStream> stream(instream);
+    ALenum format;
+    ALuint freq, blockAlign;
 
-template <>
-alureStream *create_stream(const MemDataInfo &fdata)
-{ return make_stream(fdata); }
+    if(!stream->GetFormat(&format, &freq, &blockAlign))
+    {
+        last_error = "Unsupported format";
+        return NULL;
+    }
+
+    chunkLength -= chunkLength%blockAlign;
+    if(chunkLength <= 0)
+    {
+        last_error = "Chunk length too small";
+        return NULL;
+    }
+
+    stream->chunkLen = chunkLength;
+    stream->dataChunk = new ALubyte[stream->chunkLen];
+
+    alGenBuffers(numBufs, bufs);
+    if(alGetError() != AL_NO_ERROR)
+    {
+        last_error = "Buffer creation failed";
+        return NULL;
+    }
+
+    ALsizei filled = alureBufferDataFromStream(stream.get(), numBufs, bufs);
+    if(filled < 0)
+    {
+        alDeleteBuffers(numBufs, bufs);
+        alGetError();
+
+        last_error = "Buffering error";
+        return NULL;
+    }
+
+    while(filled < numBufs)
+    {
+        alBufferData(bufs[filled], format, stream->dataChunk, 0, freq);
+        if(alGetError() != AL_NO_ERROR)
+        {
+            last_error = "Buffer load failed";
+            return NULL;
+        }
+        filled++;
+    }
+
+    return stream.release();
+}
 
 
 extern "C" {
 
-ALURE_API ALboolean ALURE_APIENTRY alureInstallDecodeCallbacks(ALint index,
-      void*     (*open_file)(const char*),
-      void*     (*open_mem)(const ALubyte*,ALuint),
-      ALboolean (*get_fmt)(void*,ALenum*,ALuint*,ALuint*,ALuint*,ALuint*),
-      ALuint    (*decode)(void*,ALubyte*,ALuint),
-      ALboolean (*rewind)(void*),
-      void      (*close)(void*))
+/* Function: alureCreateStreamFromFile
+ *
+ * Opens a file and sets it up for streaming. The given chunkLength is the
+ * number of bytes each buffer will fill with. ALURE will optionally generate
+ * the specified number of buffer objects, fill them with the beginning of the
+ * data, then place the new IDs into the provided storage, before returning.
+ * The returned alureStream pointer is an opaque handle used to control the
+ * opened stream. Returns NULL on error. Requires an active context.
+ *
+ * See Also: <alureCreateStreamFromMemory>,
+ * <alureCreateStreamFromStaticMemory>, <alureBufferDataFromStream>,
+ * <alureRewindStream>, <alureDestroyStream>
+ */
+ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromFile(const ALchar *fname, ALsizei chunkLength, ALsizei numBufs, ALuint *bufs)
 {
-    if(!open_file && !open_mem && !get_fmt && !decode && !rewind && !close)
+    init_alure();
+
+    if(alGetError() != AL_NO_ERROR)
+    {
+        last_error = "Existing OpenAL error";
+        return NULL;
+    }
+
+    if(chunkLength < 0)
+    {
+        last_error = "Invalid chunk length";
+        return NULL;
+    }
+
+    if(numBufs < 0)
+    {
+        last_error = "Invalid buffer count";
+        return NULL;
+    }
+
+    alureStream *stream = create_stream(fname);
+    if(!stream->IsValid())
+    {
+        delete stream;
+        last_error = "Open failed";
+        return NULL;
+    }
+
+    return InitStream(stream, chunkLength, numBufs, bufs);
+}
+
+/* Function: alureCreateStreamFromMemory
+ *
+ * Opens a file image from memory and sets it up for streaming, similar to
+ * alureCreateStreamFromFile. The given data buffer can be safely deleted after
+ * calling this function. Requires an active context.
+ *
+ * See Also: <alureCreateStreamFromFile>, <alureCreateStreamFromStaticMemory>,
+ * <alureBufferDataFromStream>, <alureRewindStream>, <alureDestroyStream>
+ */
+ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromMemory(const ALubyte *fdata, ALuint length, ALsizei chunkLength, ALsizei numBufs, ALuint *bufs)
+{
+    init_alure();
+
+    if(alGetError() != AL_NO_ERROR)
+    {
+        last_error = "Existing OpenAL error";
+        return NULL;
+    }
+
+    if(chunkLength < 0)
+    {
+        last_error = "Invalid chunk length";
+        return NULL;
+    }
+
+    if(numBufs < 0)
+    {
+        last_error = "Invalid buffer count";
+        return NULL;
+    }
+
+    if(length <= 0)
+    {
+        last_error = "Invalid data length";
+        return NULL;
+    }
+
+    ALubyte *streamData = new ALubyte[length];
+    memcpy(streamData, fdata, length);
+
+    MemDataInfo memData;
+    memData.Data = streamData;
+    memData.Length = length;
+    memData.Pos = 0;
+
+    alureStream *stream = create_stream(memData);
+    stream->data = streamData;
+    if(!stream->IsValid())
+    {
+        delete stream;
+        last_error = "Open failed";
+        return NULL;
+    }
+
+    return InitStream(stream, chunkLength, numBufs, bufs);
+}
+
+/* Function: alureCreateStreamFromStaticMemory
+ *
+ * Identical to alureCreateStreamFromMemory, except the given memory is used
+ * directly and not duplicated. As a consequence, the data buffer must remain
+ * valid while the stream is alive. Requires an active context.
+ *
+ * See Also: <alureCreateStreamFromFile>, <alureCreateStreamFromMemory>,
+ * <alureBufferDataFromStream>, <alureRewindStream>, <alureDestroyStream>
+ */
+ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromStaticMemory(const ALubyte *fdata, ALuint length, ALsizei chunkLength, ALsizei numBufs, ALuint *bufs)
+{
+    init_alure();
+
+    if(alGetError() != AL_NO_ERROR)
+    {
+        last_error = "Existing OpenAL error";
+        return NULL;
+    }
+
+    if(chunkLength < 0)
+    {
+        last_error = "Invalid chunk length";
+        return NULL;
+    }
+
+    if(numBufs < 0)
+    {
+        last_error = "Invalid buffer count";
+        return NULL;
+    }
+
+    if(length <= 0)
+    {
+        last_error = "Invalid data length";
+        return NULL;
+    }
+
+    MemDataInfo memData;
+    memData.Data = fdata;
+    memData.Length = length;
+    memData.Pos = 0;
+
+    alureStream *stream = create_stream(memData);
+    if(!stream->IsValid())
+    {
+        delete stream;
+        last_error = "Open failed";
+        return NULL;
+    }
+
+    return InitStream(stream, chunkLength, numBufs, bufs);
+}
+
+/* Function: alureBufferDataFromStream
+ *
+ * Buffers the given buffer objects with the next chunks of data from the
+ * stream. The number of buffers with new data are returned (0 indicating the
+ * end of the stream). The given buffer objects do not need to be ones given by
+ * the alureCreateStreamFrom* functions. Returns -1 on error. Requires an
+ * active context.
+ *
+ * See Also: <alureCreateStreamFromFile>, <alureCreateStreamFromMemory>,
+ * <alureCreateStreamFromStaticMemory>, <alureRewindStream>,
+ * <alureDestroyStream>
+ */
+ALURE_API ALsizei ALURE_APIENTRY alureBufferDataFromStream(alureStream *stream, ALsizei numBufs, ALuint *bufs)
+{
+    if(alGetError() != AL_NO_ERROR)
+    {
+        last_error = "Existing OpenAL error";
+        return -1;
+    }
+
+    if(!stream)
+    {
+        last_error = "Null stream pointer";
+        return -1;
+    }
+
+    if(numBufs < 0)
+    {
+        last_error = "Invalid buffer count";
+        return -1;
+    }
+
+    ALenum format;
+    ALuint freq, blockAlign;
+
+    if(!stream->GetFormat(&format, &freq, &blockAlign))
+    {
+        last_error = "Unsupported format";
+        return -1;
+    }
+
+    ALsizei filled;
+    for(filled = 0;filled < numBufs;filled++)
+    {
+        ALuint got = stream->GetData(stream->dataChunk, stream->chunkLen);
+        if(got == 0) break;
+
+        alBufferData(bufs[filled], format, stream->dataChunk, got, freq);
+        if(alGetError() != AL_NO_ERROR)
+        {
+            last_error = "Buffer load failed";
+            return -1;
+        }
+    }
+
+    return filled;
+}
+
+/* Function: alureRewindStream
+ *
+ * Rewinds the stream so that the next alureBufferDataFromStream call will
+ * restart from the beginning of the audio file. Returns AL_FALSE on error.
+ *
+ * See Also: <alureCreateStreamFromFile>, <alureCreateStreamFromMemory>,
+ * <alureCreateStreamFromStaticMemory>, <alureBufferDataFromStream>,
+ * <alureDestroyStream>
+ */
+ALURE_API ALboolean ALURE_APIENTRY alureRewindStream(alureStream *stream)
+{
+    if(!stream)
+    {
+        last_error = "Null stream pointer";
+        return AL_FALSE;
+    }
+
+    return stream->Rewind();
+}
+
+/* Function: alureDestroyStream
+ *
+ * Closes an opened stream. For convenience, it will also delete the given
+ * buffer objects. The given buffer objects do not need to be ones given by the
+ * alureCreateStreamFrom* functions. Returns AL_FALSE on error. Requires an
+ * active context.
+ *
+ * See Also: <alureCreateStreamFromFile>, <alureCreateStreamFromMemory>,
+ * <alureCreateStreamFromStaticMemory>, <alureBufferDataFromStream>,
+ * <alureRewindStream>
+ */
+ALURE_API ALboolean ALURE_APIENTRY alureDestroyStream(alureStream *stream, ALsizei numBufs, ALuint *bufs)
+{
+    if(alGetError() != AL_NO_ERROR)
+    {
+        last_error = "Existing OpenAL error";
+        return AL_FALSE;
+    }
+
+    if(numBufs < 0)
+    {
+        last_error = "Invalid buffer count";
+        return AL_FALSE;
+    }
+
+    alDeleteBuffers(numBufs, bufs);
+    if(alGetError() != AL_NO_ERROR)
+    {
+        last_error = "Buffer deletion failed";
+        return AL_FALSE;
+    }
+
+    delete stream;
+    return AL_TRUE;
+}
+
+
+/* Function: alureInstallDecodeCallbacks
+ *
+ * Installs callbacks to enable ALURE to handle more file types. The index is
+ * the order that each given set of callbacks will be tried, starting at the
+ * most negative number (INT_MIN) and going up. Negative indices will be tried
+ * before the built-in decoders, and positive indices will be tried after.
+ * Installing callbacks onto the same index multiple times will remove the
+ * previous callbacks, and removing old callbacks won't affect any opened files
+ * using them (they'll continue to use the old functions until properly closed,
+ * although newly opened files will use the new ones). Passing NULL for all
+ * callbacks is a valid way to remove an installed set, otherwise all callbacks
+ * must be specified. Returns AL_FALSE on error.
+ *
+ * Parameters:
+ * open_file - This callback is expected to open the named file and prepare it
+ *             for decoding. If the callbacks cannot decode the file, NULL
+ *             should be returned to indicate failure. Upon success, a non-NULL
+ *             handle must be returned, which will be used as a unique
+ *             identifier for the decoder instance.
+ * open_memory - This callback behaves the same as open_file, except it takes a
+ *               memory segment for input instead of a filename. The given
+ *               memory will remain valid while the instance is open.
+ * get_format - This callback is used to retrieve the format of the decoded
+ *              data for the given instance. If the format is set to 0, the
+ *              returned channels and bytespersample will be used to figure it
+ *              out, otherwise they are ignored. It is the responsibility if
+ *              the function to make sure the returned format is valid for the
+ *              current AL context (eg. don't return AL_FORMAT_QUAD16 if the
+ *              AL_EXT_MCFORMATS extension isn't available). Returning 0 for
+ *              blocksize will cause a failure. Returning AL_FALSE indicates
+ *              failure.
+ * decode - This callback is called to get more decoded data. Up to the
+ *          specified amount of bytes should be written to the data pointer.
+ *          The number of bytes written should be a multiple of the block size,
+ *          otherwise an OpenAL error may occur during buffering. The function
+ *          should return the number of bytes written.
+ * rewind - This callback is for rewinding the instance so that the next decode
+ *          calls for it will get audio data from the start of the sound file.
+ *          If the stream fails to rewind, AL_FALSE should be returned.
+ * close - This callback is called at the end of processing for a particular
+ *         instance. The handle will not be used further and any associated
+ *         data may be deleted.
+ *
+ */
+ALURE_API ALboolean ALURE_APIENTRY alureInstallDecodeCallbacks(ALint index,
+      void*     (*open_file)(const char *filename),
+      void*     (*open_memory)(const ALubyte *data, ALuint length),
+      ALboolean (*get_fmt)(void *instance, ALenum *format, ALuint *samplerate, ALuint *channels, ALuint *bytespersample, ALuint *blocksize),
+      ALuint    (*decode)(void *instance, ALubyte *data, ALuint bytes),
+      ALboolean (*rewind)(void *instance),
+      void      (*close)(void *instance))
+{
+    if(!open_file && !open_memory && !get_fmt && !decode && !rewind && !close)
     {
         std::map<ALint,UserCallbacks>::iterator i = InstalledCallbacks.find(index);
         if(i != InstalledCallbacks.end())
@@ -899,7 +1259,7 @@ ALURE_API ALboolean ALURE_APIENTRY alureInstallDecodeCallbacks(ALint index,
         return AL_TRUE;
     }
 
-    if(!open_file || !open_mem || !get_fmt || !decode || !rewind || !close)
+    if(!open_file || !open_memory || !get_fmt || !decode || !rewind || !close)
     {
         last_error = "Missing callback functions";
         return AL_FALSE;
@@ -907,7 +1267,7 @@ ALURE_API ALboolean ALURE_APIENTRY alureInstallDecodeCallbacks(ALint index,
 
     UserCallbacks newcb;
     newcb.open_file = open_file;
-    newcb.open_mem  = open_mem;
+    newcb.open_mem  = open_memory;
     newcb.get_fmt   = get_fmt;
     newcb.decode    = decode;
     newcb.rewind    = rewind;
