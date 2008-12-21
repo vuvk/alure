@@ -881,6 +881,8 @@ alureStream *create_stream(const MemDataInfo &fdata)
 { return make_stream(fdata); }
 
 
+extern "C" {
+
 ALURE_API ALboolean ALURE_APIENTRY alureInstallDecodeCallbacks(ALint index,
       void*     (*open_file)(const char*),
       void*     (*open_mem)(const ALubyte*,ALuint),
@@ -914,4 +916,6 @@ ALURE_API ALboolean ALURE_APIENTRY alureInstallDecodeCallbacks(ALint index,
     InstalledCallbacks[index] = newcb;
 
     return AL_TRUE;
+}
+
 }
