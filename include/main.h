@@ -58,6 +58,7 @@ MAKE_FUNC(mpg123_delete);
 MAKE_FUNC(mpg123_decode);
 MAKE_FUNC(mpg123_read);
 MAKE_FUNC(mpg123_getformat);
+MAKE_FUNC(mpg123_format_none);
 MAKE_FUNC(mpg123_format);
 MAKE_FUNC(mpg123_seek_64);
 #endif

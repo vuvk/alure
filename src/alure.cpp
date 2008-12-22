@@ -43,6 +43,7 @@ MAKE_FUNC(mpg123_open_feed);
 MAKE_FUNC(mpg123_delete);
 MAKE_FUNC(mpg123_decode);
 MAKE_FUNC(mpg123_read);
+MAKE_FUNC(mpg123_format_none);
 MAKE_FUNC(mpg123_getformat);
 MAKE_FUNC(mpg123_format);
 MAKE_FUNC(mpg123_seek_64);
@@ -140,13 +141,14 @@ static void init_libs()
         LOAD_FUNC(mpg123_hdl, mpg123_decode);
         LOAD_FUNC(mpg123_hdl, mpg123_read);
         LOAD_FUNC(mpg123_hdl, mpg123_getformat);
+        LOAD_FUNC(mpg123_hdl, mpg123_format_none);
         LOAD_FUNC(mpg123_hdl, mpg123_format);
         LOAD_FUNC(mpg123_hdl, mpg123_delete);
         LOAD_FUNC(mpg123_hdl, mpg123_seek_64);
         if(!pmpg123_init || !pmpg123_new || !pmpg123_open_64 ||
            !pmpg123_open_feed || !pmpg123_decode || !pmpg123_read ||
-           !pmpg123_getformat || !pmpg123_format || !pmpg123_delete ||
-           !pmpg123_seek_64 || pmpg123_init() != MPG123_OK)
+           !pmpg123_getformat || !pmpg123_format_none || !pmpg123_format ||
+           !pmpg123_delete || !pmpg123_seek_64 || pmpg123_init() != MPG123_OK)
             mpg123_hdl = NULL;
     }
 #endif

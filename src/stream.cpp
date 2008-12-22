@@ -778,7 +778,8 @@ struct mp3Stream : public alureStream {
             {
                 // Enforce signed 16-bit decoding
                 if(enc == MPG123_ENC_SIGNED_16 ||
-                   pmpg123_format(mp3File, samplerate, channels, MPG123_ENC_SIGNED_16) == MPG123_OK)
+                   (pmpg123_format_none(mp3File) == MPG123_OK &&
+                    pmpg123_format(mp3File, samplerate, channels, MPG123_ENC_SIGNED_16) == MPG123_OK))
                 {
                     // All OK
                     return;
@@ -802,7 +803,8 @@ struct mp3Stream : public alureStream {
                pmpg123_getformat(mp3File, &samplerate, &channels, &enc) == MPG123_OK)
             {
                 if(enc == MPG123_ENC_SIGNED_16 ||
-                   pmpg123_format(mp3File, samplerate, channels, MPG123_ENC_SIGNED_16) == MPG123_OK)
+                   (pmpg123_format_none(mp3File) == MPG123_OK &&
+                    pmpg123_format(mp3File, samplerate, channels, MPG123_ENC_SIGNED_16) == MPG123_OK))
                 {
                     // All OK
                     return;
