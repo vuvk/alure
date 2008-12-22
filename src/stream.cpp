@@ -8,6 +8,7 @@
 
 #include <string.h>
 
+#include <algorithm>
 #include <vector>
 #include <memory>
 #include <string>
@@ -720,10 +721,29 @@ struct mp3Stream : public alureStream {
         ALuint blockAlign = channels*2;
         bytes -= bytes%blockAlign;
 
-        size_t got;
-        if(pmpg123_read(mp3File, data, bytes, &got) != MPG123_OK)
-            return 0;
-        return got;
+        ALuint amt = 0;
+        do {
+            size_t got = 0;
+            int ret = pmpg123_read(mp3File, data, bytes, &got);
+
+            bytes -= got;
+            data += got;
+            amt += got;
+
+            if(ret == MPG123_NEED_MORE)
+            {
+                ALuint insize = std::min(64*1024u, memInfo.Length-memInfo.Pos);
+                if(insize > 0 &&
+                   pmpg123_decode(mp3File, const_cast<unsigned char*>(memInfo.Data+memInfo.Pos), insize, NULL, 0, NULL) == MPG123_OK)
+                {
+                    memInfo.Pos += insize;
+                    continue;
+                }
+                memInfo.Pos += insize;
+            }
+
+            return amt;
+        } while(1);
     }
 
     virtual bool Rewind()
@@ -768,9 +788,10 @@ struct mp3Stream : public alureStream {
         mp3File = pmpg123_new(NULL, NULL);
         if(pmpg123_open_feed(mp3File) == MPG123_OK)
         {
+            ALuint amt = std::min(64*1024u, memInfo.Length);
             int enc;
 
-            if(pmpg123_decode(mp3File, const_cast<unsigned char*>(memInfo.Data), memInfo.Length, NULL, 0, NULL) == MPG123_NEW_FORMAT &&
+            if(pmpg123_decode(mp3File, const_cast<unsigned char*>(memInfo.Data), amt, NULL, 0, NULL) == MPG123_NEW_FORMAT &&
                pmpg123_getformat(mp3File, &samplerate, &channels, &enc) == MPG123_OK)
             {
                 if(enc == MPG123_ENC_SIGNED_16 ||
@@ -778,6 +799,7 @@ struct mp3Stream : public alureStream {
                     pmpg123_format(mp3File, samplerate, channels, MPG123_ENC_SIGNED_16) == MPG123_OK))
                 {
                     // All OK
+                    memInfo.Pos = amt;
                     return;
                 }
             }
