@@ -465,7 +465,13 @@ struct sndStream : public alureStream {
     {
         memset(&sndInfo, 0, sizeof(sndInfo));
         if(sndfile_handle)
+        {
+            static SF_VIRTUAL_IO memIO = {
+                mem_get_filelen, mem_seek,
+                mem_read, mem_write, mem_tell
+            };
             sndFile = psf_open_virtual(&memIO, SFM_READ, &sndInfo, &memInfo);
+        }
     }
 
     virtual ~sndStream()
@@ -538,12 +544,6 @@ struct sndStream : public alureStream {
         MemDataInfo *data = (MemDataInfo*)user_data;
         return data->Pos;
     }
-
-    static SF_VIRTUAL_IO memIO;
-};
-SF_VIRTUAL_IO sndStream::memIO = {
-    mem_get_filelen, mem_seek,
-    mem_read, mem_write, mem_tell
 };
 #else
 struct sndStream : public nullStream {
