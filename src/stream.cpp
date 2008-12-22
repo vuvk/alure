@@ -748,6 +748,38 @@ struct mp3Stream : public alureStream {
 
     virtual bool Rewind()
     {
+        if(memInfo.Data)
+        {
+            mpg123_handle *newFile = pmpg123_new(NULL, NULL);
+            if(pmpg123_open_feed(newFile) == MPG123_OK)
+            {
+                ALuint amt = std::min(64*1024u, memInfo.Length);
+                long newrate;
+                int newchans;
+                int enc;
+
+                if(pmpg123_decode(newFile, const_cast<unsigned char*>(memInfo.Data), amt, NULL, 0, NULL) == MPG123_NEW_FORMAT &&
+                   pmpg123_getformat(newFile, &newrate, &newchans, &enc) == MPG123_OK)
+                {
+                    if(newrate == samplerate && newchans == channels &&
+                       (enc == MPG123_ENC_SIGNED_16 ||
+                        (pmpg123_format_none(newFile) == MPG123_OK &&
+                         pmpg123_format(newFile, samplerate, channels, MPG123_ENC_SIGNED_16) == MPG123_OK)))
+                    {
+                        // All OK
+                        pmpg123_delete(mp3File);
+                        mp3File = newFile;
+                        memInfo.Pos = amt;
+                        return true;
+                    }
+                }
+            }
+
+            pmpg123_delete(newFile);
+            last_error = "Restart failed";
+            return false;
+        }
+
         if(pmpg123_seek_64(mp3File, 0, SEEK_SET) == 0)
             return true;
 
