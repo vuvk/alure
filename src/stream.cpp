@@ -24,6 +24,54 @@ struct UserCallbacks {
 static std::map<ALint,UserCallbacks> InstalledCallbacks;
 
 
+static ALenum get_al_format(ALuint channels, ALuint bytes, ALuint floatbytes)
+{
+    if(bytes == 1)
+    {
+        if(channels == 1) return AL_FORMAT_MONO8;
+        if(channels == 2) return AL_FORMAT_STEREO8;
+        if(alIsExtensionPresent("AL_EXT_MCFORMATS"))
+        {
+            if(channels == 4) return AL_FORMAT_QUAD8;
+            if(channels == 6) return AL_FORMAT_51CHN8;
+            if(channels == 7) return AL_FORMAT_61CHN8;
+            if(channels == 8) return AL_FORMAT_71CHN8;
+            return AL_NONE;
+        }
+        return AL_NONE;
+    }
+    if(bytes == 2)
+    {
+        if(channels == 1) return AL_FORMAT_MONO16;
+        if(channels == 2) return AL_FORMAT_STEREO16;
+        if(alIsExtensionPresent("AL_EXT_MCFORMATS"))
+        {
+            if(channels == 4) return AL_FORMAT_QUAD16;
+            if(channels == 6) return AL_FORMAT_51CHN16;
+            if(channels == 7) return AL_FORMAT_61CHN16;
+            if(channels == 8) return AL_FORMAT_71CHN16;
+            return AL_NONE;
+        }
+        return AL_NONE;
+    }
+    if(floatbytes == 4)
+    {
+        if(channels == 1) return AL_FORMAT_MONO_FLOAT32;
+        if(channels == 2) return AL_FORMAT_STEREO_FLOAT32;
+        if(alIsExtensionPresent("AL_EXT_MCFORMATS"))
+        {
+            if(channels == 4) return AL_FORMAT_QUAD32;
+            if(channels == 6) return AL_FORMAT_51CHN32;
+            if(channels == 7) return AL_FORMAT_61CHN32;
+            if(channels == 8) return AL_FORMAT_71CHN32;
+            return AL_NONE;
+        }
+        return AL_NONE;
+    }
+    return AL_NONE;
+}
+
+
 struct nullStream : public alureStream {
     virtual bool IsValid() { return false; }
     virtual bool GetFormat(ALenum*,ALuint*,ALuint*) { return false; }
@@ -56,35 +104,9 @@ struct customStream : public alureStream {
 
         if(this->format == 0)
         {
-            if(bytes == 1)
-            {
-                if(channels == 1) this->format = AL_FORMAT_MONO8;
-                else if(channels == 2) this->format = AL_FORMAT_STEREO8;
-                else if(alIsExtensionPresent("AL_EXT_MCFORMATS"))
-                {
-                    if(channels == 4) this->format = AL_FORMAT_QUAD8;
-                    else if(channels == 6) this->format = AL_FORMAT_51CHN8;
-                    else if(channels == 7) this->format = AL_FORMAT_61CHN8;
-                    else if(channels == 8) this->format = AL_FORMAT_71CHN8;
-                    else return false;
-                }
-                else return false;
-            }
-            else if(bytes == 2)
-            {
-                if(channels == 1) this->format = AL_FORMAT_MONO16;
-                else if(channels == 2) this->format = AL_FORMAT_STEREO16;
-                else if(alIsExtensionPresent("AL_EXT_MCFORMATS"))
-                {
-                    if(channels == 4) this->format = AL_FORMAT_QUAD16;
-                    else if(channels == 6) this->format = AL_FORMAT_51CHN16;
-                    else if(channels == 7) this->format = AL_FORMAT_61CHN16;
-                    else if(channels == 8) this->format = AL_FORMAT_71CHN16;
-                    else return false;
-                }
-                else return false;
-            }
-            else return false;
+            this->format = get_al_format(channels, bytes, 0);
+            if(this->format == 0)
+                return false;
         }
 
         *format = this->format;
@@ -150,36 +172,11 @@ struct wavStream : public alureStream {
 
     virtual bool GetFormat(ALenum *format, ALuint *frequency, ALuint *blockalign)
     {
-        if(bytes == 1)
-        {
-            if(channels == 1) *format = AL_FORMAT_MONO8;
-            else if(channels == 2) *format = AL_FORMAT_STEREO8;
-            else if(alIsExtensionPresent("AL_EXT_MCFORMATS"))
-            {
-                if(channels == 4) *format = AL_FORMAT_QUAD8;
-                else if(channels == 6) *format = AL_FORMAT_51CHN8;
-                else if(channels == 7) *format = AL_FORMAT_61CHN8;
-                else if(channels == 8) *format = AL_FORMAT_71CHN8;
-                else return false;
-            }
-            else return false;
-        }
-        else if(bytes == 2)
-        {
-            if(channels == 1) *format = AL_FORMAT_MONO16;
-            else if(channels == 2) *format = AL_FORMAT_STEREO16;
-            else if(alIsExtensionPresent("AL_EXT_MCFORMATS"))
-            {
-                if(channels == 4) *format = AL_FORMAT_QUAD16;
-                else if(channels == 6) *format = AL_FORMAT_51CHN16;
-                else if(channels == 7) *format = AL_FORMAT_61CHN16;
-                else if(channels == 8) *format = AL_FORMAT_71CHN16;
-                else return false;
-            }
-            else return false;
-        }
-        else return false;
+        ALenum fmt = get_al_format(channels, bytes, 0);
+        if(fmt == AL_NONE)
+            return false;
 
+        *format = fmt;
         *frequency = samplerate;
         *blockalign = blockAlign;
         return true;
@@ -421,18 +418,11 @@ struct sndStream : public alureStream {
 
     virtual bool GetFormat(ALenum *format, ALuint *frequency, ALuint *blockalign)
     {
-        if(sndInfo.channels == 1) *format = AL_FORMAT_MONO16;
-        else if(sndInfo.channels == 2) *format = AL_FORMAT_STEREO16;
-        else if(alIsExtensionPresent("AL_EXT_MCFORMATS"))
-        {
-            if(sndInfo.channels == 4) *format = AL_FORMAT_QUAD16;
-            else if(sndInfo.channels == 6) *format = AL_FORMAT_51CHN16;
-            else if(sndInfo.channels == 7) *format = AL_FORMAT_61CHN16;
-            else if(sndInfo.channels == 8) *format = AL_FORMAT_71CHN16;
-            else return false;
-        }
-        else return false;
+        ALenum fmt = get_al_format(sndInfo.channels, 2, 0);
+        if(fmt == AL_NONE)
+            return false;
 
+        *format = fmt;
         *frequency = sndInfo.samplerate;
         *blockalign = sndInfo.channels*2;
         return true;
@@ -566,18 +556,11 @@ struct oggStream : public alureStream {
         vorbis_info *info = pov_info(oggFile, -1);
         if(!info) return false;
 
-        if(info->channels == 1) *format = AL_FORMAT_MONO16;
-        else if(info->channels == 2) *format = AL_FORMAT_STEREO16;
-        else if(alIsExtensionPresent("AL_EXT_MCFORMATS"))
-        {
-            if(info->channels == 4) *format = AL_FORMAT_QUAD16;
-            else if(info->channels == 6) *format = AL_FORMAT_51CHN16;
-            else if(info->channels == 7) *format = AL_FORMAT_61CHN16;
-            else if(info->channels == 8) *format = AL_FORMAT_71CHN16;
-            else return false;
-        }
-        else return false;
+        ALenum fmt = get_al_format(info->channels, 2, 0);
+        if(fmt == AL_NONE)
+            return false;
 
+        *format = fmt;
         *frequency = info->rate;
         *blockalign = info->channels*2;
         return true;
@@ -722,18 +705,11 @@ struct mp3Stream : public alureStream {
 
     virtual bool GetFormat(ALenum *format, ALuint *frequency, ALuint *blockalign)
     {
-        if(channels == 1) *format = AL_FORMAT_MONO16;
-        else if(channels == 2) *format = AL_FORMAT_STEREO16;
-        else if(alIsExtensionPresent("AL_EXT_MCFORMATS"))
-        {
-            if(channels == 4) *format = AL_FORMAT_QUAD16;
-            else if(channels == 6) *format = AL_FORMAT_51CHN16;
-            else if(channels == 7) *format = AL_FORMAT_61CHN16;
-            else if(channels == 8) *format = AL_FORMAT_71CHN16;
-            else return false;
-        }
-        else return false;
+        ALenum fmt = get_al_format(channels, 2, 0);
+        if(fmt == AL_NONE)
+            return false;
 
+        *format = fmt;
         *frequency = samplerate;
         *blockalign = channels*2;
         return true;
