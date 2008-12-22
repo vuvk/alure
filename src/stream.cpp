@@ -54,43 +54,38 @@ struct customStream : public alureStream {
                 return false;
         }
 
-        if(this->format)
+        if(this->format == 0)
         {
-            *format = this->format;
-            *frequency = samplerate;
-            *blockalign = blockAlign;
-            return true;
-        }
-
-        if(bytes == 1)
-        {
-            if(channels == 1) this->format = AL_FORMAT_MONO8;
-            else if(channels == 2) this->format = AL_FORMAT_STEREO8;
-            else if(alIsExtensionPresent("AL_EXT_MCFORMATS"))
+            if(bytes == 1)
             {
-                if(channels == 4) this->format = AL_FORMAT_QUAD8;
-                else if(channels == 6) this->format = AL_FORMAT_51CHN8;
-                else if(channels == 7) this->format = AL_FORMAT_61CHN8;
-                else if(channels == 8) this->format = AL_FORMAT_71CHN8;
+                if(channels == 1) this->format = AL_FORMAT_MONO8;
+                else if(channels == 2) this->format = AL_FORMAT_STEREO8;
+                else if(alIsExtensionPresent("AL_EXT_MCFORMATS"))
+                {
+                    if(channels == 4) this->format = AL_FORMAT_QUAD8;
+                    else if(channels == 6) this->format = AL_FORMAT_51CHN8;
+                    else if(channels == 7) this->format = AL_FORMAT_61CHN8;
+                    else if(channels == 8) this->format = AL_FORMAT_71CHN8;
+                    else return false;
+                }
+                else return false;
+            }
+            else if(bytes == 2)
+            {
+                if(channels == 1) this->format = AL_FORMAT_MONO16;
+                else if(channels == 2) this->format = AL_FORMAT_STEREO16;
+                else if(alIsExtensionPresent("AL_EXT_MCFORMATS"))
+                {
+                    if(channels == 4) this->format = AL_FORMAT_QUAD16;
+                    else if(channels == 6) this->format = AL_FORMAT_51CHN16;
+                    else if(channels == 7) this->format = AL_FORMAT_61CHN16;
+                    else if(channels == 8) this->format = AL_FORMAT_71CHN16;
+                    else return false;
+                }
                 else return false;
             }
             else return false;
         }
-        else if(bytes == 2)
-        {
-            if(channels == 1) this->format = AL_FORMAT_MONO16;
-            else if(channels == 2) this->format = AL_FORMAT_STEREO16;
-            else if(alIsExtensionPresent("AL_EXT_MCFORMATS"))
-            {
-                if(channels == 4) this->format = AL_FORMAT_QUAD16;
-                else if(channels == 6) this->format = AL_FORMAT_51CHN16;
-                else if(channels == 7) this->format = AL_FORMAT_61CHN16;
-                else if(channels == 8) this->format = AL_FORMAT_71CHN16;
-                else return false;
-            }
-            else return false;
-        }
-        else return false;
 
         *format = this->format;
         *frequency = samplerate;
