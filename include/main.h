@@ -1,3 +1,5 @@
+#ifndef MAIN_H
+#define MAIN_H
 
 #include "AL/alure.h"
 
@@ -92,3 +94,5 @@ struct MemDataInfo {
 
 template <typename T>
 alureStream *create_stream(const T &fdata);
+
+#endif // MAIN_H
