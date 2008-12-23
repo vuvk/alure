@@ -1,3 +1,5 @@
+/* Title: File Loading */
+
 #include "config.h"
 
 #include "main.h"
@@ -14,10 +16,14 @@ extern "C" {
  *
  * Loads the given file into an OpenAL buffer object. The formats supported
  * depend on the options the library was compiled with, what libraries are
- * available at runtime, and the installed decode callbacks.  Returns AL_NONE
- * on error. Requires an active context.
+ * available at runtime, and the installed decode callbacks. Requires an active
+ * context.
  *
- * See Also: <alureCreateBufferFromMemory>
+ * Returns:
+ * A new buffer ID with the loaded sound, or AL_NONE on error.
+ *
+ * See Also:
+ * <alureCreateBufferFromMemory>
  */
 ALURE_API ALuint ALURE_APIENTRY alureCreateBufferFromFile(const ALchar *fname)
 {
@@ -81,7 +87,11 @@ ALURE_API ALuint ALURE_APIENTRY alureCreateBufferFromFile(const ALchar *fname)
  * Loads a file image from memory into an OpenAL buffer object, similar to
  * alureCreateBufferFromFile. Requires an active context.
  *
- * See Also: <alureCreateBufferFromFile>
+ * Returns:
+ * A new buffer ID with the loaded sound, or AL_NONE on error.
+ *
+ * See Also:
+ * <alureCreateBufferFromFile>
  */
 ALURE_API ALuint ALURE_APIENTRY alureCreateBufferFromMemory(const ALubyte *fdata, ALsizei length)
 {

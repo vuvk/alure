@@ -1,3 +1,5 @@
+/* Title: File Streaming */
+
 #include "config.h"
 
 #include "main.h"
@@ -957,12 +959,14 @@ extern "C" {
  * number of bytes each buffer will fill with. ALURE will optionally generate
  * the specified number of buffer objects, fill them with the beginning of the
  * data, then place the new IDs into the provided storage, before returning.
- * The returned alureStream pointer is an opaque handle used to control the
- * opened stream. Returns NULL on error. Requires an active context.
+ * Requires an active context.
  *
- * See Also: <alureCreateStreamFromMemory>,
- * <alureCreateStreamFromStaticMemory>, <alureBufferDataFromStream>,
- * <alureRewindStream>, <alureDestroyStream>
+ * Returns:
+ * An opaque handle used to control the opened stream, or NULL on error.
+ *
+ * See Also:
+ * <alureCreateStreamFromMemory>, <alureCreateStreamFromStaticMemory>,
+ * <alureBufferDataFromStream>, <alureRewindStream>, <alureDestroyStream>
  */
 ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromFile(const ALchar *fname, ALsizei chunkLength, ALsizei numBufs, ALuint *bufs)
 {
@@ -1003,7 +1007,11 @@ ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromFile(const ALchar *fn
  * alureCreateStreamFromFile. The given data buffer can be safely deleted after
  * calling this function. Requires an active context.
  *
- * See Also: <alureCreateStreamFromFile>, <alureCreateStreamFromStaticMemory>,
+ * Returns:
+ * An opaque handle used to control the opened stream, or NULL on error.
+ *
+ * See Also:
+ * <alureCreateStreamFromFile>, <alureCreateStreamFromStaticMemory>,
  * <alureBufferDataFromStream>, <alureRewindStream>, <alureDestroyStream>
  */
 ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromMemory(const ALubyte *fdata, ALuint length, ALsizei chunkLength, ALsizei numBufs, ALuint *bufs)
@@ -1060,7 +1068,11 @@ ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromMemory(const ALubyte 
  * directly and not duplicated. As a consequence, the data buffer must remain
  * valid while the stream is alive. Requires an active context.
  *
- * See Also: <alureCreateStreamFromFile>, <alureCreateStreamFromMemory>,
+ * Returns:
+ * An opaque handle used to control the opened stream, or NULL on error.
+ *
+ * See Also:
+ * <alureCreateStreamFromFile>, <alureCreateStreamFromMemory>,
  * <alureBufferDataFromStream>, <alureRewindStream>, <alureDestroyStream>
  */
 ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromStaticMemory(const ALubyte *fdata, ALuint length, ALsizei chunkLength, ALsizei numBufs, ALuint *bufs)
@@ -1110,12 +1122,15 @@ ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromStaticMemory(const AL
 /* Function: alureBufferDataFromStream
  *
  * Buffers the given buffer objects with the next chunks of data from the
- * stream. The number of buffers with new data are returned (0 indicating the
- * end of the stream). The given buffer objects do not need to be ones given by
- * the alureCreateStreamFrom* functions. Returns -1 on error. Requires an
- * active context.
+ * stream. The given buffer objects do not need to be ones given by the
+ * alureCreateStreamFrom* functions. Requires an active context.
  *
- * See Also: <alureCreateStreamFromFile>, <alureCreateStreamFromMemory>,
+ * Returns:
+ * The number of buffers filled with new data (0 indicating the end of the
+ * stream), or -1 on error.
+ *
+ * See Also:
+ * <alureCreateStreamFromFile>, <alureCreateStreamFromMemory>,
  * <alureCreateStreamFromStaticMemory>, <alureRewindStream>,
  * <alureDestroyStream>
  */
@@ -1168,9 +1183,13 @@ ALURE_API ALsizei ALURE_APIENTRY alureBufferDataFromStream(alureStream *stream, 
 /* Function: alureRewindStream
  *
  * Rewinds the stream so that the next alureBufferDataFromStream call will
- * restart from the beginning of the audio file. Returns AL_FALSE on error.
+ * restart from the beginning of the audio file.
  *
- * See Also: <alureCreateStreamFromFile>, <alureCreateStreamFromMemory>,
+ * Returns:
+ * AL_FALSE on error.
+ *
+ * See Also:
+ * <alureCreateStreamFromFile>, <alureCreateStreamFromMemory>,
  * <alureCreateStreamFromStaticMemory>, <alureBufferDataFromStream>,
  * <alureDestroyStream>
  */
@@ -1189,10 +1208,13 @@ ALURE_API ALboolean ALURE_APIENTRY alureRewindStream(alureStream *stream)
  *
  * Closes an opened stream. For convenience, it will also delete the given
  * buffer objects. The given buffer objects do not need to be ones given by the
- * alureCreateStreamFrom* functions. Returns AL_FALSE on error. Requires an
- * active context.
+ * alureCreateStreamFrom* functions. Requires an active context.
  *
- * See Also: <alureCreateStreamFromFile>, <alureCreateStreamFromMemory>,
+ * Returns:
+ * AL_FALSE on error.
+ *
+ * See Also:
+ * <alureCreateStreamFromFile>, <alureCreateStreamFromMemory>,
  * <alureCreateStreamFromStaticMemory>, <alureBufferDataFromStream>,
  * <alureRewindStream>
  */
@@ -1233,7 +1255,7 @@ ALURE_API ALboolean ALURE_APIENTRY alureDestroyStream(alureStream *stream, ALsiz
  * using them (they'll continue to use the old functions until properly closed,
  * although newly opened files will use the new ones). Passing NULL for all
  * callbacks is a valid way to remove an installed set, otherwise all callbacks
- * must be specified. Returns AL_FALSE on error.
+ * must be specified.
  *
  * Parameters:
  * open_file - This callback is expected to open the named file and prepare it
@@ -1241,8 +1263,8 @@ ALURE_API ALboolean ALURE_APIENTRY alureDestroyStream(alureStream *stream, ALsiz
  *             should be returned to indicate failure. Upon success, a non-NULL
  *             handle must be returned, which will be used as a unique
  *             identifier for the decoder instance.
- * open_memory - This callback behaves the same as open_file, except it takes a
- *               memory segment for input instead of a filename. The given
+ * open_memory - This callback behaves the same as <open_file>, except it takes
+ *               a memory segment for input instead of a filename. The given
  *               memory will remain valid while the instance is open.
  * get_format - This callback is used to retrieve the format of the decoded
  *              data for the given instance. If the format is set to AL_NONE,
@@ -1258,13 +1280,16 @@ ALURE_API ALboolean ALURE_APIENTRY alureDestroyStream(alureStream *stream, ALsiz
  *          The number of bytes written should be a multiple of the block size,
  *          otherwise an OpenAL error may occur during buffering. The function
  *          should return the number of bytes written.
- * rewind - This callback is for rewinding the instance so that the next decode
- *          calls for it will get audio data from the start of the sound file.
- *          If the stream fails to rewind, AL_FALSE should be returned.
+ * rewind - This callback is for rewinding the instance so that the next
+ *          <decode> calls for it will get audio data from the start of the
+ *          sound file. If the stream fails to rewind, AL_FALSE should be
+ *          returned.
  * close - This callback is called at the end of processing for a particular
  *         instance. The handle will not be used further and any associated
  *         data may be deleted.
  *
+ * Returns:
+ * AL_FALSE on error.
  */
 ALURE_API ALboolean ALURE_APIENTRY alureInstallDecodeCallbacks(ALint index,
       void*     (*open_file)(const char *filename),
