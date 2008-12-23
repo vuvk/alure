@@ -299,7 +299,7 @@ TARGET_LINK_LIBRARIES(alurestream ${LIBNAME} ${OPENAL_LIBRARIES} stdc++)
 FIND_PROGRAM(NATDOCS_BIN NaturalDocs)
 IF(NATDOCS_BIN)
     ADD_CUSTOM_TARGET(docs
-                      "${NATDOCS_BIN}" -i "${ALURE_SOURCE_DIR}/src" -o HTML "${ALURE_SOURCE_DIR}/docs/html" -p "${ALURE_SOURCE_DIR}/docs/naturaldocs"
+                      "${NATDOCS_BIN}" -i "${ALURE_SOURCE_DIR}/src" -o HTML "${ALURE_SOURCE_DIR}/docs/html" -p "${ALURE_SOURCE_DIR}/docs/naturaldocs" -s Default CustomStyle
                       COMMENT "Building NaturalDocs documentation..." VERBATIM)
 ELSE(NATDOCS_BIN)
     MESSAGE(STATUS "\nNaturalDocs not found; building documentation is disabled")
