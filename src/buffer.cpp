@@ -14,7 +14,7 @@ extern "C" {
 
 /* Function: alureCreateBufferFromFile
  *
- * Loads the given file into an OpenAL buffer object. The formats supported
+ * Loads the given file into a new OpenAL buffer object. The formats supported
  * depend on the options the library was compiled with, what libraries are
  * available at runtime, and the installed decode callbacks. Requires an active
  * context.
@@ -23,7 +23,7 @@ extern "C" {
  * A new buffer ID with the loaded sound, or AL_NONE on error.
  *
  * See Also:
- * <alureCreateBufferFromMemory>
+ * <alureCreateBufferFromMemory>, <alureBufferDataFromFile>
  */
 ALURE_API ALuint ALURE_APIENTRY alureCreateBufferFromFile(const ALchar *fname)
 {
@@ -84,14 +84,14 @@ ALURE_API ALuint ALURE_APIENTRY alureCreateBufferFromFile(const ALchar *fname)
 
 /* Function: alureCreateBufferFromMemory
  *
- * Loads a file image from memory into an OpenAL buffer object, similar to
+ * Loads a file image from memory into a new OpenAL buffer object, similar to
  * alureCreateBufferFromFile. Requires an active context.
  *
  * Returns:
  * A new buffer ID with the loaded sound, or AL_NONE on error.
  *
  * See Also:
- * <alureCreateBufferFromFile>
+ * <alureCreateBufferFromFile>, <alureBufferDataFromMemory>
  */
 ALURE_API ALuint ALURE_APIENTRY alureCreateBufferFromMemory(const ALubyte *fdata, ALsizei length)
 {
@@ -159,6 +159,131 @@ ALURE_API ALuint ALURE_APIENTRY alureCreateBufferFromMemory(const ALubyte *fdata
     }
 
     return buf;
+}
+
+/* Function: alureBufferDataFromFile
+ *
+ * Loads the given file into an existing OpenAL buffer object. The previous
+ * contents of the buffer are replaced. Requires an active context.
+ *
+ * Returns:
+ * AL_FALSE on error.
+ *
+ * See Also:
+ * <alureCreateBufferFromFile>, <alureBufferDataFromMemory>
+ */
+ALURE_API ALboolean ALURE_APIENTRY alureBufferDataFromFile(const ALchar *fname, ALuint buffer)
+{
+    init_alure();
+
+    if(alGetError() != AL_NO_ERROR)
+    {
+        last_error = "Existing OpenAL error";
+        return AL_FALSE;
+    }
+
+    std::auto_ptr<alureStream> stream(create_stream(fname));
+    if(!stream->IsValid())
+    {
+        last_error = "Open failed";
+        return AL_FALSE;
+    }
+
+    ALenum format;
+    ALuint freq, blockAlign;
+
+    if(!stream->GetFormat(&format, &freq, &blockAlign))
+    {
+        last_error = "Unsupported format";
+        return AL_FALSE;
+    }
+
+    ALuint writePos = 0, got;
+    std::vector<ALubyte> data(freq*4);
+    while((got=stream->GetData(&data[writePos], data.size()-writePos)) > 0)
+    {
+        writePos += got;
+        data.resize(data.size() * 2);
+    }
+    data.resize(writePos);
+    stream.reset(NULL);
+
+    alBufferData(buffer, format, &data[0], data.size(), freq);
+    if(alGetError() != AL_NO_ERROR)
+    {
+        last_error = "Buffer load failed";
+        return AL_FALSE;
+    }
+
+    return AL_TRUE;
+}
+
+/* Function: alureBufferDataFromMemory
+ *
+ * Loads a file image from memory into an existing OpenAL buffer object,
+ * similar to alureBufferDataFromFile. Requires an active context.
+ *
+ * Returns:
+ * AL_FALSE on error.
+ *
+ * See Also:
+ * <alureCreateBufferFromMemory>, <alureBufferDataFromFile>
+ */
+ALURE_API ALboolean ALURE_APIENTRY alureBufferDataFromMemory(const ALubyte *fdata, ALsizei length, ALuint buffer)
+{
+    init_alure();
+
+    if(alGetError() != AL_NO_ERROR)
+    {
+        last_error = "Existing OpenAL error";
+        return AL_FALSE;
+    }
+
+    if(length < 0)
+    {
+        last_error = "Invalid data length";
+        return AL_FALSE;
+    }
+
+    MemDataInfo memData;
+    memData.Data = fdata;
+    memData.Length = length;
+    memData.Pos = 0;
+
+    std::auto_ptr<alureStream> stream(create_stream(memData));
+    if(!stream->IsValid())
+    {
+        last_error = "Open failed";
+        return AL_FALSE;
+    }
+
+    ALenum format;
+    ALuint freq, blockAlign;
+
+    if(!stream->GetFormat(&format, &freq, &blockAlign))
+    {
+        last_error = "Unsupported format";
+        return AL_FALSE;
+    }
+
+    ALuint writePos = 0, got;
+    std::vector<ALubyte> data(freq*4);
+    while((got=stream->GetData(&data[writePos], data.size()-writePos)) > 0)
+    {
+        writePos += got;
+        data.resize(data.size() * 2);
+    }
+    data.resize(writePos);
+    stream.reset(NULL);
+
+    alBufferData(buffer, format, &data[0], data.size(), freq);
+    if(alGetError() != AL_NO_ERROR)
+    {
+        last_error = "Buffer load failed";
+        return AL_FALSE;
+    }
+
+    return AL_TRUE;
 }
 
 } // extern "C"
