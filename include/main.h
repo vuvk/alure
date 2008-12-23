@@ -26,8 +26,20 @@
 
 #endif
 
+#include <map>
+
 
 void init_alure();
+
+struct UserCallbacks {
+    void*     (*open_file)(const char*);
+    void*     (*open_mem)(const ALubyte*,ALuint);
+    ALboolean (*get_fmt)(void*,ALenum*,ALuint*,ALuint*,ALuint*,ALuint*);
+    ALuint    (*decode)(void*,ALubyte*,ALuint);
+    ALboolean (*rewind)(void*);
+    void      (*close)(void*);
+};
+extern std::map<ALint,UserCallbacks> InstalledCallbacks;
 
 extern const ALchar *last_error;
 

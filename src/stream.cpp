@@ -10,17 +10,6 @@
 #include <vector>
 #include <memory>
 #include <string>
-#include <map>
-
-struct UserCallbacks {
-    void*     (*open_file)(const char*);
-    void*     (*open_mem)(const ALubyte*,ALuint);
-    ALboolean (*get_fmt)(void*,ALenum*,ALuint*,ALuint*,ALuint*,ALuint*);
-    ALuint    (*decode)(void*,ALubyte*,ALuint);
-    ALboolean (*rewind)(void*);
-    void      (*close)(void*);
-};
-static std::map<ALint,UserCallbacks> InstalledCallbacks;
 
 
 static ALenum get_al_format(ALuint channels, ALuint bytes, ALuint floatbytes)
@@ -1240,89 +1229,6 @@ ALURE_API ALboolean ALURE_APIENTRY alureDestroyStream(alureStream *stream, ALsiz
     }
 
     delete stream;
-    return AL_TRUE;
-}
-
-
-/* Function: alureInstallDecodeCallbacks
- *
- * Installs callbacks to enable ALURE to handle more file types. The index is
- * the order that each given set of callbacks will be tried, starting at the
- * most negative number (INT_MIN) and going up. Negative indices will be tried
- * before the built-in decoders, and positive indices will be tried after.
- * Installing callbacks onto the same index multiple times will remove the
- * previous callbacks, and removing old callbacks won't affect any opened files
- * using them (they'll continue to use the old functions until properly closed,
- * although newly opened files will use the new ones). Passing NULL for all
- * callbacks is a valid way to remove an installed set, otherwise all callbacks
- * must be specified.
- *
- * Parameters:
- * open_file - This callback is expected to open the named file and prepare it
- *             for decoding. If the callbacks cannot decode the file, NULL
- *             should be returned to indicate failure. Upon success, a non-NULL
- *             handle must be returned, which will be used as a unique
- *             identifier for the decoder instance.
- * open_memory - This callback behaves the same as <open_file>, except it takes
- *               a memory segment for input instead of a filename. The given
- *               memory will remain valid while the instance is open.
- * get_format - This callback is used to retrieve the format of the decoded
- *              data for the given instance. If the format is set to AL_NONE,
- *              the returned channels and bytespersample will be used to figure
- *              it out, otherwise they are ignored. It is the responsibility if
- *              the function to make sure the returned format is valid for the
- *              current AL context (eg. don't return AL_FORMAT_QUAD16 if the
- *              AL_EXT_MCFORMATS extension isn't available). Returning 0 for
- *              blocksize will cause a failure. Returning AL_FALSE indicates
- *              failure.
- * decode - This callback is called to get more decoded data. Up to the
- *          specified amount of bytes should be written to the data pointer.
- *          The number of bytes written should be a multiple of the block size,
- *          otherwise an OpenAL error may occur during buffering. The function
- *          should return the number of bytes written.
- * rewind - This callback is for rewinding the instance so that the next
- *          <decode> calls for it will get audio data from the start of the
- *          sound file. If the stream fails to rewind, AL_FALSE should be
- *          returned.
- * close - This callback is called at the end of processing for a particular
- *         instance. The handle will not be used further and any associated
- *         data may be deleted.
- *
- * Returns:
- * AL_FALSE on error.
- */
-ALURE_API ALboolean ALURE_APIENTRY alureInstallDecodeCallbacks(ALint index,
-      void*     (*open_file)(const char *filename),
-      void*     (*open_memory)(const ALubyte *data, ALuint length),
-      ALboolean (*get_fmt)(void *instance, ALenum *format, ALuint *samplerate, ALuint *channels, ALuint *bytespersample, ALuint *blocksize),
-      ALuint    (*decode)(void *instance, ALubyte *data, ALuint bytes),
-      ALboolean (*rewind)(void *instance),
-      void      (*close)(void *instance))
-{
-    if(!open_file && !open_memory && !get_fmt && !decode && !rewind && !close)
-    {
-        std::map<ALint,UserCallbacks>::iterator i = InstalledCallbacks.find(index);
-        if(i != InstalledCallbacks.end())
-            InstalledCallbacks.erase(i);
-        return AL_TRUE;
-    }
-
-    if(!open_file || !open_memory || !get_fmt || !decode || !rewind || !close)
-    {
-        last_error = "Missing callback functions";
-        return AL_FALSE;
-    }
-
-    UserCallbacks newcb;
-    newcb.open_file = open_file;
-    newcb.open_mem  = open_memory;
-    newcb.get_fmt   = get_fmt;
-    newcb.decode    = decode;
-    newcb.rewind    = rewind;
-    newcb.close     = close;
-
-    InstalledCallbacks[index] = newcb;
-
     return AL_TRUE;
 }
 
