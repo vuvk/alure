@@ -1253,9 +1253,9 @@ ALURE_API ALboolean ALURE_APIENTRY alureDestroyStream(alureStream *stream, ALsiz
  *               memory segment for input instead of a filename. The given
  *               memory will remain valid while the instance is open.
  * get_format - This callback is used to retrieve the format of the decoded
- *              data for the given instance. If the format is set to 0, the
- *              returned channels and bytespersample will be used to figure it
- *              out, otherwise they are ignored. It is the responsibility if
+ *              data for the given instance. If the format is set to AL_NONE,
+ *              the returned channels and bytespersample will be used to figure
+ *              it out, otherwise they are ignored. It is the responsibility if
  *              the function to make sure the returned format is valid for the
  *              current AL context (eg. don't return AL_FORMAT_QUAD16 if the
  *              AL_EXT_MCFORMATS extension isn't available). Returning 0 for
