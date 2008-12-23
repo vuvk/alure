@@ -75,16 +75,27 @@ static void init_libs()
     } \
 } while(0)
 
+#ifdef __APPLE__
+# define VER_PREFIX
+# define VER_POSTFIX ".dylib"
+#else
+# define VER_PREFIX ".so"
+# define VER_POSTFIX
+#endif
+
     const char *err;
 #ifdef HAS_SNDFILE
-    sndfile_handle = dlopen("libsndfile.so.1", RTLD_NOW);
+    sndfile_handle = dlopen("libsndfile"VER_PREFIX".1"VER_POSTFIX, RTLD_NOW);
 #endif
 #ifdef HAS_VORBISFILE
-    vorbisfile_handle = dlopen("libvorbisfile.so.3", RTLD_NOW);
+    vorbisfile_handle = dlopen("libvorbisfile"VER_PREFIX".3"VER_POSTFIX, RTLD_NOW);
 #endif
 #ifdef HAS_MPG123
-    mpg123_hdl = dlopen("libmpg123.so.0", RTLD_NOW);
+    mpg123_hdl = dlopen("libmpg123"VER_PREFIX".0"VER_POSTFIX, RTLD_NOW);
 #endif
+
+#undef VER_PREFIX
+#undef VER_POSTFIX
 
 #else
 # define LOAD_FUNC(m, x) (p##x = x)
