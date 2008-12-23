@@ -1,8 +1,5 @@
 #include <stdio.h>
 
-#include <AL/al.h>
-#include <AL/alc.h>
-
 #include "AL/alure.h"
 
 int main( int argc, char **argv)
