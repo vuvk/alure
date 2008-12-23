@@ -33,7 +33,6 @@ static ALenum get_al_format(ALuint channels, ALuint bytes, ALuint floatbytes)
             if(channels == 6) return AL_FORMAT_51CHN8;
             if(channels == 7) return AL_FORMAT_61CHN8;
             if(channels == 8) return AL_FORMAT_71CHN8;
-            return AL_NONE;
         }
         return AL_NONE;
     }
@@ -47,7 +46,6 @@ static ALenum get_al_format(ALuint channels, ALuint bytes, ALuint floatbytes)
             if(channels == 6) return AL_FORMAT_51CHN16;
             if(channels == 7) return AL_FORMAT_61CHN16;
             if(channels == 8) return AL_FORMAT_71CHN16;
-            return AL_NONE;
         }
         return AL_NONE;
     }
@@ -63,7 +61,6 @@ static ALenum get_al_format(ALuint channels, ALuint bytes, ALuint floatbytes)
                 if(channels == 6) return AL_FORMAT_51CHN32;
                 if(channels == 7) return AL_FORMAT_61CHN32;
                 if(channels == 8) return AL_FORMAT_71CHN32;
-                return AL_NONE;
             }
         }
         return AL_NONE;
