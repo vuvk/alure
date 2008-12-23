@@ -247,8 +247,8 @@ private:
     bool Init(void *ptr)
     {
         bool gotfmt = false;
+        ALubyte buffer[25];
         int length;
-        ALubyte buffer[25] = "\0";
 
         fio.read(buffer, 1, 12, ptr);
         if(memcmp(buffer, "RIFF", 4) || memcmp(buffer+8, "WAVE", 4))
@@ -714,7 +714,7 @@ struct mp3Stream : public alureStream {
 
     virtual ALuint GetData(ALubyte *data, ALuint bytes)
     {
-        ALuint blockAlign = channels*2;
+        const ALuint blockAlign = channels*2;
         bytes -= bytes%blockAlign;
 
         ALuint amt = 0;
