@@ -304,7 +304,7 @@ ALURE_API ALboolean ALURE_APIENTRY alureShutdownDevice(void)
 
     ALCcontext *context = alcGetCurrentContext();
     ALCdevice *device = alcGetContextsDevice(context);
-    if(alcGetError(device) || !device)
+    if(alcGetError(device) != ALC_NO_ERROR || !device)
     {
         last_error = "Failed to get current device";
         return AL_FALSE;
