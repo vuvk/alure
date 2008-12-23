@@ -1,10 +1,14 @@
 #include "config.h"
 
-#include <AL/al.h>
-#include <AL/alc.h>
-#include <AL/alext.h>
-
 #include "main.h"
+
+#ifdef _WIN32
+#include <alext.h>
+#elif defined(__APPLE__)
+#include <OpenAL/alext.h>
+#else
+#include <AL/alext.h>
+#endif
 
 #include <string.h>
 #include <errno.h>
