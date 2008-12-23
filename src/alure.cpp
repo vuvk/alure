@@ -13,8 +13,6 @@
 
 #include <vector>
 
-const ALchar *last_error = "No error";
-
 std::map<ALint,UserCallbacks> InstalledCallbacks;
 
 
@@ -177,6 +175,14 @@ void init_alure()
     init_libs();
 }
 
+
+static const ALchar *last_error = "No error";
+
+void SetError(const char *err)
+{
+    last_error = err;
+}
+
 extern "C" {
 
 /* Function: alureGetErrorString
@@ -216,7 +222,7 @@ ALURE_API const ALCchar** ALURE_APIENTRY alureGetDeviceNames(ALCboolean all, ALC
     if(!list)
     {
         alcGetError(NULL);
-        last_error = "No device names found";
+        SetError("No device names found");
         return NULL;
     }
 
@@ -278,7 +284,7 @@ ALURE_API ALboolean ALURE_APIENTRY alureInitDevice(const ALCchar *name, const AL
     {
         alcGetError(NULL);
 
-        last_error = "Device open failed";
+        SetError("Device open failed");
         return AL_FALSE;
     }
 
@@ -287,7 +293,7 @@ ALURE_API ALboolean ALURE_APIENTRY alureInitDevice(const ALCchar *name, const AL
     {
         alcCloseDevice(device);
 
-        last_error = "Context creation failed";
+        SetError("Context creation failed");
         return AL_FALSE;
     }
 
@@ -297,7 +303,7 @@ ALURE_API ALboolean ALURE_APIENTRY alureInitDevice(const ALCchar *name, const AL
         alcDestroyContext(context);
         alcCloseDevice(device);
 
-        last_error = "Context setup failed";
+        SetError("Context setup failed");
         return AL_FALSE;
     }
 
@@ -322,7 +328,7 @@ ALURE_API ALboolean ALURE_APIENTRY alureShutdownDevice(void)
     ALCdevice *device = alcGetContextsDevice(context);
     if(alcGetError(device) != ALC_NO_ERROR || !device)
     {
-        last_error = "Failed to get current device";
+        SetError("Failed to get current device");
         return AL_FALSE;
     }
 
@@ -399,7 +405,7 @@ ALURE_API ALboolean ALURE_APIENTRY alureInstallDecodeCallbacks(ALint index,
 
     if(!open_file || !open_memory || !get_fmt || !decode || !rewind || !close)
     {
-        last_error = "Missing callback functions";
+        SetError("Missing callback functions");
         return AL_FALSE;
     }
 
@@ -430,7 +436,7 @@ ALURE_API ALboolean ALURE_APIENTRY alureSleep(ALfloat duration)
 
     if(duration < 0.0f)
     {
-        last_error = "Invalid duration";
+        SetError("Invalid duration");
         return AL_FALSE;
     }
 

@@ -31,14 +31,14 @@ ALURE_API ALuint ALURE_APIENTRY alureCreateBufferFromFile(const ALchar *fname)
 
     if(alGetError() != AL_NO_ERROR)
     {
-        last_error = "Existing OpenAL error";
+        SetError("Existing OpenAL error");
         return AL_NONE;
     }
 
     std::auto_ptr<alureStream> stream(create_stream(fname));
     if(!stream->IsValid())
     {
-        last_error = "Open failed";
+        SetError("Open failed");
         return AL_NONE;
     }
 
@@ -47,7 +47,7 @@ ALURE_API ALuint ALURE_APIENTRY alureCreateBufferFromFile(const ALchar *fname)
 
     if(!stream->GetFormat(&format, &freq, &blockAlign))
     {
-        last_error = "Unsupported format";
+        SetError("Unsupported format");
         return AL_NONE;
     }
 
@@ -65,7 +65,7 @@ ALURE_API ALuint ALURE_APIENTRY alureCreateBufferFromFile(const ALchar *fname)
     alGenBuffers(1, &buf);
     if(alGetError() != AL_NO_ERROR)
     {
-        last_error = "Buffer creation failed";
+        SetError("Buffer creation failed");
         return AL_NONE;
     }
 
@@ -75,7 +75,7 @@ ALURE_API ALuint ALURE_APIENTRY alureCreateBufferFromFile(const ALchar *fname)
         alDeleteBuffers(1, &buf);
         alGetError();
 
-        last_error = "Buffer load failed";
+        SetError("Buffer load failed");
         return AL_NONE;
     }
 
@@ -99,13 +99,13 @@ ALURE_API ALuint ALURE_APIENTRY alureCreateBufferFromMemory(const ALubyte *fdata
 
     if(alGetError() != AL_NO_ERROR)
     {
-        last_error = "Existing OpenAL error";
+        SetError("Existing OpenAL error");
         return AL_NONE;
     }
 
     if(length < 0)
     {
-        last_error = "Invalid data length";
+        SetError("Invalid data length");
         return AL_NONE;
     }
 
@@ -117,7 +117,7 @@ ALURE_API ALuint ALURE_APIENTRY alureCreateBufferFromMemory(const ALubyte *fdata
     std::auto_ptr<alureStream> stream(create_stream(memData));
     if(!stream->IsValid())
     {
-        last_error = "Open failed";
+        SetError("Open failed");
         return AL_NONE;
     }
 
@@ -126,7 +126,7 @@ ALURE_API ALuint ALURE_APIENTRY alureCreateBufferFromMemory(const ALubyte *fdata
 
     if(!stream->GetFormat(&format, &freq, &blockAlign))
     {
-        last_error = "Unsupported format";
+        SetError("Unsupported format");
         return AL_NONE;
     }
 
@@ -144,7 +144,7 @@ ALURE_API ALuint ALURE_APIENTRY alureCreateBufferFromMemory(const ALubyte *fdata
     alGenBuffers(1, &buf);
     if(alGetError() != AL_NO_ERROR)
     {
-        last_error = "Buffer creation failed";
+        SetError("Buffer creation failed");
         return AL_NONE;
     }
 
@@ -154,7 +154,7 @@ ALURE_API ALuint ALURE_APIENTRY alureCreateBufferFromMemory(const ALubyte *fdata
         alDeleteBuffers(1, &buf);
         alGetError();
 
-        last_error = "Buffer load failed";
+        SetError("Buffer load failed");
         return AL_NONE;
     }
 
@@ -178,14 +178,14 @@ ALURE_API ALboolean ALURE_APIENTRY alureBufferDataFromFile(const ALchar *fname, 
 
     if(alGetError() != AL_NO_ERROR)
     {
-        last_error = "Existing OpenAL error";
+        SetError("Existing OpenAL error");
         return AL_FALSE;
     }
 
     std::auto_ptr<alureStream> stream(create_stream(fname));
     if(!stream->IsValid())
     {
-        last_error = "Open failed";
+        SetError("Open failed");
         return AL_FALSE;
     }
 
@@ -194,7 +194,7 @@ ALURE_API ALboolean ALURE_APIENTRY alureBufferDataFromFile(const ALchar *fname, 
 
     if(!stream->GetFormat(&format, &freq, &blockAlign))
     {
-        last_error = "Unsupported format";
+        SetError("Unsupported format");
         return AL_FALSE;
     }
 
@@ -211,7 +211,7 @@ ALURE_API ALboolean ALURE_APIENTRY alureBufferDataFromFile(const ALchar *fname, 
     alBufferData(buffer, format, &data[0], data.size(), freq);
     if(alGetError() != AL_NO_ERROR)
     {
-        last_error = "Buffer load failed";
+        SetError("Buffer load failed");
         return AL_FALSE;
     }
 
@@ -235,13 +235,13 @@ ALURE_API ALboolean ALURE_APIENTRY alureBufferDataFromMemory(const ALubyte *fdat
 
     if(alGetError() != AL_NO_ERROR)
     {
-        last_error = "Existing OpenAL error";
+        SetError("Existing OpenAL error");
         return AL_FALSE;
     }
 
     if(length < 0)
     {
-        last_error = "Invalid data length";
+        SetError("Invalid data length");
         return AL_FALSE;
     }
 
@@ -253,7 +253,7 @@ ALURE_API ALboolean ALURE_APIENTRY alureBufferDataFromMemory(const ALubyte *fdat
     std::auto_ptr<alureStream> stream(create_stream(memData));
     if(!stream->IsValid())
     {
-        last_error = "Open failed";
+        SetError("Open failed");
         return AL_FALSE;
     }
 
@@ -262,7 +262,7 @@ ALURE_API ALboolean ALURE_APIENTRY alureBufferDataFromMemory(const ALubyte *fdat
 
     if(!stream->GetFormat(&format, &freq, &blockAlign))
     {
-        last_error = "Unsupported format";
+        SetError("Unsupported format");
         return AL_FALSE;
     }
 
@@ -279,7 +279,7 @@ ALURE_API ALboolean ALURE_APIENTRY alureBufferDataFromMemory(const ALubyte *fdat
     alBufferData(buffer, format, &data[0], data.size(), freq);
     if(alGetError() != AL_NO_ERROR)
     {
-        last_error = "Buffer load failed";
+        SetError("Buffer load failed");
         return AL_FALSE;
     }
 

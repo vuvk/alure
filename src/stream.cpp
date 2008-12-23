@@ -114,7 +114,7 @@ struct customStream : public alureStream {
         if(cb.rewind(usrFile))
             return true;
 
-        last_error = "Rewind failed";
+        SetError("Rewind failed");
         return false;
     }
 
@@ -199,7 +199,7 @@ struct wavStream : public alureStream {
         if(fio.seek(wavFile, dataStart, SEEK_SET) == dataStart)
             return true;
 
-        last_error = "Seek failed";
+        SetError("Seek failed");
         return false;
     }
 
@@ -427,7 +427,7 @@ struct sndStream : public alureStream {
         if(psf_seek(sndFile, 0, SEEK_SET) != -1)
             return true;
 
-        last_error = "Seek failed";
+        SetError("Seek failed");
         return false;
     }
 
@@ -584,7 +584,7 @@ struct oggStream : public alureStream {
         if(pov_pcm_seek(oggFile, 0) == 0)
             return true;
 
-        last_error = "Seek failed";
+        SetError("Seek failed");
         return false;
     }
 
@@ -763,14 +763,14 @@ struct mp3Stream : public alureStream {
             }
 
             pmpg123_delete(newFile);
-            last_error = "Restart failed";
+            SetError("Restart failed");
             return false;
         }
 
         if(pmpg123_seek_64(mp3File, 0, SEEK_SET) == 0)
             return true;
 
-        last_error = "Seek failed";
+        SetError("Seek failed");
         return false;
     }
 
@@ -894,14 +894,14 @@ static alureStream *InitStream(alureStream *instream, ALsizei chunkLength, ALsiz
 
     if(!stream->GetFormat(&format, &freq, &blockAlign))
     {
-        last_error = "Unsupported format";
+        SetError("Unsupported format");
         return NULL;
     }
 
     chunkLength -= chunkLength%blockAlign;
     if(chunkLength <= 0)
     {
-        last_error = "Chunk length too small";
+        SetError("Chunk length too small");
         return NULL;
     }
 
@@ -911,7 +911,7 @@ static alureStream *InitStream(alureStream *instream, ALsizei chunkLength, ALsiz
     alGenBuffers(numBufs, bufs);
     if(alGetError() != AL_NO_ERROR)
     {
-        last_error = "Buffer creation failed";
+        SetError("Buffer creation failed");
         return NULL;
     }
 
@@ -921,7 +921,7 @@ static alureStream *InitStream(alureStream *instream, ALsizei chunkLength, ALsiz
         alDeleteBuffers(numBufs, bufs);
         alGetError();
 
-        last_error = "Buffering error";
+        SetError("Buffering error");
         return NULL;
     }
 
@@ -930,7 +930,7 @@ static alureStream *InitStream(alureStream *instream, ALsizei chunkLength, ALsiz
         alBufferData(bufs[filled], format, stream->dataChunk, 0, freq);
         if(alGetError() != AL_NO_ERROR)
         {
-            last_error = "Buffer load failed";
+            SetError("Buffer load failed");
             return NULL;
         }
         filled++;
@@ -963,19 +963,19 @@ ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromFile(const ALchar *fn
 
     if(alGetError() != AL_NO_ERROR)
     {
-        last_error = "Existing OpenAL error";
+        SetError("Existing OpenAL error");
         return NULL;
     }
 
     if(chunkLength < 0)
     {
-        last_error = "Invalid chunk length";
+        SetError("Invalid chunk length");
         return NULL;
     }
 
     if(numBufs < 0)
     {
-        last_error = "Invalid buffer count";
+        SetError("Invalid buffer count");
         return NULL;
     }
 
@@ -983,7 +983,7 @@ ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromFile(const ALchar *fn
     if(!stream->IsValid())
     {
         delete stream;
-        last_error = "Open failed";
+        SetError("Open failed");
         return NULL;
     }
 
@@ -1009,25 +1009,25 @@ ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromMemory(const ALubyte 
 
     if(alGetError() != AL_NO_ERROR)
     {
-        last_error = "Existing OpenAL error";
+        SetError("Existing OpenAL error");
         return NULL;
     }
 
     if(chunkLength < 0)
     {
-        last_error = "Invalid chunk length";
+        SetError("Invalid chunk length");
         return NULL;
     }
 
     if(numBufs < 0)
     {
-        last_error = "Invalid buffer count";
+        SetError("Invalid buffer count");
         return NULL;
     }
 
     if(length <= 0)
     {
-        last_error = "Invalid data length";
+        SetError("Invalid data length");
         return NULL;
     }
 
@@ -1044,7 +1044,7 @@ ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromMemory(const ALubyte 
     if(!stream->IsValid())
     {
         delete stream;
-        last_error = "Open failed";
+        SetError("Open failed");
         return NULL;
     }
 
@@ -1070,25 +1070,25 @@ ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromStaticMemory(const AL
 
     if(alGetError() != AL_NO_ERROR)
     {
-        last_error = "Existing OpenAL error";
+        SetError("Existing OpenAL error");
         return NULL;
     }
 
     if(chunkLength < 0)
     {
-        last_error = "Invalid chunk length";
+        SetError("Invalid chunk length");
         return NULL;
     }
 
     if(numBufs < 0)
     {
-        last_error = "Invalid buffer count";
+        SetError("Invalid buffer count");
         return NULL;
     }
 
     if(length <= 0)
     {
-        last_error = "Invalid data length";
+        SetError("Invalid data length");
         return NULL;
     }
 
@@ -1101,7 +1101,7 @@ ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromStaticMemory(const AL
     if(!stream->IsValid())
     {
         delete stream;
-        last_error = "Open failed";
+        SetError("Open failed");
         return NULL;
     }
 
@@ -1127,19 +1127,19 @@ ALURE_API ALsizei ALURE_APIENTRY alureBufferDataFromStream(alureStream *stream, 
 {
     if(alGetError() != AL_NO_ERROR)
     {
-        last_error = "Existing OpenAL error";
+        SetError("Existing OpenAL error");
         return -1;
     }
 
     if(!stream)
     {
-        last_error = "Null stream pointer";
+        SetError("Null stream pointer");
         return -1;
     }
 
     if(numBufs < 0)
     {
-        last_error = "Invalid buffer count";
+        SetError("Invalid buffer count");
         return -1;
     }
 
@@ -1148,7 +1148,7 @@ ALURE_API ALsizei ALURE_APIENTRY alureBufferDataFromStream(alureStream *stream, 
 
     if(!stream->GetFormat(&format, &freq, &blockAlign))
     {
-        last_error = "Unsupported format";
+        SetError("Unsupported format");
         return -1;
     }
 
@@ -1161,7 +1161,7 @@ ALURE_API ALsizei ALURE_APIENTRY alureBufferDataFromStream(alureStream *stream, 
         alBufferData(bufs[filled], format, stream->dataChunk, got, freq);
         if(alGetError() != AL_NO_ERROR)
         {
-            last_error = "Buffer load failed";
+            SetError("Buffer load failed");
             return -1;
         }
     }
@@ -1186,7 +1186,7 @@ ALURE_API ALboolean ALURE_APIENTRY alureRewindStream(alureStream *stream)
 {
     if(!stream)
     {
-        last_error = "Null stream pointer";
+        SetError("Null stream pointer");
         return AL_FALSE;
     }
 
@@ -1211,20 +1211,20 @@ ALURE_API ALboolean ALURE_APIENTRY alureDestroyStream(alureStream *stream, ALsiz
 {
     if(alGetError() != AL_NO_ERROR)
     {
-        last_error = "Existing OpenAL error";
+        SetError("Existing OpenAL error");
         return AL_FALSE;
     }
 
     if(numBufs < 0)
     {
-        last_error = "Invalid buffer count";
+        SetError("Invalid buffer count");
         return AL_FALSE;
     }
 
     alDeleteBuffers(numBufs, bufs);
     if(alGetError() != AL_NO_ERROR)
     {
-        last_error = "Buffer deletion failed";
+        SetError("Buffer deletion failed");
         return AL_FALSE;
     }
 

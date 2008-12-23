@@ -31,6 +31,8 @@
 
 void init_alure();
 
+void SetError(const char *err);
+
 struct UserCallbacks {
     void*     (*open_file)(const char*);
     void*     (*open_mem)(const ALubyte*,ALuint);
@@ -40,8 +42,6 @@ struct UserCallbacks {
     void      (*close)(void*);
 };
 extern std::map<ALint,UserCallbacks> InstalledCallbacks;
-
-extern const ALchar *last_error;
 
 
 #define MAKE_FUNC(x) extern typeof(x) * p##x
