@@ -53,15 +53,18 @@ static ALenum get_al_format(ALuint channels, ALuint bytes, ALuint floatbytes)
     }
     if(floatbytes == 4)
     {
-        if(channels == 1) return AL_FORMAT_MONO_FLOAT32;
-        if(channels == 2) return AL_FORMAT_STEREO_FLOAT32;
-        if(alIsExtensionPresent("AL_EXT_MCFORMATS"))
+        if(alIsExtensionPresent("AL_EXT_FLOAT32"))
         {
-            if(channels == 4) return AL_FORMAT_QUAD32;
-            if(channels == 6) return AL_FORMAT_51CHN32;
-            if(channels == 7) return AL_FORMAT_61CHN32;
-            if(channels == 8) return AL_FORMAT_71CHN32;
-            return AL_NONE;
+            if(channels == 1) return AL_FORMAT_MONO_FLOAT32;
+            if(channels == 2) return AL_FORMAT_STEREO_FLOAT32;
+            if(alIsExtensionPresent("AL_EXT_MCFORMATS"))
+            {
+                if(channels == 4) return AL_FORMAT_QUAD32;
+                if(channels == 6) return AL_FORMAT_51CHN32;
+                if(channels == 7) return AL_FORMAT_61CHN32;
+                if(channels == 8) return AL_FORMAT_71CHN32;
+                return AL_NONE;
+            }
         }
         return AL_NONE;
     }
