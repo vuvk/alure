@@ -983,7 +983,7 @@ ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromFile(const ALchar *fn
     if(!stream->IsValid())
     {
         delete stream;
-        SetError("Open failed");
+        SetError("Unsupported type");
         return NULL;
     }
 
@@ -1044,7 +1044,7 @@ ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromMemory(const ALubyte 
     if(!stream->IsValid())
     {
         delete stream;
-        SetError("Open failed");
+        SetError("Unsupported type");
         return NULL;
     }
 
@@ -1101,7 +1101,7 @@ ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromStaticMemory(const AL
     if(!stream->IsValid())
     {
         delete stream;
-        SetError("Open failed");
+        SetError("Unsupported type");
         return NULL;
     }
 

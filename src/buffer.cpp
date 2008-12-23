@@ -38,7 +38,7 @@ ALURE_API ALuint ALURE_APIENTRY alureCreateBufferFromFile(const ALchar *fname)
     std::auto_ptr<alureStream> stream(create_stream(fname));
     if(!stream->IsValid())
     {
-        SetError("Open failed");
+        SetError("Unsupported type");
         return AL_NONE;
     }
 
@@ -117,7 +117,7 @@ ALURE_API ALuint ALURE_APIENTRY alureCreateBufferFromMemory(const ALubyte *fdata
     std::auto_ptr<alureStream> stream(create_stream(memData));
     if(!stream->IsValid())
     {
-        SetError("Open failed");
+        SetError("Unsupported type");
         return AL_NONE;
     }
 
@@ -185,7 +185,7 @@ ALURE_API ALboolean ALURE_APIENTRY alureBufferDataFromFile(const ALchar *fname, 
     std::auto_ptr<alureStream> stream(create_stream(fname));
     if(!stream->IsValid())
     {
-        SetError("Open failed");
+        SetError("Unsupported type");
         return AL_FALSE;
     }
 
@@ -253,7 +253,7 @@ ALURE_API ALboolean ALURE_APIENTRY alureBufferDataFromMemory(const ALubyte *fdat
     std::auto_ptr<alureStream> stream(create_stream(memData));
     if(!stream->IsValid())
     {
-        SetError("Open failed");
+        SetError("Unsupported type");
         return AL_FALSE;
     }
 
