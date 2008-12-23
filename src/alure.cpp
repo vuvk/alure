@@ -188,19 +188,14 @@ ALURE_API const ALCchar** ALURE_APIENTRY alureGetDeviceNames(ALCboolean all, ALC
 {
     init_alure();
 
-    if(alcGetError(NULL) != ALC_NO_ERROR)
-    {
-        last_error = "Existing OpenAL error";
-        return NULL;
-    }
-
     const ALCchar *list = NULL;
     if(all && alcIsExtensionPresent(NULL, "ALC_ENUMERATE_ALL_EXT"))
         list = alcGetString(NULL, ALC_ALL_DEVICES_SPECIFIER);
     else
         list = alcGetString(NULL, ALC_DEVICE_SPECIFIER);
-    if(alcGetError(NULL) != ALC_NO_ERROR || !list)
+    if(!list)
     {
+        alcGetError(NULL);
         last_error = "No device names found";
         return NULL;
     }
@@ -254,12 +249,6 @@ ALURE_API ALboolean ALURE_APIENTRY alureInitDevice(const ALCchar *name, const AL
 {
     init_alure();
 
-    if(alcGetError(NULL) != ALC_NO_ERROR)
-    {
-        last_error = "Existing OpenAL error";
-        return AL_FALSE;
-    }
-
     ALCdevice *device = alcOpenDevice(name);
     if(!device)
     {
@@ -270,10 +259,9 @@ ALURE_API ALboolean ALURE_APIENTRY alureInitDevice(const ALCchar *name, const AL
     }
 
     ALCcontext *context = alcCreateContext(device, attribs);
-    if(!context)
+    if(alcGetError(device) != ALC_NO_ERROR || !context)
     {
         alcCloseDevice(device);
-        alcGetError(NULL);
 
         last_error = "Context creation failed";
         return AL_FALSE;
@@ -284,7 +272,6 @@ ALURE_API ALboolean ALURE_APIENTRY alureInitDevice(const ALCchar *name, const AL
     {
         alcDestroyContext(context);
         alcCloseDevice(device);
-        alcGetError(NULL);
 
         last_error = "Context setup failed";
         return AL_FALSE;
@@ -303,12 +290,6 @@ ALURE_API ALboolean ALURE_APIENTRY alureInitDevice(const ALCchar *name, const AL
 ALURE_API ALboolean ALURE_APIENTRY alureShutdownDevice(void)
 {
     init_alure();
-
-    if(alcGetError(NULL) != ALC_NO_ERROR)
-    {
-        last_error = "Existing OpenAL error";
-        return AL_FALSE;
-    }
 
     ALCcontext *context = alcGetCurrentContext();
     ALCdevice *device = alcGetContextsDevice(context);
