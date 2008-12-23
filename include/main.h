@@ -2,6 +2,7 @@
 #define MAIN_H
 
 #include "AL/alure.h"
+#include "alext.h"
 
 #ifdef HAS_SNDFILE
 #include <sndfile.h>

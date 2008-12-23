@@ -2,14 +2,6 @@
 
 #include "main.h"
 
-#ifdef _WIN32
-#include <alext.h>
-#elif defined(__APPLE__)
-#include <OpenAL/alext.h>
-#else
-#include <AL/alext.h>
-#endif
-
 #include <string.h>
 
 #include <algorithm>
