@@ -390,12 +390,12 @@ ALURE_API ALboolean ALURE_APIENTRY alureShutdownDevice(void)
 ALURE_API ALboolean ALURE_APIENTRY alureInstallDecodeCallbacks(ALint index,
       void*     (*open_file)(const char *filename),
       void*     (*open_memory)(const ALubyte *data, ALuint length),
-      ALboolean (*get_fmt)(void *instance, ALenum *format, ALuint *samplerate, ALuint *channels, ALuint *bytespersample, ALuint *blocksize),
+      ALboolean (*get_format)(void *instance, ALenum *format, ALuint *samplerate, ALuint *channels, ALuint *bytespersample, ALuint *blocksize),
       ALuint    (*decode)(void *instance, ALubyte *data, ALuint bytes),
       ALboolean (*rewind)(void *instance),
       void      (*close)(void *instance))
 {
-    if(!open_file && !open_memory && !get_fmt && !decode && !rewind && !close)
+    if(!open_file && !open_memory && !get_format && !decode && !rewind && !close)
     {
         std::map<ALint,UserCallbacks>::iterator i = InstalledCallbacks.find(index);
         if(i != InstalledCallbacks.end())
@@ -403,7 +403,7 @@ ALURE_API ALboolean ALURE_APIENTRY alureInstallDecodeCallbacks(ALint index,
         return AL_TRUE;
     }
 
-    if(!open_file || !open_memory || !get_fmt || !decode || !rewind || !close)
+    if(!open_file || !open_memory || !get_format || !decode || !rewind || !close)
     {
         SetError("Missing callback functions");
         return AL_FALSE;
@@ -412,7 +412,7 @@ ALURE_API ALboolean ALURE_APIENTRY alureInstallDecodeCallbacks(ALint index,
     UserCallbacks newcb;
     newcb.open_file = open_file;
     newcb.open_mem  = open_memory;
-    newcb.get_fmt   = get_fmt;
+    newcb.get_fmt   = get_format;
     newcb.decode    = decode;
     newcb.rewind    = rewind;
     newcb.close     = close;

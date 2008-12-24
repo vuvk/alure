@@ -1115,8 +1115,9 @@ ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromStaticMemory(const AL
  * alureCreateStreamFrom* functions. Requires an active context.
  *
  * Returns:
- * The number of buffers filled with new data (0 indicating the end of the
- * stream), or -1 on error.
+ * The number of buffers filled with new data, or -1 on error. If the value
+ * returned is less than the number requested, the end of the stream has been
+ * reached.
  *
  * See Also:
  * <alureCreateStreamFromFile>, <alureCreateStreamFromMemory>,
