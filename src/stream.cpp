@@ -84,10 +84,10 @@ struct customStream : public alureStream {
 
 struct wavStream : public alureStream {
     void *wavFile;
-    int channels;
-    int bytes;
+    ALenum format;
     int samplerate;
     int blockAlign;
+    int sampleSize;
     long dataStart;
     size_t remLen;
     MemDataInfo memInfo;
@@ -104,11 +104,7 @@ struct wavStream : public alureStream {
 
     virtual bool GetFormat(ALenum *format, ALuint *frequency, ALuint *blockalign)
     {
-        ALenum fmt = alureGetSampleFormat(channels, bytes*8, 0);
-        if(fmt == AL_NONE)
-            return false;
-
-        *format = fmt;
+        *format = this->format;
         *frequency = samplerate;
         *blockalign = blockAlign;
         return true;
@@ -125,9 +121,9 @@ struct wavStream : public alureStream {
         size_t got = fio.read(data, blockAlign, rem/blockAlign, wavFile) * blockAlign;
         remLen -= got;
 
-        if(endian.b[0] == 0 && bytes > 1)
+        if(endian.b[0] == 0 && sampleSize > 1)
         {
-            for(size_t i = 0;i < got;i+=2)
+            for(size_t i = 0;i < got;i+=sampleSize)
             {
                 ALubyte tmp = data[i];
                 data[i] = data[i+1];
@@ -148,7 +144,7 @@ struct wavStream : public alureStream {
     }
 
     wavStream(const char *fname)
-      : wavFile(NULL), dataStart(0)
+      : wavFile(NULL), format(0), dataStart(0)
     {
         FILE *file = fopen(fname, "rb");
         if(file)
@@ -162,7 +158,7 @@ struct wavStream : public alureStream {
         }
     }
     wavStream(const MemDataInfo &memData)
-      : wavFile(NULL), dataStart(0), memInfo(memData)
+      : wavFile(NULL), format(0), dataStart(0), memInfo(memData)
     {
         fio.read = mem_read;
         fio.seek = mem_seek;
@@ -181,7 +177,6 @@ struct wavStream : public alureStream {
 private:
     bool Init(void *ptr)
     {
-        bool gotfmt = false;
         ALubyte buffer[25];
         int length;
 
@@ -189,7 +184,7 @@ private:
         if(memcmp(buffer, "RIFF", 4) || memcmp(buffer+8, "WAVE", 4))
             return false;
 
-        while(!dataStart || !gotfmt)
+        while(!dataStart || format == AL_NONE)
         {
             char tag[4];
             if(fio.read(tag, 1, 4, ptr) != 4)
@@ -211,9 +206,7 @@ private:
                 /* mono or stereo data */
                 if(fio.read(buffer, 1, 2, ptr) != 2) break;
                 length -= 2;
-                channels = buffer[0] | (buffer[1]<<8);
-                if(channels != 1 && channels != 2)
-                    break;
+                int channels = buffer[0] | (buffer[1]<<8);
 
                 /* sample frequency */
                 if(fio.read(buffer, 1, 4, ptr) != 4) break;
@@ -235,11 +228,9 @@ private:
                 /* 8 or 16 bit data? */
                 if(fio.read(buffer, 1, 2, ptr) != 2) break;
                 length -= 2;
-                bytes = (buffer[0] | (buffer[1]<<8)) / 8;
-                if(bytes != 1 && bytes != 2)
-                    break;
+                sampleSize = (buffer[0] | (buffer[1]<<8)) / 8;
 
-                gotfmt = true;
+                format = alureGetSampleFormat(channels, sampleSize*8, 0);
             }
             else if(memcmp(tag, "data", 4) == 0)
             {
@@ -250,7 +241,7 @@ private:
             fio.seek(ptr, length, SEEK_CUR);
         }
 
-        if(dataStart > 0 && gotfmt)
+        if(dataStart > 0 && format != AL_NONE)
         {
             fio.seek(ptr, dataStart, SEEK_SET);
             wavFile = ptr;
