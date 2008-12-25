@@ -341,6 +341,81 @@ ALURE_API ALboolean ALURE_APIENTRY alureShutdownDevice(void)
 }
 
 
+/* Function: alureGetSampleFormat
+ *
+ * Retrives an OpenAL format for the given sample format. If bits is non-0,
+ * floatbits must be 0, and if floatbits is non-0, bits must be 0. The
+ * application should not rely on any particular format enum being returned as
+ * it is dependant on the available extensions. The returned format will be
+ * valid for the current context. Requires an active context.
+ *
+ * Returns:
+ * An OpenAL format enum for the given sample format, or AL_NONE if one can't
+ * be found.
+ */
+ALURE_API ALenum ALURE_APIENTRY alureGetSampleFormat(ALuint channels, ALuint bits, ALuint floatbits)
+{
+    init_alure();
+
+    if(alGetError() != AL_NO_ERROR)
+    {
+        SetError("Existing OpenAL error");
+        return AL_NONE;
+    }
+
+    if(bits && floatbits)
+    {
+        SetError("Both bit-types specified");
+        return AL_NONE;
+    }
+
+    if(bits == 8)
+    {
+        if(channels == 1) return AL_FORMAT_MONO8;
+        if(channels == 2) return AL_FORMAT_STEREO8;
+        if(alIsExtensionPresent("AL_EXT_MCFORMATS"))
+        {
+            if(channels == 4) return AL_FORMAT_QUAD8;
+            if(channels == 6) return AL_FORMAT_51CHN8;
+            if(channels == 7) return AL_FORMAT_61CHN8;
+            if(channels == 8) return AL_FORMAT_71CHN8;
+        }
+        return AL_NONE;
+    }
+    if(bits == 16)
+    {
+        if(channels == 1) return AL_FORMAT_MONO16;
+        if(channels == 2) return AL_FORMAT_STEREO16;
+        if(alIsExtensionPresent("AL_EXT_MCFORMATS"))
+        {
+            if(channels == 4) return AL_FORMAT_QUAD16;
+            if(channels == 6) return AL_FORMAT_51CHN16;
+            if(channels == 7) return AL_FORMAT_61CHN16;
+            if(channels == 8) return AL_FORMAT_71CHN16;
+        }
+        return AL_NONE;
+    }
+    if(floatbits == 32)
+    {
+        if(alIsExtensionPresent("AL_EXT_FLOAT32"))
+        {
+            if(channels == 1) return AL_FORMAT_MONO_FLOAT32;
+            if(channels == 2) return AL_FORMAT_STEREO_FLOAT32;
+            if(alIsExtensionPresent("AL_EXT_MCFORMATS"))
+            {
+                if(channels == 4) return AL_FORMAT_QUAD32;
+                if(channels == 6) return AL_FORMAT_51CHN32;
+                if(channels == 7) return AL_FORMAT_61CHN32;
+                if(channels == 8) return AL_FORMAT_71CHN32;
+            }
+        }
+        return AL_NONE;
+    }
+
+    return AL_NONE;
+}
+
+
 /* Function: alureInstallDecodeCallbacks
  *
  * Installs callbacks to enable ALURE to handle more file types. The index is
