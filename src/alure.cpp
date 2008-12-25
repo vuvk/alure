@@ -343,7 +343,7 @@ ALURE_API ALboolean ALURE_APIENTRY alureShutdownDevice(void)
 
 /* Function: alureGetSampleFormat
  *
- * Retrives an OpenAL format for the given sample format. If bits is non-0,
+ * Retrieves an OpenAL format for the given sample format. If bits is non-0,
  * floatbits must be 0, and if floatbits is non-0, bits must be 0. The
  * application should not rely on any particular format enum being returned as
  * it is dependant on the available extensions. The returned format will be
@@ -439,7 +439,7 @@ ALURE_API ALenum ALURE_APIENTRY alureGetSampleFormat(ALuint channels, ALuint bit
  *               memory segment for input instead of a filename. The given
  *               memory will remain valid while the instance is open.
  * get_format - This callback is used to retrieve the format of the decoded
- *              data for the given instance. It is the responsibility ot the
+ *              data for the given instance. It is the responsibility of the
  *              function to make sure the returned format is valid for the
  *              current AL context (eg. don't return AL_FORMAT_QUAD16 if the
  *              AL_EXT_MCFORMATS extension isn't available). Returning 0 for
