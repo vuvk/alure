@@ -35,17 +35,9 @@ struct customStream : public alureStream {
 
     virtual bool GetFormat(ALenum *format, ALuint *frequency, ALuint *blockalign)
     {
-        ALuint channels, bytes;
         if(this->format == 0)
         {
-            if(!cb.get_fmt(usrFile, &this->format, &samplerate, &channels, &bytes, &blockAlign))
-                return false;
-        }
-
-        if(this->format == 0)
-        {
-            this->format = alureGetSampleFormat(channels, bytes*8, 0);
-            if(this->format == AL_NONE)
+            if(!cb.get_fmt(usrFile, &this->format, &samplerate, &blockAlign))
                 return false;
         }
 

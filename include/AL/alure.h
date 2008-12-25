@@ -63,7 +63,7 @@ ALURE_API ALboolean ALURE_APIENTRY alureDestroyStream(alureStream *stream, ALsiz
 ALURE_API ALboolean ALURE_APIENTRY alureInstallDecodeCallbacks(ALint index,
     void*     (*open_file)(const char*),
     void*     (*open_mem)(const ALubyte*,ALuint),
-    ALboolean (*get_format)(void*,ALenum*,ALuint*,ALuint*,ALuint*,ALuint*),
+    ALboolean (*get_format)(void*,ALenum*,ALuint*,ALuint*),
     ALuint    (*decode)(void*,ALubyte*, ALuint),
     ALboolean (*rewind)(void*),
     void      (*close)(void*));
@@ -83,7 +83,7 @@ typedef alureStream*    (ALURE_APIENTRY *LPALURECREATESTREAMFROMMEMORY)(const AL
 typedef ALsizei         (ALURE_APIENTRY *LPALUREBUFFERDATAFROMSTREAM)(alureStream*,ALsizei,ALuint*);
 typedef ALboolean       (ALURE_APIENTRY *LPALUREREWINDSTREAM)(alureStream*);
 typedef ALboolean       (ALURE_APIENTRY *LPALUREDESTROYSTREAM)(alureStream*,ALsizei,ALuint*);
-typedef ALboolean       (ALURE_APIENTRY *LPALUREINSTALLDECODECALLBACKS)(ALint,void*(*)(const char*),void*(*)(const ALubyte*,ALuint),ALboolean(*)(void*,ALenum*,ALuint*,ALuint*,ALuint*,ALuint*),ALuint(*)(void*,ALubyte*,ALuint),ALboolean(*)(void*),void(*)(void*));
+typedef ALboolean       (ALURE_APIENTRY *LPALUREINSTALLDECODECALLBACKS)(ALint,void*(*)(const char*),void*(*)(const ALubyte*,ALuint),ALboolean(*)(void*,ALenum*,ALuint*,ALuint*),ALuint(*)(void*,ALubyte*,ALuint),ALboolean(*)(void*),void(*)(void*));
 
 #if defined(__cplusplus)
 }  /* extern "C" */

@@ -36,7 +36,7 @@ void SetError(const char *err);
 struct UserCallbacks {
     void*     (*open_file)(const char*);
     void*     (*open_mem)(const ALubyte*,ALuint);
-    ALboolean (*get_fmt)(void*,ALenum*,ALuint*,ALuint*,ALuint*,ALuint*);
+    ALboolean (*get_fmt)(void*,ALenum*,ALuint*,ALuint*);
     ALuint    (*decode)(void*,ALubyte*,ALuint);
     ALboolean (*rewind)(void*);
     void      (*close)(void*);
