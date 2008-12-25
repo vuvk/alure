@@ -52,6 +52,8 @@ ALURE_API ALboolean ALURE_APIENTRY alureSleep(ALfloat duration);
 
 ALURE_API ALuint ALURE_APIENTRY alureCreateBufferFromFile(const ALchar *fname);
 ALURE_API ALuint ALURE_APIENTRY alureCreateBufferFromMemory(const ALubyte *data, ALsizei length);
+ALURE_API ALboolean ALURE_APIENTRY alureBufferDataFromFile(const ALchar *fname, ALuint buffer);
+ALURE_API ALboolean ALURE_APIENTRY alureBufferDataFromMemory(const ALubyte *fdata, ALsizei length, ALuint buffer);
 
 ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromFile(const ALchar *fname, ALsizei chunkLength, ALsizei numBufs, ALuint *bufs);
 ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromMemory(const ALubyte *data, ALuint length, ALsizei chunkLength, ALsizei numBufs, ALuint *bufs);
@@ -78,6 +80,8 @@ typedef const ALchar*   (ALURE_APIENTRY *LPALUREGETERRORSTRING)(void);
 typedef ALboolean       (ALURE_APIENTRY *LPALURESLEEP)(ALfloat);
 typedef ALuint          (ALURE_APIENTRY *LPALURECREATEBUFFERFROMFILE)(const ALchar*);
 typedef ALuint          (ALURE_APIENTRY *LPALURECREATEBUFFERFROMMEMORY)(const ALubyte*,ALsizei);
+typedef ALboolean       (ALURE_APIENTRY *LPALUREBUFFERDATAFROMFILE)(const ALchar *fname, ALuint buffer);
+typedef ALboolean       (ALURE_APIENTRY *LPALUREBUFFERDATAFROMMEMORY)(const ALubyte *fdata, ALsizei length, ALuint buffer);
 typedef alureStream*    (ALURE_APIENTRY *LPALURECREATESTREAMFROMFILE)(const ALchar*,ALsizei,ALsizei,ALuint*);
 typedef alureStream*    (ALURE_APIENTRY *LPALURECREATESTREAMFROMMEMORY)(const ALubyte*,ALuint,ALsizei,ALsizei,ALuint*);
 typedef ALsizei         (ALURE_APIENTRY *LPALUREBUFFERDATAFROMSTREAM)(alureStream*,ALsizei,ALuint*);
