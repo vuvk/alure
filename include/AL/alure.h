@@ -70,7 +70,7 @@ ALURE_API ALboolean ALURE_APIENTRY alureInstallDecodeCallbacks(ALint index,
     void*     (*open_file)(const ALchar*),
     void*     (*open_mem)(const ALubyte*,ALuint),
     ALboolean (*get_format)(void*,ALenum*,ALuint*,ALuint*),
-    ALuint    (*decode)(void*,ALubyte*, ALuint),
+    ALuint    (*decode)(void*,ALubyte*,ALuint),
     ALboolean (*rewind)(void*),
     void      (*close)(void*));
 
@@ -88,6 +88,7 @@ typedef ALboolean       (ALURE_APIENTRY *LPALUREBUFFERDATAFROMFILE)(const ALchar
 typedef ALboolean       (ALURE_APIENTRY *LPALUREBUFFERDATAFROMMEMORY)(const ALubyte *fdata, ALsizei length, ALuint buffer);
 typedef alureStream*    (ALURE_APIENTRY *LPALURECREATESTREAMFROMFILE)(const ALchar*,ALsizei,ALsizei,ALuint*);
 typedef alureStream*    (ALURE_APIENTRY *LPALURECREATESTREAMFROMMEMORY)(const ALubyte*,ALuint,ALsizei,ALsizei,ALuint*);
+typedef alureStream*    (ALURE_APIENTRY *LPALURECREATESTREAMFROMSTATICMEMORY)(const ALubyte*,ALuint,ALsizei,ALsizei,ALuint*);
 typedef alureStream*    (ALURE_APIENTRY *LPALURECREATESTREAMFROMCALLBACK)(ALuint(*)(void*,ALubyte*,ALuint),void*,ALenum,ALuint,ALsizei,ALsizei,ALuint*);
 typedef ALsizei         (ALURE_APIENTRY *LPALUREBUFFERDATAFROMSTREAM)(alureStream*,ALsizei,ALuint*);
 typedef ALboolean       (ALURE_APIENTRY *LPALUREREWINDSTREAM)(alureStream*);
