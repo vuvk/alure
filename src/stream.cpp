@@ -37,7 +37,8 @@ struct customStream : public alureStream {
     {
         if(this->format == 0)
         {
-            if(!cb.get_fmt(usrFile, &this->format, &samplerate, &blockAlign))
+            if(!cb.get_fmt ||
+               !cb.get_fmt(usrFile, &this->format, &samplerate, &blockAlign))
                 return false;
         }
 
@@ -55,7 +56,7 @@ struct customStream : public alureStream {
 
     virtual bool Rewind()
     {
-        if(cb.rewind(usrFile))
+        if(cb.rewind && cb.rewind(usrFile))
             return true;
 
         SetError("Rewind failed");
@@ -65,18 +66,20 @@ struct customStream : public alureStream {
     customStream(const char *fname, const UserCallbacks &callbacks)
       : usrFile(NULL), format(0), samplerate(0), blockAlign(0), cb(callbacks)
     {
-        usrFile = cb.open_file(fname);
+        if(cb.open_file)
+            usrFile = cb.open_file(fname);
     }
     customStream(const MemDataInfo &memData, const UserCallbacks &callbacks)
       : usrFile(NULL), format(0), samplerate(0), blockAlign(0),
         memInfo(memData), cb(callbacks)
     {
-        usrFile = cb.open_mem(memInfo.Data, memInfo.Length);
+        if(cb.open_mem)
+            usrFile = cb.open_mem(memInfo.Data, memInfo.Length);
     }
 
     virtual ~customStream()
     {
-        if(usrFile)
+        if(cb.close && usrFile)
             cb.close(usrFile);
         usrFile = NULL;
     }

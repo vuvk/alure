@@ -426,30 +426,34 @@ ALURE_API ALenum ALURE_APIENTRY alureGetSampleFormat(ALuint channels, ALuint bit
  * previous callbacks, and removing old callbacks won't affect any opened files
  * using them (they'll continue to use the old functions until properly closed,
  * although newly opened files will use the new ones). Passing NULL for all
- * callbacks is a valid way to remove an installed set, otherwise all callbacks
- * must be specified.
+ * callbacks is a valid way to remove an installed set, otherwise certain
+ * callbacks must be specified. Callbacks that are not specified will assume
+ * failure.
  *
  * Parameters:
  * open_file - This callback is expected to open the named file and prepare it
  *             for decoding. If the callbacks cannot decode the file, NULL
  *             should be returned to indicate failure. Upon success, a non-NULL
  *             handle must be returned, which will be used as a unique
- *             identifier for the decoder instance.
+ *             identifier for the decoder instance. This callback is required
+ *             if open_memory is not specified.
  * open_memory - This callback behaves the same as open_file, except it takes a
  *               memory segment for input instead of a filename. The given
- *               memory will remain valid while the instance is open.
+ *               memory will remain valid while the instance is open. This
+ *               callback is required if open_file is not specified.
  * get_format - This callback is used to retrieve the format of the decoded
  *              data for the given instance. It is the responsibility of the
  *              function to make sure the returned format is valid for the
  *              current AL context (eg. don't return AL_FORMAT_QUAD16 if the
  *              AL_EXT_MCFORMATS extension isn't available). Returning 0 for
  *              blocksize will cause a failure. Returning AL_FALSE indicates
- *              failure.
+ *              failure. This callback is required.
  * decode - This callback is called to get more decoded data. Up to the
  *          specified amount of bytes should be written to the data pointer.
  *          The number of bytes written should be a multiple of the block size,
  *          otherwise an OpenAL error may occur during buffering. The function
- *          should return the number of bytes written.
+ *          should return the number of bytes written. This callback is
+ *          required.
  * rewind - This callback is for rewinding the instance so that the next decode
  *          calls for it will get audio data from the start of the sound file.
  *          If the stream fails to rewind, AL_FALSE should be returned.
@@ -476,7 +480,7 @@ ALURE_API ALboolean ALURE_APIENTRY alureInstallDecodeCallbacks(ALint index,
         return AL_TRUE;
     }
 
-    if(!open_file || !open_memory || !get_format || !decode || !rewind || !close)
+    if((!open_file && !open_memory) || !get_format || !decode)
     {
         SetError("Missing callback functions");
         return AL_FALSE;
