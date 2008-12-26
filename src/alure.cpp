@@ -461,7 +461,7 @@ ALURE_API ALenum ALURE_APIENTRY alureGetSampleFormat(ALuint channels, ALuint bit
  * AL_FALSE on error.
  */
 ALURE_API ALboolean ALURE_APIENTRY alureInstallDecodeCallbacks(ALint index,
-      void*     (*open_file)(const char *filename),
+      void*     (*open_file)(const ALchar *filename),
       void*     (*open_memory)(const ALubyte *data, ALuint length),
       ALboolean (*get_format)(void *instance, ALenum *format, ALuint *samplerate, ALuint *blocksize),
       ALuint    (*decode)(void *instance, ALubyte *data, ALuint bytes),

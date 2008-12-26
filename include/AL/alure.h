@@ -63,7 +63,7 @@ ALURE_API ALboolean ALURE_APIENTRY alureRewindStream(alureStream *stream);
 ALURE_API ALboolean ALURE_APIENTRY alureDestroyStream(alureStream *stream, ALsizei numBufs, ALuint *bufs);
 
 ALURE_API ALboolean ALURE_APIENTRY alureInstallDecodeCallbacks(ALint index,
-    void*     (*open_file)(const char*),
+    void*     (*open_file)(const ALchar*),
     void*     (*open_mem)(const ALubyte*,ALuint),
     ALboolean (*get_format)(void*,ALenum*,ALuint*,ALuint*),
     ALuint    (*decode)(void*,ALubyte*, ALuint),
