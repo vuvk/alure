@@ -76,6 +76,9 @@ struct customStream : public alureStream {
         if(cb.open_mem)
             usrFile = cb.open_mem(memInfo.Data, memInfo.Length);
     }
+    customStream(void *userdata, ALenum fmt, ALuint srate, const UserCallbacks &callbacks)
+      : usrFile(userdata), format(fmt), samplerate(srate), blockAlign(1), cb(callbacks)
+    { }
 
     virtual ~customStream()
     {
@@ -893,7 +896,8 @@ extern "C" {
  *
  * See Also:
  * <alureCreateStreamFromMemory>, <alureCreateStreamFromStaticMemory>,
- * <alureBufferDataFromStream>, <alureRewindStream>, <alureDestroyStream>
+ * <alureCreateStreamFromCallback>, <alureBufferDataFromStream>,
+ * <alureRewindStream>, <alureDestroyStream>
  */
 ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromFile(const ALchar *fname, ALsizei chunkLength, ALsizei numBufs, ALuint *bufs)
 {
@@ -939,7 +943,8 @@ ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromFile(const ALchar *fn
  *
  * See Also:
  * <alureCreateStreamFromFile>, <alureCreateStreamFromStaticMemory>,
- * <alureBufferDataFromStream>, <alureRewindStream>, <alureDestroyStream>
+ * <alureCreateStreamFromCallback>, <alureBufferDataFromStream>,
+ * <alureRewindStream>, <alureDestroyStream>
  */
 ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromMemory(const ALubyte *fdata, ALuint length, ALsizei chunkLength, ALsizei numBufs, ALuint *bufs)
 {
@@ -1000,7 +1005,8 @@ ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromMemory(const ALubyte 
  *
  * See Also:
  * <alureCreateStreamFromFile>, <alureCreateStreamFromMemory>,
- * <alureBufferDataFromStream>, <alureRewindStream>, <alureDestroyStream>
+ * <alureCreateStreamFromCallback>, <alureBufferDataFromStream>,
+ * <alureRewindStream>, <alureDestroyStream>
  */
 ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromStaticMemory(const ALubyte *fdata, ALuint length, ALsizei chunkLength, ALsizei numBufs, ALuint *bufs)
 {
@@ -1046,6 +1052,74 @@ ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromStaticMemory(const AL
     return InitStream(stream, chunkLength, numBufs, bufs);
 }
 
+/* Function: alureCreateStreamFromCallback
+ *
+ * Creates a stream using the specified callback to retrieve data. Requires an
+ * active context.
+ *
+ * Parameters:
+ * callback - This is called when more data is needed from the stream. Up to
+ *            the specified number of bytes should be written to the data
+ *            pointer, and the number of bytes actually written should be
+ *            returned. The number of bytes written must be block aligned for
+ *            the format (eg. a multiple of 4 for AL_FORMAT_STEREO16), or an
+ *            OpenAL error may occur during buffering.
+ * userdata - A handle passed through to the callback.
+ * format - The format of the data the callback will be giving. The format must
+ *          be valid for the context.
+ * samplerate - The sample rate (frequency) of the stream
+ *
+ * Returns:
+ * An opaque handle used to control the opened stream, or NULL on error.
+ *
+ * See Also:
+ * <alureCreateStreamFromFile>, <alureCreateStreamFromMemory>,
+ * <alureCreateStreamFromStaticMemory>, <alureBufferDataFromStream>,
+ * <alureRewindStream>, <alureDestroyStream>
+ */
+ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromCallback(
+      ALuint (*callback)(void *userdata, ALubyte *data, ALuint bytes),
+      void *userdata, ALenum format, ALuint samplerate,
+      ALsizei chunkLength, ALsizei numBufs, ALuint *bufs)
+{
+    init_alure();
+
+    if(alGetError() != AL_NO_ERROR)
+    {
+        SetError("Existing OpenAL error");
+        return NULL;
+    }
+
+    if(callback == NULL)
+    {
+        SetError("Invalid callback");
+        return NULL;
+    }
+
+    if(chunkLength < 0)
+    {
+        SetError("Invalid chunk length");
+        return NULL;
+    }
+
+    if(numBufs < 0)
+    {
+        SetError("Invalid buffer count");
+        return NULL;
+    }
+
+    UserCallbacks newcb;
+    newcb.open_file = NULL;
+    newcb.open_mem  = NULL;
+    newcb.get_fmt   = NULL;
+    newcb.decode    = callback;
+    newcb.rewind    = NULL;
+    newcb.close     = NULL;
+
+    customStream *stream = new customStream(userdata, format, samplerate, newcb);
+    return InitStream(stream, chunkLength, numBufs, bufs);
+}
+
 /* Function: alureBufferDataFromStream
  *
  * Buffers the given buffer objects with the next chunks of data from the
@@ -1059,8 +1133,8 @@ ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromStaticMemory(const AL
  *
  * See Also:
  * <alureCreateStreamFromFile>, <alureCreateStreamFromMemory>,
- * <alureCreateStreamFromStaticMemory>, <alureRewindStream>,
- * <alureDestroyStream>
+ * <alureCreateStreamFromStaticMemory>, <alureCreateStreamFromCallback>,
+ * <alureRewindStream>, <alureDestroyStream>
  */
 ALURE_API ALsizei ALURE_APIENTRY alureBufferDataFromStream(alureStream *stream, ALsizei numBufs, ALuint *bufs)
 {
@@ -1118,8 +1192,8 @@ ALURE_API ALsizei ALURE_APIENTRY alureBufferDataFromStream(alureStream *stream, 
  *
  * See Also:
  * <alureCreateStreamFromFile>, <alureCreateStreamFromMemory>,
- * <alureCreateStreamFromStaticMemory>, <alureBufferDataFromStream>,
- * <alureDestroyStream>
+ * <alureCreateStreamFromStaticMemory>, <alureCreateStreamFromCallback>,
+ * <alureBufferDataFromStream>, <alureDestroyStream>
  */
 ALURE_API ALboolean ALURE_APIENTRY alureRewindStream(alureStream *stream)
 {
@@ -1143,8 +1217,8 @@ ALURE_API ALboolean ALURE_APIENTRY alureRewindStream(alureStream *stream)
  *
  * See Also:
  * <alureCreateStreamFromFile>, <alureCreateStreamFromMemory>,
- * <alureCreateStreamFromStaticMemory>, <alureBufferDataFromStream>,
- * <alureRewindStream>
+ * <alureCreateStreamFromStaticMemory>, <alureCreateStreamFromCallback>,
+ * <alureBufferDataFromStream>, <alureRewindStream>
  */
 ALURE_API ALboolean ALURE_APIENTRY alureDestroyStream(alureStream *stream, ALsizei numBufs, ALuint *bufs)
 {
