@@ -129,12 +129,23 @@ struct wavStream : public alureStream {
 
         if(endian.b[0] == 0 && sampleSize > 1)
         {
-            for(size_t i = 0;i < got;i+=sampleSize)
-            {
-                ALubyte tmp = data[i];
-                data[i] = data[i+1];
-                data[i+1] = tmp;
-            }
+            if(sampleSize == 2)
+                for(size_t i = 0;i < got;i+=2)
+                {
+                    ALubyte tmp = data[i];
+                    data[i] = data[i+1];
+                    data[i+1] = tmp;
+                }
+            else if(sampleSize == 4)
+                for(size_t i = 0;i < got;i+=4)
+                {
+                    ALubyte tmp = data[i];
+                    data[i] = data[i+3];
+                    data[i+3] = tmp;
+                    tmp = data[i+1];
+                    data[i+1] = data[i+2];
+                    data[i+2] = tmp;
+                }
         }
 
         return got;
