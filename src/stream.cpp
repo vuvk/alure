@@ -181,6 +181,20 @@ struct wavStream : public alureStream {
     }
 
 private:
+    ALuint read_le32(void *ptr)
+    {
+        ALubyte buffer[4];
+        if(fio.read(buffer, 1, 4, ptr) != 4) return 0;
+        return buffer[0] | (buffer[1]<<8) | (buffer[2]<<16) | (buffer[3]<<24);
+    }
+
+    ALushort read_le16(void *ptr)
+    {
+        ALubyte buffer[2];
+        if(fio.read(buffer, 1, 2, ptr) != 2) return 0;
+        return buffer[0] | (buffer[1]<<8);
+    }
+
     bool Init(void *ptr)
     {
         ALubyte buffer[25];
@@ -197,44 +211,37 @@ private:
                 break;
 
             /* read chunk length */
-            if(fio.read(buffer, 1, 4, ptr) != 4) break;
-            length = buffer[0] | (buffer[1]<<8) | (buffer[2]<<16) | (buffer[3]<<24);
+            length = read_le32(ptr);
 
             if(memcmp(tag, "fmt ", 4) == 0 && length >= 16)
             {
-                /* should be 1 for PCM data */
-                if(fio.read(buffer, 1, 2, ptr) != 2) break;
+                /* Data type (should be 1 for PCM data) */
+                int type = read_le16(ptr);
                 length -= 2;
-                int type = buffer[0] | (buffer[1]<<8);
                 if(type != 1)
                     break;
 
                 /* mono or stereo data */
-                if(fio.read(buffer, 1, 2, ptr) != 2) break;
+                int channels = read_le16(ptr);
                 length -= 2;
-                int channels = buffer[0] | (buffer[1]<<8);
 
                 /* sample frequency */
-                if(fio.read(buffer, 1, 4, ptr) != 4) break;
+                samplerate = read_le32(ptr);
                 length -= 4;
-                samplerate = (buffer[0]    ) | (buffer[1]<< 8) |
-                             (buffer[2]<<16) | (buffer[3]<<24);
 
                 /* skip four bytes */
                 if(fio.read(buffer, 1, 4, ptr) != 4) break;
                 length -= 4;
 
                 /* bytes per block */
-                if(fio.read(buffer, 1, 2, ptr) != 2) break;
+                blockAlign = read_le16(ptr);
                 length -= 2;
-                blockAlign = buffer[0] | (buffer[1]<<8);
                 if(blockAlign == 0)
                     break;
 
-                /* 8 or 16 bit data? */
-                if(fio.read(buffer, 1, 2, ptr) != 2) break;
+                /* bits per sample */
+                sampleSize = read_le16(ptr) / 8;
                 length -= 2;
-                sampleSize = (buffer[0] | (buffer[1]<<8)) / 8;
 
                 format = alureGetSampleFormat(channels, sampleSize*8, 0);
             }
