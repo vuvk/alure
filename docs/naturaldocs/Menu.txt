@@ -31,7 +31,7 @@ SubTitle: API Reference
 
 File: Main and Miscellanious  (no auto-title, alure.cpp)
 File: File Loading  (no auto-title, buffer.cpp)
-File: File Streaming  (no auto-title, stream.cpp)
+File: Streaming  (no auto-title, stream.cpp)
 
 Group: Index  {
 
