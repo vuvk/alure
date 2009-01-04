@@ -380,6 +380,7 @@ ALURE_API ALenum ALURE_APIENTRY alureGetSampleFormat(ALuint channels, ALuint bit
             if(channels == 7) return AL_FORMAT_61CHN8;
             if(channels == 8) return AL_FORMAT_71CHN8;
         }
+        SetError("Unhandled channel count\n");
         return AL_NONE;
     }
     if(bits == 16)
@@ -393,6 +394,7 @@ ALURE_API ALenum ALURE_APIENTRY alureGetSampleFormat(ALuint channels, ALuint bit
             if(channels == 7) return AL_FORMAT_61CHN16;
             if(channels == 8) return AL_FORMAT_71CHN16;
         }
+        SetError("Unhandled channel count\n");
         return AL_NONE;
     }
     if(floatbits == 32)
@@ -409,9 +411,11 @@ ALURE_API ALenum ALURE_APIENTRY alureGetSampleFormat(ALuint channels, ALuint bit
                 if(channels == 8) return AL_FORMAT_71CHN32;
             }
         }
+        SetError("Unhandled channel count\n");
         return AL_NONE;
     }
 
+    SetError("Unhandled bit-depth\n");
     return AL_NONE;
 }
 
