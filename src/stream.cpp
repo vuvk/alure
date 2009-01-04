@@ -1,4 +1,4 @@
-/* Title: File Streaming */
+/* Title: Streaming */
 
 #include "config.h"
 
