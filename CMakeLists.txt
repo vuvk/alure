@@ -112,8 +112,8 @@ IF(WIN32)
     ENDIF(CMAKE_SIZEOF_VOID_P MATCHES "8")
 
     SET(OPENAL_SEARCH_PATHS
-        ENV MINGDIR
         ENV ALSDK_DIR
+        ENV MINGDIR
         "C:/Program Files/OpenAL 1.1 SDK"
         "C:/Program Files (x86)/OpenAL 1.1 SDK"
         "E:/Programs/Dev/OpenAL"
