@@ -234,7 +234,7 @@ ALURE_API const ALCchar** ALURE_APIENTRY alureGetDeviceNames(ALCboolean all, ALC
         retlistLen++;
     }
 
-    const ALCchar **retlist = new const ALCchar*[retlistLen];
+    const ALCchar **retlist = new const ALCchar*[retlistLen+1];
     retlistLen = 0;
     cur = list;
     while(*cur)
@@ -243,6 +243,7 @@ ALURE_API const ALCchar** ALURE_APIENTRY alureGetDeviceNames(ALCboolean all, ALC
         cur += strlen(cur)+1;
         retlistLen++;
     }
+    retlist[retlistLen] = NULL;
 
     *count = retlistLen;
     return retlist;
