@@ -239,8 +239,13 @@ ALURE_API const ALCchar** ALURE_APIENTRY alureGetDeviceNames(ALCboolean all, ALC
     cur = list;
     while(*cur)
     {
-        retlist[retlistLen] = cur;
-        cur += strlen(cur)+1;
+        ALCuint len = strlen(cur)+1;
+        ALCchar *newstr = new ALCchar[len];
+
+        memcpy(newstr, cur, len);
+        cur += len;
+
+        retlist[retlistLen] = newstr;
         retlistLen++;
     }
     retlist[retlistLen] = NULL;
@@ -260,7 +265,12 @@ ALURE_API ALvoid ALURE_APIENTRY alureFreeDeviceNames(const ALCchar **names)
 {
     init_alure();
 
-    delete[] names;
+    if(names)
+    {
+        for(ALCuint i = 0;names[i];i++)
+            delete[] const_cast<ALCchar*>(names[i]);
+        delete[] names;
+    }
 }
 
 
