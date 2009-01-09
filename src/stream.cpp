@@ -354,6 +354,201 @@ public:
 
 };
 
+struct aiffStream : public alureStream {
+    void *aiffFile;
+    ALenum format;
+    int samplerate;
+    int blockAlign;
+    int sampleSize;
+    long dataStart;
+    size_t remLen;
+    MemDataInfo memInfo;
+
+    struct {
+        size_t (*read)(void*,size_t,size_t,void*);
+        int    (*seek)(void*,long,int);
+        int    (*close)(void*);
+        long   (*tell)(void*);
+    } fio;
+
+    virtual bool IsValid()
+    { return aiffFile != NULL; }
+
+    virtual bool GetFormat(ALenum *format, ALuint *frequency, ALuint *blockalign)
+    {
+        *format = this->format;
+        *frequency = samplerate;
+        *blockalign = blockAlign;
+        return true;
+    }
+
+    virtual ALuint GetData(ALubyte *data, ALuint bytes)
+    {
+        static const union {
+            int val;
+            char b[sizeof(int)];
+        } endian = { 1 };
+
+        size_t rem = ((remLen >= bytes) ? bytes : remLen);
+        size_t got = fio.read(data, blockAlign, rem/blockAlign, aiffFile) * blockAlign;
+        remLen -= got;
+
+        if(endian.b[0] == 1 && sampleSize > 1)
+        {
+            if(sampleSize == 2)
+                for(size_t i = 0;i < got;i+=2)
+                {
+                    ALubyte tmp = data[i];
+                    data[i] = data[i+1];
+                    data[i+1] = tmp;
+                }
+            else if(sampleSize == 4)
+                for(size_t i = 0;i < got;i+=4)
+                {
+                    ALubyte tmp = data[i];
+                    data[i] = data[i+3];
+                    data[i+3] = tmp;
+                    tmp = data[i+1];
+                    data[i+1] = data[i+2];
+                    data[i+2] = tmp;
+                }
+        }
+
+        return got;
+    }
+
+    virtual bool Rewind()
+    {
+        if(fio.seek(aiffFile, dataStart, SEEK_SET) == dataStart)
+            return true;
+
+        SetError("Seek failed");
+        return false;
+    }
+
+    aiffStream(const char *fname)
+      : aiffFile(NULL), format(0), dataStart(0)
+    {
+        FILE *file = fopen(fname, "rb");
+        if(file)
+        {
+            fio.read = wavStream::read_wrap;
+            fio.seek = wavStream::seek_wrap;
+            fio.close = wavStream::close_wrap;
+            fio.tell = wavStream::tell_wrap;
+            if(!Init(file))
+                fclose(file);
+        }
+    }
+    aiffStream(const MemDataInfo &memData)
+      : aiffFile(NULL), format(0), dataStart(0), memInfo(memData)
+    {
+        fio.read = wavStream::mem_read;
+        fio.seek = wavStream::mem_seek;
+        fio.close = NULL;
+        fio.tell = wavStream::mem_tell;
+        Init(&memInfo);
+    }
+
+    virtual ~aiffStream()
+    {
+        if(aiffFile && fio.close)
+            fio.close(aiffFile);
+        aiffFile = NULL;
+    }
+
+private:
+    ALuint read_be32(void *ptr)
+    {
+        ALubyte buffer[4];
+        if(fio.read(buffer, 1, 4, ptr) != 4) return 0;
+        return (buffer[0]<<24) | (buffer[1]<<16) | (buffer[2]<<8) | buffer[3];
+    }
+
+    ALushort read_be16(void *ptr)
+    {
+        ALubyte buffer[2];
+        if(fio.read(buffer, 1, 2, ptr) != 2) return 0;
+        return (buffer[0]<<8) | buffer[1];
+    }
+
+    ALuint read_be80extended(void *ptr)
+    {
+        ALubyte buffer[10];
+        if (fio.read(buffer, 1, 10, ptr) != 10) return 0;
+        ALuint mantissa, last = 0;
+        ALubyte exp = buffer[1];
+        exp = 30 - exp;
+        mantissa = (buffer[2]<<24) | (buffer[3]<<16) | (buffer[4]<<8) | buffer[5];
+        while (exp--)
+        {
+            last = mantissa;
+            mantissa >>= 1;
+        }
+        if (last & 1) mantissa++;
+        return mantissa;
+    }
+
+    bool Init(void *ptr)
+    {
+        ALubyte buffer[25];
+        int length;
+
+        fio.read(buffer, 1, 12, ptr);
+        if(memcmp(buffer, "FORM", 4) || memcmp(buffer+8, "AIFF", 4))
+            return false;
+
+        while(!dataStart || format == AL_NONE)
+        {
+            char tag[4];
+            if(fio.read(tag, 1, 4, ptr) != 4)
+                break;
+
+            /* read chunk length */
+            length = read_be32(ptr);
+
+            if(memcmp(tag, "COMM", 4) == 0 && length >= 16)
+            {
+                /* mono or stereo data */
+                int channels = read_be16(ptr);
+                length -= 2;
+
+                /* number of sample frames */
+                fio.read(buffer, 1, 4, ptr);
+                length -= 4;
+
+                /* bits per sample */
+                sampleSize = read_be16(ptr) / 8;
+                length -= 2;
+
+                /* sample frequency */
+                samplerate = read_be80extended(ptr);
+                length -= 10;
+
+                /* block alignment */
+                blockAlign = channels * sampleSize;
+
+                format = alureGetSampleFormat(channels, sampleSize*8, 0);
+            }
+            else if(memcmp(tag, "SSND", 4) == 0)
+            {
+                dataStart = fio.tell(ptr) + 8;
+                remLen = length - 8;
+            }
+
+            fio.seek(ptr, length, SEEK_CUR);
+        }
+
+        if(dataStart > 0 && format != AL_NONE)
+        {
+            fio.seek(ptr, dataStart, SEEK_SET);
+            aiffFile = ptr;
+            return true;
+        }
+        return false;
+    }
+};
+
 #ifdef HAS_SNDFILE
 struct sndStream : public alureStream {
     SNDFILE *sndFile;
@@ -816,6 +1011,10 @@ alureStream *create_stream(const T &fdata)
     }
 
     stream.reset(new wavStream(fdata));
+    if(stream->IsValid())
+        return stream.release();
+
+    stream.reset(new aiffStream(fdata));
     if(stream->IsValid())
         return stream.release();
 
