@@ -60,7 +60,7 @@ static void init_libs()
 } while(0)
 
 #ifdef HAS_SNDFILE
-    sndfile_handle = LoadLibrary("sndfile.dll");
+    sndfile_handle = LoadLibrary("libsndfile-1.dll");
 #endif
 #ifdef HAS_VORBISFILE
     vorbisfile_handle = LoadLibrary("vorbisfile.dll");
