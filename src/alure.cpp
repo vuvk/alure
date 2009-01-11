@@ -54,7 +54,7 @@ static void init_libs()
 {
 #if defined(HAVE_WINDOWS_H) && defined(HAS_LOADLIBRARY)
 # define LOAD_FUNC(x, f) do { \
-    p##f = reinterpret_cast<typeof(f)*>(GetProcAddress((HMODULE)x, #f)); \
+    p##f = reinterpret_cast<typeof(p##f)>(GetProcAddress((HMODULE)x, #f)); \
     if(!(p##f)) \
         fprintf(stderr, "Could not load "#f"\n"); \
 } while(0)
@@ -71,7 +71,7 @@ static void init_libs()
 
 #elif defined(HAS_DLOPEN)
 # define LOAD_FUNC(x, f) do { \
-    p##f = reinterpret_cast<typeof(f)*>(dlsym(x, #f)); \
+    p##f = reinterpret_cast<typeof(p##f)>(dlsym(x, #f)); \
     if((err=dlerror()) != NULL) { \
         fprintf(stderr, "Could not load "#f": %s\n", err); \
         p##f = NULL; \
