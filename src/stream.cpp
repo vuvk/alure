@@ -892,7 +892,10 @@ struct flacStream : public alureStream {
     virtual bool Rewind()
     {
         if(pFLAC__stream_decoder_seek_absolute(flacFile, 0) != false)
+        {
+            initialData.clear();
             return true;
+        }
 
         SetError("Seek failed");
         return false;
