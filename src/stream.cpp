@@ -978,17 +978,9 @@ private:
     {
         flacStream *This = static_cast<flacStream*>(client_data);
         ALubyte *data = This->outBytes + This->outTotal;
-        int i = 0;
+        ALuint i = 0;
 
-        if(This->outLen == 0)
-        {
-            This->outLen = frame->header.blocksize*frame->header.channels*
-                           frame->header.bits_per_sample/8;
-            This->initialData.resize(This->outLen);
-            data = &This->initialData[0];
-        }
-
-        while(This->outTotal < This->outLen)
+        while(This->outTotal < This->outLen && i < frame->header.blocksize)
         {
             for(ALuint c = 0;c < frame->header.channels;c++)
             {
@@ -1000,6 +992,30 @@ private:
                 data += frame->header.bits_per_sample/8;
             }
             i++;
+        }
+
+        if(i < frame->header.blocksize)
+        {
+            ALuint blocklen = (frame->header.blocksize-i) *
+                              frame->header.channels *
+                              frame->header.bits_per_sample/8;
+            ALuint start = This->initialData.size();
+
+            This->initialData.resize(start+blocklen);
+            data = &This->initialData[start];
+
+            while(i < frame->header.blocksize)
+            {
+                for(ALuint c = 0;c < frame->header.channels;c++)
+                {
+                    if(frame->header.bits_per_sample == 8)
+                        *((ALubyte*)data) = buffer[c][i]+128;
+                    else if(frame->header.bits_per_sample == 16)
+                        *((ALshort*)data) = buffer[c][i];
+                    data += frame->header.bits_per_sample/8;
+                }
+                i++;
+            }
         }
 
         return FLAC__STREAM_DECODER_WRITE_STATUS_CONTINUE;
