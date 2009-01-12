@@ -36,11 +36,11 @@ INCLUDE_DIRECTORIES(include "${ALURE_BINARY_DIR}")
 
 OPTION(NO_SHARED "Build a static library instead of shared" OFF)
 
-IF(NOT DEFINED CMAKE_BUILD_TYPE)
+IF(NOT CMAKE_BUILD_TYPE)
     SET(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING
         "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel."
         FORCE)
-ENDIF(NOT DEFINED CMAKE_BUILD_TYPE)
+ENDIF(NOT CMAKE_BUILD_TYPE)
 IF(NOT DEFINED CMAKE_DEBUG_POSTFIX)
     SET(CMAKE_DEBUG_POSTFIX "" CACHE STRING
         "Library postfix for debug builds. Normally left blank."
