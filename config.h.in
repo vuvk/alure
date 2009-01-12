@@ -21,3 +21,6 @@
 
 /* Define if we have vorbisfile */
 #cmakedefine HAS_VORBISFILE
+
+/* Define if we have FLAC */
+#cmakedefine HAS_FLAC

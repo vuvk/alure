@@ -33,6 +33,21 @@ MAKE_FUNC(ov_info);
 MAKE_FUNC(ov_read);
 MAKE_FUNC(ov_pcm_seek);
 #endif
+#ifdef HAS_FLAC
+void *flac_handle;
+MAKE_FUNC(FLAC__stream_decoder_get_state);
+MAKE_FUNC(FLAC__stream_decoder_get_channels);
+MAKE_FUNC(FLAC__stream_decoder_init_file);
+MAKE_FUNC(FLAC__stream_decoder_finish);
+MAKE_FUNC(FLAC__stream_decoder_new);
+MAKE_FUNC(FLAC__stream_decoder_get_blocksize);
+MAKE_FUNC(FLAC__stream_decoder_get_bits_per_sample);
+MAKE_FUNC(FLAC__stream_decoder_seek_absolute);
+MAKE_FUNC(FLAC__stream_decoder_delete);
+MAKE_FUNC(FLAC__stream_decoder_get_sample_rate);
+MAKE_FUNC(FLAC__stream_decoder_process_single);
+MAKE_FUNC(FLAC__stream_decoder_init_stream);
+#endif
 #undef MAKE_FUNC
 
 
@@ -50,6 +65,9 @@ static void init_libs()
 #endif
 #ifdef HAS_VORBISFILE
     vorbisfile_handle = LoadLibrary("vorbisfile.dll");
+#endif
+#ifdef HAS_FLAC
+    flac_handle = LoadLibrary("libFLAC.dll");
 #endif
 
 #elif defined(HAS_DLOPEN)
@@ -76,6 +94,9 @@ static void init_libs()
 #ifdef HAS_VORBISFILE
     vorbisfile_handle = dlopen("libvorbisfile"VER_PREFIX".3"VER_POSTFIX, RTLD_NOW);
 #endif
+#ifdef HAS_FLAC
+    flac_handle = dlopen("libFLAC"VER_PREFIX".8"VER_POSTFIX, RTLD_NOW);
+#endif
 
 #undef VER_PREFIX
 #undef VER_POSTFIX
@@ -88,6 +109,9 @@ static void init_libs()
 #endif
 #ifdef HAS_VORBISFILE
     vorbisfile_handle = (void*)0xDEADBEEF;
+#endif
+#ifdef HAS_FLAC
+    flac_handle = (void*)0xD00FBA11;
 #endif
 #endif
 
@@ -116,6 +140,31 @@ static void init_libs()
         if(!pov_open_callbacks || !pov_clear || !pov_info || !pov_read ||
            !pov_pcm_seek)
             vorbisfile_handle = NULL;
+    }
+#endif
+#ifdef HAS_FLAC
+    if(flac_handle)
+    {
+        LOAD_FUNC(flac_handle, FLAC__stream_decoder_get_state);
+        LOAD_FUNC(flac_handle, FLAC__stream_decoder_get_channels);
+        LOAD_FUNC(flac_handle, FLAC__stream_decoder_init_file);
+        LOAD_FUNC(flac_handle, FLAC__stream_decoder_finish);
+        LOAD_FUNC(flac_handle, FLAC__stream_decoder_new);
+        LOAD_FUNC(flac_handle, FLAC__stream_decoder_get_blocksize);
+        LOAD_FUNC(flac_handle, FLAC__stream_decoder_get_bits_per_sample);
+        LOAD_FUNC(flac_handle, FLAC__stream_decoder_seek_absolute);
+        LOAD_FUNC(flac_handle, FLAC__stream_decoder_delete);
+        LOAD_FUNC(flac_handle, FLAC__stream_decoder_get_sample_rate);
+        LOAD_FUNC(flac_handle, FLAC__stream_decoder_process_single);
+        LOAD_FUNC(flac_handle, FLAC__stream_decoder_init_stream);
+        if(!pFLAC__stream_decoder_get_state || !pFLAC__stream_decoder_get_channels ||
+           !pFLAC__stream_decoder_init_file || !pFLAC__stream_decoder_finish ||
+           !pFLAC__stream_decoder_new || !pFLAC__stream_decoder_get_blocksize ||
+           !pFLAC__stream_decoder_get_bits_per_sample ||
+           !pFLAC__stream_decoder_seek_absolute || !pFLAC__stream_decoder_delete ||
+           !pFLAC__stream_decoder_get_sample_rate ||
+           !pFLAC__stream_decoder_process_single || !pFLAC__stream_decoder_init_stream)
+            flac_handle = NULL;
     }
 #endif
 

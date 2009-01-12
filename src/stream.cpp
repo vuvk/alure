@@ -835,6 +835,235 @@ struct oggStream : public nullStream {
 };
 #endif
 
+#ifdef HAS_FLAC
+struct flacStream : public alureStream {
+    FLAC__StreamDecoder *flacFile;
+    ALenum format;
+    ALuint samplerate;
+    ALuint blockAlign;
+    MemDataInfo memInfo;
+
+    std::vector<ALubyte> initialData;
+
+    ALubyte *outBytes;
+    ALuint outLen;
+    ALuint outTotal;
+
+    virtual bool IsValid()
+    { return flacFile != NULL; }
+
+    virtual bool GetFormat(ALenum *format, ALuint *frequency, ALuint *blockalign)
+    {
+        if(!this->format)
+            return false;
+
+        *format = this->format;
+        *frequency = samplerate;
+        *blockalign = blockAlign;
+        return true;
+    }
+
+    virtual ALuint GetData(ALubyte *data, ALuint bytes)
+    {
+        bytes -= bytes%blockAlign;
+
+        outBytes = data;
+        outTotal = 0;
+        outLen = bytes;
+
+        if(initialData.size() > 0)
+        {
+            ALuint rem = std::min(initialData.size(), bytes);
+            memcpy(data, &initialData[0], rem);
+            outTotal += rem;
+            initialData.erase(initialData.begin(), initialData.begin()+rem);
+        }
+
+        while(outTotal < bytes)
+        {
+            if(pFLAC__stream_decoder_process_single(flacFile) == false ||
+               pFLAC__stream_decoder_get_state(flacFile) == FLAC__STREAM_DECODER_END_OF_STREAM)
+                break;
+        }
+
+        return outTotal;
+    }
+
+    virtual bool Rewind()
+    {
+        if(pFLAC__stream_decoder_seek_absolute(flacFile, 0) != false)
+            return true;
+
+        SetError("Seek failed");
+        return false;
+    }
+
+    flacStream(const char *fname)
+      : flacFile(NULL)
+    {
+        flacFile = pFLAC__stream_decoder_new();
+        if(flacFile)
+        {
+            if(pFLAC__stream_decoder_init_file(flacFile, fname, WriteCallback, MetadataCallback, ErrorCallback, this) == FLAC__STREAM_DECODER_INIT_STATUS_OK)
+            {
+                if(InitFlac())
+                {
+                    // all ok
+                    return;
+                }
+
+                pFLAC__stream_decoder_finish(flacFile);
+            }
+            pFLAC__stream_decoder_delete(flacFile);
+            flacFile = NULL;
+        }
+    }
+    flacStream(const MemDataInfo &memData)
+      : flacFile(NULL), memInfo(memData)
+    {
+        flacFile = pFLAC__stream_decoder_new();
+        if(flacFile)
+        {
+            if(pFLAC__stream_decoder_init_stream(flacFile, ReadCallback, SeekCallback, TellCallback, LengthCallback, EofCallback, WriteCallback, MetadataCallback, ErrorCallback, this) == FLAC__STREAM_DECODER_INIT_STATUS_OK)
+            {
+                if(InitFlac())
+                {
+                    // all ok
+                    return;
+                }
+
+                pFLAC__stream_decoder_finish(flacFile);
+            }
+            pFLAC__stream_decoder_delete(flacFile);
+            flacFile = NULL;
+        }
+    }
+
+    virtual ~flacStream()
+    {
+        if(flacFile)
+        {
+            pFLAC__stream_decoder_finish(flacFile);
+            pFLAC__stream_decoder_delete(flacFile);
+            flacFile = NULL;
+        }
+    }
+
+private:
+    bool InitFlac()
+    {
+        outLen = 0;
+        outTotal = 0;
+        while(initialData.size() == 0)
+        {
+            if(pFLAC__stream_decoder_process_single(flacFile) == false ||
+               pFLAC__stream_decoder_get_state(flacFile) == FLAC__STREAM_DECODER_END_OF_STREAM)
+                break;
+        }
+
+        if(initialData.size() > 0)
+        {
+            blockAlign = pFLAC__stream_decoder_get_blocksize(flacFile)*
+                         pFLAC__stream_decoder_get_channels(flacFile)*
+                         pFLAC__stream_decoder_get_bits_per_sample(flacFile)/8;
+            samplerate = pFLAC__stream_decoder_get_sample_rate(flacFile);
+            format = alureGetSampleFormat(pFLAC__stream_decoder_get_channels(flacFile),
+                                          pFLAC__stream_decoder_get_bits_per_sample(flacFile), 0);
+            return true;
+        }
+        return false;
+    }
+
+    static FLAC__StreamDecoderWriteStatus WriteCallback(const FLAC__StreamDecoder*, const FLAC__Frame *frame, const FLAC__int32 *const buffer[], void *client_data)
+    {
+        flacStream *This = static_cast<flacStream*>(client_data);
+        ALubyte *data = This->outBytes + This->outTotal;
+        int i = 0;
+
+        if(This->outLen == 0)
+        {
+            This->outLen = frame->header.blocksize*frame->header.channels*
+                           frame->header.bits_per_sample/8;
+            This->initialData.resize(This->outLen);
+            data = &This->initialData[0];
+        }
+
+        while(This->outTotal < This->outLen)
+        {
+            for(ALuint c = 0;c < frame->header.channels;c++)
+            {
+                if(frame->header.bits_per_sample == 8)
+                    *((ALubyte*)data) = buffer[c][i]+128;
+                else if(frame->header.bits_per_sample == 16)
+                    *((ALshort*)data) = buffer[c][i];
+                This->outTotal += frame->header.bits_per_sample/8;
+                data += frame->header.bits_per_sample/8;
+            }
+            i++;
+        }
+
+        return FLAC__STREAM_DECODER_WRITE_STATUS_CONTINUE;
+    }
+    static void MetadataCallback(const FLAC__StreamDecoder*,const FLAC__StreamMetadata*,void*)
+    {
+    }
+    static void ErrorCallback(const FLAC__StreamDecoder*,FLAC__StreamDecoderErrorStatus,void*)
+    {
+    }
+
+    static FLAC__StreamDecoderReadStatus ReadCallback(const FLAC__StreamDecoder*, FLAC__byte buffer[], size_t *bytes, void *client_data)
+    {
+        MemDataInfo *data = &static_cast<flacStream*>(client_data)->memInfo;
+
+        if(*bytes <= 0)
+            return FLAC__STREAM_DECODER_READ_STATUS_ABORT;
+
+        if(*bytes > data->Length - data->Pos)
+            *bytes = data->Length - data->Pos;
+        if(*bytes == 0)
+            return FLAC__STREAM_DECODER_READ_STATUS_END_OF_STREAM;
+
+        memcpy(buffer, &data->Data[data->Pos], *bytes);
+        data->Pos += *bytes;
+
+        return FLAC__STREAM_DECODER_READ_STATUS_CONTINUE;
+    }
+    static FLAC__StreamDecoderSeekStatus SeekCallback(const FLAC__StreamDecoder*, FLAC__uint64 absolute_byte_offset, void *client_data)
+    {
+        MemDataInfo *data = &static_cast<flacStream*>(client_data)->memInfo;
+
+        if(absolute_byte_offset > data->Length)
+            return FLAC__STREAM_DECODER_SEEK_STATUS_ERROR;
+        data->Pos = absolute_byte_offset;
+        return FLAC__STREAM_DECODER_SEEK_STATUS_OK;
+    }
+    static FLAC__StreamDecoderTellStatus TellCallback(const FLAC__StreamDecoder*, FLAC__uint64 *absolute_byte_offset, void *client_data)
+    {
+        MemDataInfo *data = &static_cast<flacStream*>(client_data)->memInfo;
+
+        *absolute_byte_offset = (FLAC__uint64)data->Pos;
+        return FLAC__STREAM_DECODER_TELL_STATUS_OK;
+    }
+    static FLAC__StreamDecoderLengthStatus LengthCallback(const FLAC__StreamDecoder*, FLAC__uint64 *stream_length, void *client_data)
+    {
+        MemDataInfo *data = &static_cast<flacStream*>(client_data)->memInfo;
+
+        *stream_length = (FLAC__uint64)data->Length;
+        return FLAC__STREAM_DECODER_LENGTH_STATUS_OK;
+    }
+    static FLAC__bool EofCallback(const FLAC__StreamDecoder*, void *client_data)
+    {
+        MemDataInfo *data = &static_cast<flacStream*>(client_data)->memInfo;
+        return (data->Pos >= data->Length) ? true : false;
+    }
+};
+#else
+struct flacStream : public nullStream {
+    flacStream(const char*){}
+    flacStream(const MemDataInfo&){}
+};
+#endif
+
 
 template <typename T>
 alureStream *create_stream(const T &fdata)
@@ -865,6 +1094,11 @@ alureStream *create_stream(const T &fdata)
 
     // Try libVorbisFile
     stream.reset(new oggStream(fdata));
+    if(stream->IsValid())
+        return stream.release();
+
+    // Try libFLAC
+    stream.reset(new flacStream(fdata));
     if(stream->IsValid())
         return stream.release();
 

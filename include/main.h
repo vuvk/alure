@@ -10,6 +10,9 @@
 #ifdef HAS_VORBISFILE
 #include <vorbis/vorbisfile.h>
 #endif
+#ifdef HAS_FLAC
+#include <FLAC/all.h>
+#endif
 
 #ifdef HAVE_WINDOWS_H
 
@@ -57,6 +60,21 @@ MAKE_FUNC(ov_clear);
 MAKE_FUNC(ov_info);
 MAKE_FUNC(ov_read);
 MAKE_FUNC(ov_pcm_seek);
+#endif
+#ifdef HAS_FLAC
+extern void *flac_handle;
+MAKE_FUNC(FLAC__stream_decoder_get_state);
+MAKE_FUNC(FLAC__stream_decoder_get_channels);
+MAKE_FUNC(FLAC__stream_decoder_init_file);
+MAKE_FUNC(FLAC__stream_decoder_finish);
+MAKE_FUNC(FLAC__stream_decoder_new);
+MAKE_FUNC(FLAC__stream_decoder_get_blocksize);
+MAKE_FUNC(FLAC__stream_decoder_get_bits_per_sample);
+MAKE_FUNC(FLAC__stream_decoder_seek_absolute);
+MAKE_FUNC(FLAC__stream_decoder_delete);
+MAKE_FUNC(FLAC__stream_decoder_get_sample_rate);
+MAKE_FUNC(FLAC__stream_decoder_process_single);
+MAKE_FUNC(FLAC__stream_decoder_init_stream);
 #endif
 #undef MAKE_FUNC
 
