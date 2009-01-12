@@ -10,9 +10,6 @@
 #ifdef HAS_VORBISFILE
 #include <vorbis/vorbisfile.h>
 #endif
-#ifdef HAS_MPG123
-#include <mpg123.h>
-#endif
 
 #ifdef HAVE_WINDOWS_H
 
@@ -60,20 +57,6 @@ MAKE_FUNC(ov_clear);
 MAKE_FUNC(ov_info);
 MAKE_FUNC(ov_read);
 MAKE_FUNC(ov_pcm_seek);
-#endif
-#ifdef HAS_MPG123
-extern void *mpg123_hdl;
-MAKE_FUNC(mpg123_init);
-MAKE_FUNC(mpg123_new);
-MAKE_FUNC(mpg123_open_64);
-MAKE_FUNC(mpg123_open_feed);
-MAKE_FUNC(mpg123_delete);
-MAKE_FUNC(mpg123_decode);
-MAKE_FUNC(mpg123_read);
-MAKE_FUNC(mpg123_getformat);
-MAKE_FUNC(mpg123_format_none);
-MAKE_FUNC(mpg123_format);
-MAKE_FUNC(mpg123_seek_64);
 #endif
 #undef MAKE_FUNC
 

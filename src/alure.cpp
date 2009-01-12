@@ -33,20 +33,6 @@ MAKE_FUNC(ov_info);
 MAKE_FUNC(ov_read);
 MAKE_FUNC(ov_pcm_seek);
 #endif
-#ifdef HAS_MPG123
-void *mpg123_hdl;
-MAKE_FUNC(mpg123_init);
-MAKE_FUNC(mpg123_new);
-MAKE_FUNC(mpg123_open_64);
-MAKE_FUNC(mpg123_open_feed);
-MAKE_FUNC(mpg123_delete);
-MAKE_FUNC(mpg123_decode);
-MAKE_FUNC(mpg123_read);
-MAKE_FUNC(mpg123_format_none);
-MAKE_FUNC(mpg123_getformat);
-MAKE_FUNC(mpg123_format);
-MAKE_FUNC(mpg123_seek_64);
-#endif
 #undef MAKE_FUNC
 
 
@@ -64,9 +50,6 @@ static void init_libs()
 #endif
 #ifdef HAS_VORBISFILE
     vorbisfile_handle = LoadLibrary("vorbisfile.dll");
-#endif
-#ifdef HAS_MPG123
-    mpg123_hdl = LoadLibrary("mpg123.dll");
 #endif
 
 #elif defined(HAS_DLOPEN)
@@ -93,9 +76,6 @@ static void init_libs()
 #ifdef HAS_VORBISFILE
     vorbisfile_handle = dlopen("libvorbisfile"VER_PREFIX".3"VER_POSTFIX, RTLD_NOW);
 #endif
-#ifdef HAS_MPG123
-    mpg123_hdl = dlopen("libmpg123"VER_PREFIX".0"VER_POSTFIX, RTLD_NOW);
-#endif
 
 #undef VER_PREFIX
 #undef VER_POSTFIX
@@ -108,9 +88,6 @@ static void init_libs()
 #endif
 #ifdef HAS_VORBISFILE
     vorbisfile_handle = (void*)0xDEADBEEF;
-#endif
-#ifdef HAS_MPG123
-    mpg123_hdl = (void*)0xD00FBA11;
 #endif
 #endif
 
@@ -139,27 +116,6 @@ static void init_libs()
         if(!pov_open_callbacks || !pov_clear || !pov_info || !pov_read ||
            !pov_pcm_seek)
             vorbisfile_handle = NULL;
-    }
-#endif
-#ifdef HAS_MPG123
-    if(mpg123_hdl)
-    {
-        LOAD_FUNC(mpg123_hdl, mpg123_init);
-        LOAD_FUNC(mpg123_hdl, mpg123_new);
-        LOAD_FUNC(mpg123_hdl, mpg123_open_64);
-        LOAD_FUNC(mpg123_hdl, mpg123_open_feed);
-        LOAD_FUNC(mpg123_hdl, mpg123_decode);
-        LOAD_FUNC(mpg123_hdl, mpg123_read);
-        LOAD_FUNC(mpg123_hdl, mpg123_getformat);
-        LOAD_FUNC(mpg123_hdl, mpg123_format_none);
-        LOAD_FUNC(mpg123_hdl, mpg123_format);
-        LOAD_FUNC(mpg123_hdl, mpg123_delete);
-        LOAD_FUNC(mpg123_hdl, mpg123_seek_64);
-        if(!pmpg123_init || !pmpg123_new || !pmpg123_open_64 ||
-           !pmpg123_open_feed || !pmpg123_decode || !pmpg123_read ||
-           !pmpg123_getformat || !pmpg123_format_none || !pmpg123_format ||
-           !pmpg123_delete || !pmpg123_seek_64 || pmpg123_init() != MPG123_OK)
-            mpg123_hdl = NULL;
     }
 #endif
 

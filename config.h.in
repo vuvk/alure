@@ -21,6 +21,3 @@
 
 /* Define if we have vorbisfile */
 #cmakedefine HAS_VORBISFILE
-
-/* Define if we have mpg123 */
-#cmakedefine HAS_MPG123
