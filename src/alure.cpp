@@ -348,7 +348,13 @@ ALURE_API ALboolean ALURE_APIENTRY alureShutdownDevice(void)
         return AL_FALSE;
     }
 
-    alcMakeContextCurrent(NULL);
+    if(alcMakeContextCurrent(NULL) == ALC_FALSE)
+    {
+        alcGetError(NULL);
+        SetError("Failed to unset current context");
+        return AL_FALSE;
+    }
+
     alcDestroyContext(context);
     alcCloseDevice(device);
     alcGetError(NULL);
