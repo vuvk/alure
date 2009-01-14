@@ -948,6 +948,10 @@ struct flacStream : public alureStream {
 private:
     bool InitFlac()
     {
+        // We need to decode some data to be able to get the channel count, bit
+        // depth, and sample rate. It also ensures the file has FLAC data, as
+        // the FLAC__stream_decoder_init_* functions can succeed on non-FLAC
+        // Ogg files.
         outLen = 0;
         outTotal = 0;
         while(initialData.size() == 0)
