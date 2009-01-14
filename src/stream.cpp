@@ -904,6 +904,8 @@ struct flacStream : public alureStream {
     flacStream(const char *fname)
       : flacFile(NULL)
     {
+        if(!flac_handle) return;
+
         flacFile = pFLAC__stream_decoder_new();
         if(flacFile)
         {
@@ -924,6 +926,8 @@ struct flacStream : public alureStream {
     flacStream(const MemDataInfo &memData)
       : flacFile(NULL), memInfo(memData)
     {
+        if(!flac_handle) return;
+
         flacFile = pFLAC__stream_decoder_new();
         if(flacFile)
         {
