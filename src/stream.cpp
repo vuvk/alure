@@ -560,11 +560,7 @@ struct sndStream : public alureStream {
 
     virtual bool GetFormat(ALenum *format, ALuint *frequency, ALuint *blockalign)
     {
-        ALenum fmt = alureGetSampleFormat(sndInfo.channels, 16, 0);
-        if(fmt == AL_NONE)
-            return false;
-
-        *format = fmt;
+        *format = alureGetSampleFormat(sndInfo.channels, 16, 0);
         *frequency = sndInfo.samplerate;
         *blockalign = sndInfo.channels*2;
         return true;
@@ -698,11 +694,7 @@ struct oggStream : public alureStream {
         vorbis_info *info = pov_info(oggFile, -1);
         if(!info) return false;
 
-        ALenum fmt = alureGetSampleFormat(info->channels, 16, 0);
-        if(fmt == AL_NONE)
-            return false;
-
-        *format = fmt;
+        *format = alureGetSampleFormat(info->channels, 16, 0);
         *frequency = info->rate;
         *blockalign = info->channels*2;
         return true;
@@ -854,9 +846,6 @@ struct flacStream : public alureStream {
 
     virtual bool GetFormat(ALenum *format, ALuint *frequency, ALuint *blockalign)
     {
-        if(!this->format)
-            return false;
-
         *format = this->format;
         *frequency = samplerate;
         *blockalign = blockAlign;
@@ -1145,6 +1134,22 @@ static alureStream *InitStream(alureStream *instream, ALsizei chunkLength, ALsiz
     if(!stream->GetFormat(&format, &freq, &blockAlign))
     {
         SetError("Unsupported format");
+        return NULL;
+    }
+
+    if(format == AL_NONE)
+    {
+        SetError("No valid format");
+        return NULL;
+    }
+    if(blockAlign == 0)
+    {
+        SetError("Invalid block size");
+        return NULL;
+    }
+    if(freq == 0)
+    {
+        SetError("Invalid sample rate");
         return NULL;
     }
 
