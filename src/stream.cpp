@@ -959,8 +959,7 @@ private:
 
         if(initialData.size() > 0)
         {
-            blockAlign = pFLAC__stream_decoder_get_blocksize(flacFile)*
-                         pFLAC__stream_decoder_get_channels(flacFile)*
+            blockAlign = pFLAC__stream_decoder_get_channels(flacFile) *
                          pFLAC__stream_decoder_get_bits_per_sample(flacFile)/8;
             samplerate = pFLAC__stream_decoder_get_sample_rate(flacFile);
             format = alureGetSampleFormat(pFLAC__stream_decoder_get_channels(flacFile),
