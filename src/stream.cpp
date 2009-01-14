@@ -1133,7 +1133,7 @@ static alureStream *InitStream(alureStream *instream, ALsizei chunkLength, ALsiz
 
     if(!stream->GetFormat(&format, &freq, &blockAlign))
     {
-        SetError("Unsupported format");
+        SetError("Could not get stream format");
         return NULL;
     }
 
@@ -1475,7 +1475,7 @@ ALURE_API ALsizei ALURE_APIENTRY alureBufferDataFromStream(alureStream *stream, 
 
     if(!stream->GetFormat(&format, &freq, &blockAlign))
     {
-        SetError("Unsupported format");
+        SetError("Could not get stream format");
         return -1;
     }
 

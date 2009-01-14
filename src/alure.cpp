@@ -472,8 +472,9 @@ ALURE_API ALenum ALURE_APIENTRY alureGetSampleFormat(ALuint channels, ALuint bit
  *              function to make sure the returned format is valid for the
  *              current AL context (eg. don't return AL_FORMAT_QUAD16 if the
  *              AL_EXT_MCFORMATS extension isn't available). Returning 0 for
- *              blocksize will cause a failure. Returning AL_FALSE indicates
- *              failure. This callback is required.
+ *              samplerate or blocksize, or returning AL_NONE for format, will
+ *              cause a failure. Returning AL_FALSE indicates failure. This
+ *              callback is required.
  * decode - This callback is called to get more decoded data. Up to the
  *          specified amount of bytes should be written to the data pointer.
  *          The number of bytes written should be a multiple of the block size,
