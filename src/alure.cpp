@@ -551,7 +551,7 @@ ALURE_API ALboolean ALURE_APIENTRY alureSleep(ALfloat duration)
 
     struct timespec t, remainingTime;
     t.tv_sec = (time_t)seconds;
-    t.tv_nsec = (long)(rest*1000000000);
+    t.tv_nsec = (long)(rest*1000000)*1000;
 
     while(nanosleep(&t, &remainingTime) < 0 && errno == EINTR)
         t = remainingTime;
