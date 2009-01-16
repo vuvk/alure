@@ -38,6 +38,9 @@ extern "C" {
 
 typedef struct alureStream alureStream;
 
+ALURE_API void ALURE_APIENTRY alureGetVersion(ALuint *major, ALuint *minor);
+ALURE_API const ALchar* ALURE_APIENTRY alureGetErrorString(void);
+
 ALURE_API const ALCchar** ALURE_APIENTRY alureGetDeviceNames(ALCboolean all, ALCsizei *count);
 ALURE_API ALvoid ALURE_APIENTRY alureFreeDeviceNames(const ALCchar **names);
 
@@ -45,8 +48,6 @@ ALURE_API ALboolean ALURE_APIENTRY alureInitDevice(const ALCchar *name, const AL
 ALURE_API ALboolean ALURE_APIENTRY alureShutdownDevice(void);
 
 ALURE_API ALenum ALURE_APIENTRY alureGetSampleFormat(ALuint channels, ALuint bits, ALuint floatbits);
-
-ALURE_API const ALchar* ALURE_APIENTRY alureGetErrorString(void);
 
 ALURE_API ALboolean ALURE_APIENTRY alureSleep(ALfloat duration);
 
@@ -75,12 +76,13 @@ ALURE_API ALboolean ALURE_APIENTRY alureInstallDecodeCallbacks(ALint index,
     void      (*close)(void*));
 
 
+typedef void            (ALURE_APIENTRY *LPALUREGETVERSION)(ALuint*,ALuint*);
+typedef const ALchar*   (ALURE_APIENTRY *LPALUREGETERRORSTRING)(void);
 typedef const ALCchar** (ALURE_APIENTRY *LPALUREGETDEVICENAMES)(ALCboolean,ALCsizei*);
 typedef ALvoid          (ALURE_APIENTRY *LPALUREFREEDEVICENAMES)(const ALCchar**);
 typedef ALboolean       (ALURE_APIENTRY *LPALUREINITDEVICE)(const ALCchar*,const ALCint*);
 typedef ALboolean       (ALURE_APIENTRY *LPALURESHUTDOWNDEVICE)(void);
 typedef ALenum          (ALURE_APIENTRY *LPALUREGETSAMPLEFORMAT)(ALuint,ALuint,ALuint);
-typedef const ALchar*   (ALURE_APIENTRY *LPALUREGETERRORSTRING)(void);
 typedef ALboolean       (ALURE_APIENTRY *LPALURESLEEP)(ALfloat);
 typedef ALuint          (ALURE_APIENTRY *LPALURECREATEBUFFERFROMFILE)(const ALchar*);
 typedef ALuint          (ALURE_APIENTRY *LPALURECREATEBUFFERFROMMEMORY)(const ALubyte*,ALsizei);

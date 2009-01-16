@@ -1,3 +1,7 @@
+/* Define to the version of the library being built */
+#define ALURE_VER_MAJOR ${LIB_MAJOR_VERSION}
+#define ALURE_VER_MINOR ${LIB_MINOR_VERSION}
+
 /* Define if we have GCC's visibility attribute */
 #cmakedefine HAVE_GCC_VISIBILITY
 

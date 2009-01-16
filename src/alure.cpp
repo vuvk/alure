@@ -190,6 +190,19 @@ void SetError(const char *err)
 
 extern "C" {
 
+/* Function: alureGetVersion
+ *
+ * Stores the major and minor version of the library. If either major or minor
+ * are NULL, that value is not provided.
+ */
+ALURE_API void ALURE_APIENTRY alureGetVersion(ALuint *major, ALuint *minor)
+{
+    init_alure();
+
+    if(major) *major = ALURE_VER_MAJOR;
+    if(minor) *minor = ALURE_VER_MINOR;
+}
+
 /* Function: alureGetErrorString
  *
  * Returns a string describing the last error encountered.
