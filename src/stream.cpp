@@ -10,6 +10,9 @@
 #include <vector>
 #include <memory>
 #include <string>
+#include <istream>
+#include <fstream>
+#include <iostream>
 
 
 struct nullStream : public alureStream {
@@ -89,21 +92,13 @@ struct customStream : public alureStream {
 };
 
 struct wavStream : public alureStream {
-    void *wavFile;
+    std::istream *wavFile;
     ALenum format;
     int samplerate;
     int blockAlign;
     int sampleSize;
     long dataStart;
     size_t remLen;
-    MemDataInfo memInfo;
-
-    struct {
-        size_t (*read)(void*,size_t,size_t,void*);
-        int    (*seek)(void*,long,int);
-        int    (*close)(void*);
-        long   (*tell)(void*);
-    } fio;
 
     virtual bool IsValid()
     { return wavFile != NULL; }
@@ -123,21 +118,24 @@ struct wavStream : public alureStream {
             char b[sizeof(int)];
         } endian = { 1 };
 
-        size_t rem = ((remLen >= bytes) ? bytes : remLen);
-        size_t got = fio.read(data, blockAlign, rem/blockAlign, wavFile) * blockAlign;
+        std::streamsize rem = ((remLen >= bytes) ? bytes : remLen) / blockAlign;
+        wavFile->read(reinterpret_cast<char*>(data), rem*blockAlign);
+
+        std::streamsize got = wavFile->gcount();
+        got -= got%blockAlign;
         remLen -= got;
 
         if(endian.b[0] == 0 && sampleSize > 1)
         {
             if(sampleSize == 2)
-                for(size_t i = 0;i < got;i+=2)
+                for(std::streamsize i = 0;i < got;i+=2)
                 {
                     ALubyte tmp = data[i];
                     data[i] = data[i+1];
                     data[i+1] = tmp;
                 }
             else if(sampleSize == 4)
-                for(size_t i = 0;i < got;i+=4)
+                for(std::streamsize i = 0;i < got;i+=4)
                 {
                     ALubyte tmp = data[i];
                     data[i] = data[i+3];
@@ -153,7 +151,8 @@ struct wavStream : public alureStream {
 
     virtual bool Rewind()
     {
-        if(fio.seek(wavFile, dataStart, SEEK_SET) == dataStart)
+        wavFile->clear();
+        if(wavFile->seekg(dataStart))
             return true;
 
         SetError("Seek failed");
@@ -163,213 +162,115 @@ struct wavStream : public alureStream {
     wavStream(const char *fname)
       : wavFile(NULL), format(0), dataStart(0)
     {
-        FILE *file = fopen(fname, "rb");
-        if(file)
-        {
-            fio.read = read_wrap;
-            fio.seek = seek_wrap;
-            fio.close = close_wrap;
-            fio.tell = tell_wrap;
-            if(!Init(file))
-                fclose(file);
-        }
+        wavFile = new std::ifstream(fname, std::ios_base::in|std::ios_base::binary);
+        Init();
     }
     wavStream(const MemDataInfo &memData)
-      : wavFile(NULL), format(0), dataStart(0), memInfo(memData)
+      : wavFile(NULL), format(0), dataStart(0)
     {
-        fio.read = mem_read;
-        fio.seek = mem_seek;
-        fio.close = NULL;
-        fio.tell = mem_tell;
-        Init(&memInfo);
+        wavFile = new IMemStream(memData);
+        Init();
     }
 
     virtual ~wavStream()
     {
-        if(wavFile && fio.close)
-            fio.close(wavFile);
+        delete wavFile;
         wavFile = NULL;
     }
 
 private:
-    ALuint read_le32(void *ptr)
+    ALuint read_le32()
     {
         ALubyte buffer[4];
-        if(fio.read(buffer, 1, 4, ptr) != 4) return 0;
+        if(!wavFile->read(reinterpret_cast<char*>(buffer), 4)) return 0;
         return buffer[0] | (buffer[1]<<8) | (buffer[2]<<16) | (buffer[3]<<24);
     }
 
-    ALushort read_le16(void *ptr)
+    ALushort read_le16()
     {
         ALubyte buffer[2];
-        if(fio.read(buffer, 1, 2, ptr) != 2) return 0;
+        if(!wavFile->read(reinterpret_cast<char*>(buffer), 2)) return 0;
         return buffer[0] | (buffer[1]<<8);
     }
 
-    bool Init(void *ptr)
+    void Init()
     {
         ALubyte buffer[25];
         int length;
 
-        fio.read(buffer, 1, 12, ptr);
-        if(memcmp(buffer, "RIFF", 4) || memcmp(buffer+8, "WAVE", 4))
-            return false;
+        if(!wavFile->read(reinterpret_cast<char*>(buffer), 12) ||
+           memcmp(buffer, "RIFF", 4) != 0 || memcmp(buffer+8, "WAVE", 4) != 0)
+        {
+            delete wavFile;
+            wavFile = NULL;
+
+            return;
+        }
 
         while(!dataStart || format == AL_NONE)
         {
             char tag[4];
-            if(fio.read(tag, 1, 4, ptr) != 4)
+            if(!wavFile->read(tag, 4))
                 break;
 
             /* read chunk length */
-            length = read_le32(ptr);
+            length = read_le32();
 
             if(memcmp(tag, "fmt ", 4) == 0 && length >= 16)
             {
                 /* Data type (should be 1 for PCM data) */
-                int type = read_le16(ptr);
-                length -= 2;
+                int type = read_le16();
                 if(type != 1)
                     break;
 
                 /* mono or stereo data */
-                int channels = read_le16(ptr);
-                length -= 2;
+                int channels = read_le16();
 
                 /* sample frequency */
-                samplerate = read_le32(ptr);
-                length -= 4;
+                samplerate = read_le32();
 
                 /* skip four bytes */
-                if(fio.read(buffer, 1, 4, ptr) != 4) break;
-                length -= 4;
+                wavFile->ignore(4);
 
                 /* bytes per block */
-                blockAlign = read_le16(ptr);
-                length -= 2;
+                blockAlign = read_le16();
                 if(blockAlign == 0)
                     break;
 
                 /* bits per sample */
-                sampleSize = read_le16(ptr) / 8;
-                length -= 2;
+                sampleSize = read_le16() / 8;
 
                 format = alureGetSampleFormat(channels, sampleSize*8, 0);
+
+                length -= 16;
             }
             else if(memcmp(tag, "data", 4) == 0)
             {
-                dataStart = fio.tell(ptr);
+                dataStart = wavFile->tellg();
                 remLen = length;
             }
 
-            fio.seek(ptr, length, SEEK_CUR);
+            wavFile->seekg(length, std::ios_base::cur);
         }
 
-        if(dataStart > 0 && format != AL_NONE)
+        if(dataStart <= 0 || format == AL_NONE)
         {
-            fio.seek(ptr, dataStart, SEEK_SET);
-            wavFile = ptr;
-            return true;
-        }
-        return false;
-    }
-
-public:
-    // STDIO-style memory callbacks
-    static size_t mem_read(void *ptr, size_t size, size_t nmemb, void *user_data)
-    {
-        MemDataInfo *data = (MemDataInfo*)user_data;
-
-        if(data->Pos+(size*nmemb) > data->Length)
-            nmemb = (data->Length-data->Pos) / size;
-
-        memcpy(ptr, &data->Data[data->Pos], nmemb*size);
-        data->Pos += nmemb*size;
-
-        return nmemb;
-    }
-
-    static int mem_seek(void *user_data, long offset, int whence)
-    {
-        MemDataInfo *data = (MemDataInfo*)user_data;
-        if(whence == SEEK_CUR)
-        {
-            if(offset < 0)
-            {
-                if(-offset > (long)data->Pos)
-                    return -1;
-            }
-            else if(offset+data->Pos > data->Length)
-                return -1;
-            data->Pos += offset;
-        }
-        else if(whence == SEEK_SET)
-        {
-            if(offset < 0 || (unsigned long)offset > data->Length)
-                return -1;
-            data->Pos = offset;
-        }
-        else if(whence == SEEK_END)
-        {
-            if(offset > 0 || -offset > (long)data->Length)
-                return -1;
-            data->Pos = data->Length + offset;
+            delete wavFile;
+            wavFile = NULL;
         }
         else
-            return -1;
-
-        return data->Pos;
+            wavFile->seekg(dataStart);
     }
-
-    static long mem_tell(void *user_data)
-    {
-        MemDataInfo *data = (MemDataInfo*)user_data;
-        return data->Pos;
-    }
-
-
-    static size_t read_wrap(void *ptr, size_t size, size_t nmemb, void *user_data)
-    {
-        FILE *f = (FILE*)user_data;
-        return fread(ptr, size, nmemb, f);
-    }
-
-    static int seek_wrap(void *user_data, long offset, int whence)
-    {
-        FILE *f = (FILE*)user_data;
-        return fseek(f, offset, whence);
-    }
-
-    static int close_wrap(void *user_data)
-    {
-        FILE *f = (FILE*)user_data;
-        return fclose(f);
-    }
-
-    static long tell_wrap(void *user_data)
-    {
-        FILE *f = (FILE*)user_data;
-        return ftell(f);
-    }
-
 };
 
 struct aiffStream : public alureStream {
-    void *aiffFile;
+    std::istream *aiffFile;
     ALenum format;
     int samplerate;
     int blockAlign;
     int sampleSize;
     long dataStart;
     size_t remLen;
-    MemDataInfo memInfo;
-
-    struct {
-        size_t (*read)(void*,size_t,size_t,void*);
-        int    (*seek)(void*,long,int);
-        int    (*close)(void*);
-        long   (*tell)(void*);
-    } fio;
 
     virtual bool IsValid()
     { return aiffFile != NULL; }
@@ -389,21 +290,24 @@ struct aiffStream : public alureStream {
             char b[sizeof(int)];
         } endian = { 1 };
 
-        size_t rem = ((remLen >= bytes) ? bytes : remLen);
-        size_t got = fio.read(data, blockAlign, rem/blockAlign, aiffFile) * blockAlign;
+        std::streamsize rem = ((remLen >= bytes) ? bytes : remLen) / blockAlign;
+        aiffFile->read(reinterpret_cast<char*>(data), rem*blockAlign);
+
+        std::streamsize got = aiffFile->gcount();
+        got -= got%blockAlign;
         remLen -= got;
 
         if(endian.b[0] == 1 && sampleSize > 1)
         {
             if(sampleSize == 2)
-                for(size_t i = 0;i < got;i+=2)
+                for(std::streamsize i = 0;i < got;i+=2)
                 {
                     ALubyte tmp = data[i];
                     data[i] = data[i+1];
                     data[i+1] = tmp;
                 }
             else if(sampleSize == 4)
-                for(size_t i = 0;i < got;i+=4)
+                for(std::streamsize i = 0;i < got;i+=4)
                 {
                     ALubyte tmp = data[i];
                     data[i] = data[i+3];
@@ -419,7 +323,8 @@ struct aiffStream : public alureStream {
 
     virtual bool Rewind()
     {
-        if(fio.seek(aiffFile, dataStart, SEEK_SET) == dataStart)
+        aiffFile->clear();
+        if(aiffFile->seekg(dataStart))
             return true;
 
         SetError("Seek failed");
@@ -429,53 +334,41 @@ struct aiffStream : public alureStream {
     aiffStream(const char *fname)
       : aiffFile(NULL), format(0), dataStart(0)
     {
-        FILE *file = fopen(fname, "rb");
-        if(file)
-        {
-            fio.read = wavStream::read_wrap;
-            fio.seek = wavStream::seek_wrap;
-            fio.close = wavStream::close_wrap;
-            fio.tell = wavStream::tell_wrap;
-            if(!Init(file))
-                fclose(file);
-        }
+        aiffFile = new std::ifstream(fname, std::ios_base::in|std::ios_base::binary);
+        Init();
     }
     aiffStream(const MemDataInfo &memData)
-      : aiffFile(NULL), format(0), dataStart(0), memInfo(memData)
+      : aiffFile(NULL), format(0), dataStart(0)
     {
-        fio.read = wavStream::mem_read;
-        fio.seek = wavStream::mem_seek;
-        fio.close = NULL;
-        fio.tell = wavStream::mem_tell;
-        Init(&memInfo);
+        aiffFile = new IMemStream(memData);
+        Init();
     }
 
     virtual ~aiffStream()
     {
-        if(aiffFile && fio.close)
-            fio.close(aiffFile);
+        delete aiffFile;
         aiffFile = NULL;
     }
 
 private:
-    ALuint read_be32(void *ptr)
+    ALuint read_be32()
     {
         ALubyte buffer[4];
-        if(fio.read(buffer, 1, 4, ptr) != 4) return 0;
+        if(!aiffFile->read(reinterpret_cast<char*>(buffer), 4)) return 0;
         return (buffer[0]<<24) | (buffer[1]<<16) | (buffer[2]<<8) | buffer[3];
     }
 
-    ALushort read_be16(void *ptr)
+    ALushort read_be16()
     {
         ALubyte buffer[2];
-        if(fio.read(buffer, 1, 2, ptr) != 2) return 0;
+        if(!aiffFile->read(reinterpret_cast<char*>(buffer), 2)) return 0;
         return (buffer[0]<<8) | buffer[1];
     }
 
-    ALuint read_be80extended(void *ptr)
+    ALuint read_be80extended()
     {
         ALubyte buffer[10];
-        if (fio.read(buffer, 1, 10, ptr) != 10) return 0;
+        if(!aiffFile->read(reinterpret_cast<char*>(buffer), 10)) return 0;
         ALuint mantissa, last = 0;
         ALubyte exp = buffer[1];
         exp = 30 - exp;
@@ -489,63 +382,66 @@ private:
         return mantissa;
     }
 
-    bool Init(void *ptr)
+    void Init()
     {
         ALubyte buffer[25];
         int length;
 
-        fio.read(buffer, 1, 12, ptr);
-        if(memcmp(buffer, "FORM", 4) || memcmp(buffer+8, "AIFF", 4))
-            return false;
+        if(!aiffFile->read(reinterpret_cast<char*>(buffer), 12) ||
+           memcmp(buffer, "FORM", 4) != 0 || memcmp(buffer+8, "AIFF", 4) != 0)
+        {
+            delete aiffFile;
+            aiffFile = NULL;
+            return;
+        }
 
         while(!dataStart || format == AL_NONE)
         {
             char tag[4];
-            if(fio.read(tag, 1, 4, ptr) != 4)
+            if(!aiffFile->read(tag, 4))
                 break;
 
             /* read chunk length */
-            length = read_be32(ptr);
+            length = read_be32();
 
-            if(memcmp(tag, "COMM", 4) == 0 && length >= 16)
+            if(memcmp(tag, "COMM", 4) == 0 && length >= 18)
             {
                 /* mono or stereo data */
-                int channels = read_be16(ptr);
-                length -= 2;
+                int channels = read_be16();
 
                 /* number of sample frames */
-                fio.read(buffer, 1, 4, ptr);
-                length -= 4;
+                aiffFile->ignore(4);
 
                 /* bits per sample */
-                sampleSize = read_be16(ptr) / 8;
-                length -= 2;
+                sampleSize = read_be16() / 8;
 
                 /* sample frequency */
-                samplerate = read_be80extended(ptr);
-                length -= 10;
+                samplerate = read_be80extended();
 
                 /* block alignment */
                 blockAlign = channels * sampleSize;
 
                 format = alureGetSampleFormat(channels, sampleSize*8, 0);
+
+                length -= 18;
             }
             else if(memcmp(tag, "SSND", 4) == 0)
             {
-                dataStart = fio.tell(ptr) + 8;
+                dataStart = aiffFile->tellg();
+                dataStart += 8;
                 remLen = length - 8;
             }
 
-            fio.seek(ptr, length, SEEK_CUR);
+            aiffFile->seekg(length, std::ios_base::cur);
         }
 
-        if(dataStart > 0 && format != AL_NONE)
+        if(dataStart <= 0 || format == AL_NONE)
         {
-            fio.seek(ptr, dataStart, SEEK_SET);
-            aiffFile = ptr;
-            return true;
+            delete aiffFile;
+            aiffFile = NULL;
         }
-        return false;
+        else
+            aiffFile->seekg(dataStart);
     }
 };
 
@@ -553,7 +449,7 @@ private:
 struct sndStream : public alureStream {
     SNDFILE *sndFile;
     SF_INFO sndInfo;
-    MemDataInfo memInfo;
+    std::istream *fstream;
 
     virtual bool IsValid()
     { return sndFile != NULL; }
@@ -582,23 +478,31 @@ struct sndStream : public alureStream {
     }
 
     sndStream(const char *fname)
-      : sndFile(NULL)
-    {
-        memset(&sndInfo, 0, sizeof(sndInfo));
-        if(sndfile_handle)
-            sndFile = psf_open(fname, SFM_READ, &sndInfo);
-    }
-    sndStream(const MemDataInfo &memData)
-      : sndFile(NULL), memInfo(memData)
+      : sndFile(NULL), fstream(NULL)
     {
         memset(&sndInfo, 0, sizeof(sndInfo));
         if(sndfile_handle)
         {
-            static SF_VIRTUAL_IO memIO = {
-                mem_get_filelen, mem_seek,
-                mem_read, mem_write, mem_tell
+            static SF_VIRTUAL_IO streamIO = {
+                get_filelen, seek,
+                read, write, tell
             };
-            sndFile = psf_open_virtual(&memIO, SFM_READ, &sndInfo, &memInfo);
+            fstream = new std::ifstream(fname, std::ios_base::in|std::ios_base::binary);
+            sndFile = psf_open_virtual(&streamIO, SFM_READ, &sndInfo, fstream);
+        }
+    }
+    sndStream(const MemDataInfo &memData)
+      : sndFile(NULL), fstream(NULL)
+    {
+        memset(&sndInfo, 0, sizeof(sndInfo));
+        if(sndfile_handle)
+        {
+            static SF_VIRTUAL_IO streamIO = {
+                get_filelen, seek,
+                read, write, tell
+            };
+            fstream = new IMemStream(memData);
+            sndFile = psf_open_virtual(&streamIO, SFM_READ, &sndInfo, fstream);
         }
     }
 
@@ -607,70 +511,62 @@ struct sndStream : public alureStream {
         if(sndFile)
             psf_close(sndFile);
         sndFile = NULL;
+
+        delete fstream;
+        fstream = NULL;
     }
 
-    // libSndFile memory callbacks
-    static sf_count_t mem_get_filelen(void *user_data)
+private:
+    // libSndFile iostream callbacks
+    static sf_count_t get_filelen(void *user_data)
     {
-        MemDataInfo *data = (MemDataInfo*)user_data;
-        return data->Length;
+        std::istream *stream = static_cast<std::istream*>(user_data);
+        stream->clear();
+
+        std::streampos len = -1;
+        std::streampos pos = stream->tellg();
+        if(stream->seekg(0, std::ios_base::end))
+        {
+            len = stream->tellg();
+            stream->seekg(pos);
+        }
+
+        return len;
     }
 
-    static sf_count_t mem_seek(sf_count_t offset, int whence, void *user_data)
+    static sf_count_t seek(sf_count_t offset, int whence, void *user_data)
     {
-        MemDataInfo *data = (MemDataInfo*)user_data;
+        std::istream *stream = static_cast<std::istream*>(user_data);
+        stream->clear();
+
         if(whence == SEEK_CUR)
-        {
-            if(offset < 0)
-            {
-                if(-offset > data->Pos)
-                    return -1;
-            }
-            else if(offset+data->Pos > data->Length)
-                return -1;
-            data->Pos += offset;
-        }
+            stream->seekg(offset, std::ios_base::cur);
         else if(whence == SEEK_SET)
-        {
-            if(offset < 0 || offset > data->Length)
-                return -1;
-            data->Pos = offset;
-        }
+            stream->seekg(offset, std::ios_base::beg);
         else if(whence == SEEK_END)
-        {
-            if(offset > 0 || -offset > data->Length)
-                return -1;
-            data->Pos = data->Length + offset;
-        }
+            stream->seekg(offset, std::ios_base::end);
         else
             return -1;
 
-        return data->Pos;
+        return stream->tellg();
     }
 
-    static sf_count_t mem_read(void *ptr, sf_count_t count, void *user_data)
+    static sf_count_t read(void *ptr, sf_count_t count, void *user_data)
     {
-        MemDataInfo *data = (MemDataInfo*)user_data;
-        if(count < 0)
-            return -1;
-
-        if(count > data->Length - data->Pos)
-            count = data->Length - data->Pos;
-        memcpy(ptr, &data->Data[data->Pos], count);
-        data->Pos += count;
-
-        return count;
+        std::istream *stream = static_cast<std::istream*>(user_data);
+        stream->clear();
+        stream->read(static_cast<char*>(ptr), count);
+        return stream->gcount();
     }
 
-    static sf_count_t mem_write(const void*, sf_count_t, void*)
-    {
-        return -1;
-    }
+    static sf_count_t write(const void*, sf_count_t, void*)
+    { return -1; }
 
-    static sf_count_t mem_tell(void *user_data)
+    static sf_count_t tell(void *user_data)
     {
-        MemDataInfo *data = (MemDataInfo*)user_data;
-        return data->Pos;
+        std::istream *stream = static_cast<std::istream*>(user_data);
+        stream->clear();
+        return stream->tellg();
     }
 };
 #else
@@ -684,7 +580,6 @@ struct sndStream : public nullStream {
 struct oggStream : public alureStream {
     OggVorbis_File *oggFile;
     int oggBitstream;
-    MemDataInfo memInfo;
 
     virtual bool IsValid()
     { return oggFile != NULL; }
@@ -737,38 +632,35 @@ struct oggStream : public alureStream {
     oggStream(const char *fname)
       : oggFile(NULL), oggBitstream(0)
     {
-        FILE *f = fopen(fname, "rb");
-        if(f)
-        {
-            const ov_callbacks fileIO = {
-                wavStream::read_wrap,  seek_wrap,
-                wavStream::close_wrap, wavStream::tell_wrap
-            };
-
-            oggFile = new OggVorbis_File;
-            if(!vorbisfile_handle ||
-               pov_open_callbacks(f, oggFile, NULL, 0, fileIO) != 0)
-            {
-                delete oggFile;
-                oggFile = NULL;
-                fclose(f);
-            }
-        }
-    }
-    oggStream(const MemDataInfo &memData)
-      : oggFile(NULL), oggBitstream(0), memInfo(memData)
-    {
-        const ov_callbacks memIO = {
-            wavStream::mem_read, mem_seek,
-            NULL, wavStream::mem_tell
+        std::istream *f = new std::ifstream(fname, std::ios_base::in|std::ios_base::binary);
+        const ov_callbacks streamIO = {
+            read, seek, close, tell
         };
 
         oggFile = new OggVorbis_File;
         if(!vorbisfile_handle ||
-           pov_open_callbacks(&memInfo, oggFile, NULL, 0, memIO) != 0)
+           pov_open_callbacks(f, oggFile, NULL, 0, streamIO) != 0)
         {
             delete oggFile;
             oggFile = NULL;
+            delete f;
+        }
+    }
+    oggStream(const MemDataInfo &memData)
+      : oggFile(NULL), oggBitstream(0)
+    {
+        std::istream *f = new IMemStream(memData);
+        const ov_callbacks streamIO = {
+            read, seek, close, tell
+        };
+
+        oggFile = new OggVorbis_File;
+        if(!vorbisfile_handle ||
+           pov_open_callbacks(f, oggFile, NULL, 0, streamIO) != 0)
+        {
+            delete oggFile;
+            oggFile = NULL;
+            delete f;
         }
     }
 
@@ -781,43 +673,47 @@ struct oggStream : public alureStream {
         }
     }
 
-    // libVorbisFile memory callbacks
-    static int mem_seek(void *user_data, ogg_int64_t offset, int whence)
+private:
+    // libVorbisFile iostream callbacks
+    static int seek(void *user_data, ogg_int64_t offset, int whence)
     {
-        MemDataInfo *data = (MemDataInfo*)user_data;
+        std::istream *stream = static_cast<std::istream*>(user_data);
+        stream->clear();
+
         if(whence == SEEK_CUR)
-        {
-            if(offset < 0)
-            {
-                if(-offset > data->Pos)
-                    return -1;
-            }
-            else if(offset+data->Pos > data->Length)
-                return -1;
-            data->Pos += offset;
-        }
+            stream->seekg(offset, std::ios_base::cur);
         else if(whence == SEEK_SET)
-        {
-            if(offset < 0 || offset > data->Length)
-                return -1;
-            data->Pos = offset;
-        }
+            stream->seekg(offset, std::ios_base::beg);
         else if(whence == SEEK_END)
-        {
-            if(offset > 0 && -offset > data->Length)
-                return -1;
-            data->Pos = data->Length + offset;
-        }
+            stream->seekg(offset, std::ios_base::end);
         else
             return -1;
 
-        return data->Pos;
+        return stream->tellg();
     }
 
-    static int seek_wrap(void *user_data, ogg_int64_t offset, int whence)
+    static size_t read(void *ptr, size_t size, size_t nmemb, void *user_data)
     {
-        FILE *f = (FILE*)user_data;
-        return fseek(f, offset, whence);
+        std::istream *stream = static_cast<std::istream*>(user_data);
+        stream->clear();
+
+        stream->read(static_cast<char*>(ptr), nmemb*size);
+        size_t ret = stream->gcount();
+        return ret/size;
+    }
+
+    static long tell(void *user_data)
+    {
+        std::istream *stream = static_cast<std::istream*>(user_data);
+        stream->clear();
+        return stream->tellg();
+    }
+
+    static int close(void *user_data)
+    {
+        std::istream *stream = static_cast<std::istream*>(user_data);
+        delete stream;
+        return 0;
     }
 };
 #else
@@ -833,7 +729,7 @@ struct flacStream : public alureStream {
     ALenum format;
     ALuint samplerate;
     ALuint blockAlign;
-    MemDataInfo memInfo;
+    std::istream *fstream;
 
     std::vector<ALubyte> initialData;
 
@@ -891,14 +787,15 @@ struct flacStream : public alureStream {
     }
 
     flacStream(const char *fname)
-      : flacFile(NULL)
+      : flacFile(NULL), fstream(NULL)
     {
         if(!flac_handle) return;
 
         flacFile = pFLAC__stream_decoder_new();
         if(flacFile)
         {
-            if(pFLAC__stream_decoder_init_file(flacFile, fname, WriteCallback, MetadataCallback, ErrorCallback, this) == FLAC__STREAM_DECODER_INIT_STATUS_OK)
+            fstream = new std::ifstream(fname, std::ios_base::in|std::ios_base::binary);
+            if(pFLAC__stream_decoder_init_stream(flacFile, ReadCallback, SeekCallback, TellCallback, LengthCallback, EofCallback, WriteCallback, MetadataCallback, ErrorCallback, this) == FLAC__STREAM_DECODER_INIT_STATUS_OK)
             {
                 if(InitFlac())
                 {
@@ -913,13 +810,14 @@ struct flacStream : public alureStream {
         }
     }
     flacStream(const MemDataInfo &memData)
-      : flacFile(NULL), memInfo(memData)
+      : flacFile(NULL), fstream(NULL)
     {
         if(!flac_handle) return;
 
         flacFile = pFLAC__stream_decoder_new();
         if(flacFile)
         {
+            fstream = new IMemStream(memData);
             if(pFLAC__stream_decoder_init_stream(flacFile, ReadCallback, SeekCallback, TellCallback, LengthCallback, EofCallback, WriteCallback, MetadataCallback, ErrorCallback, this) == FLAC__STREAM_DECODER_INIT_STATUS_OK)
             {
                 if(InitFlac())
@@ -943,6 +841,8 @@ struct flacStream : public alureStream {
             pFLAC__stream_decoder_delete(flacFile);
             flacFile = NULL;
         }
+        delete fstream;
+        fstream = NULL;
     }
 
 private:
@@ -1028,48 +928,56 @@ private:
 
     static FLAC__StreamDecoderReadStatus ReadCallback(const FLAC__StreamDecoder*, FLAC__byte buffer[], size_t *bytes, void *client_data)
     {
-        MemDataInfo *data = &static_cast<flacStream*>(client_data)->memInfo;
+        std::istream *stream = static_cast<flacStream*>(client_data)->fstream;
+        stream->clear();
 
         if(*bytes <= 0)
             return FLAC__STREAM_DECODER_READ_STATUS_ABORT;
 
-        if(*bytes > data->Length - data->Pos)
-            *bytes = data->Length - data->Pos;
-        if(*bytes == 0)
+        stream->read(reinterpret_cast<char*>(buffer), *bytes);
+        *bytes = stream->gcount();
+        if(*bytes == 0 && stream->eof())
             return FLAC__STREAM_DECODER_READ_STATUS_END_OF_STREAM;
-
-        memcpy(buffer, &data->Data[data->Pos], *bytes);
-        data->Pos += *bytes;
 
         return FLAC__STREAM_DECODER_READ_STATUS_CONTINUE;
     }
     static FLAC__StreamDecoderSeekStatus SeekCallback(const FLAC__StreamDecoder*, FLAC__uint64 absolute_byte_offset, void *client_data)
     {
-        MemDataInfo *data = &static_cast<flacStream*>(client_data)->memInfo;
+        std::istream *stream = static_cast<flacStream*>(client_data)->fstream;
+        stream->clear();
 
-        if(absolute_byte_offset > data->Length)
+        if(!stream->seekg(absolute_byte_offset))
             return FLAC__STREAM_DECODER_SEEK_STATUS_ERROR;
-        data->Pos = absolute_byte_offset;
         return FLAC__STREAM_DECODER_SEEK_STATUS_OK;
     }
     static FLAC__StreamDecoderTellStatus TellCallback(const FLAC__StreamDecoder*, FLAC__uint64 *absolute_byte_offset, void *client_data)
     {
-        MemDataInfo *data = &static_cast<flacStream*>(client_data)->memInfo;
+        std::istream *stream = static_cast<flacStream*>(client_data)->fstream;
+        stream->clear();
 
-        *absolute_byte_offset = (FLAC__uint64)data->Pos;
+        *absolute_byte_offset = stream->tellg();
         return FLAC__STREAM_DECODER_TELL_STATUS_OK;
     }
     static FLAC__StreamDecoderLengthStatus LengthCallback(const FLAC__StreamDecoder*, FLAC__uint64 *stream_length, void *client_data)
     {
-        MemDataInfo *data = &static_cast<flacStream*>(client_data)->memInfo;
+        std::istream *stream = static_cast<flacStream*>(client_data)->fstream;
+        stream->clear();
 
-        *stream_length = (FLAC__uint64)data->Length;
+        std::streampos pos = stream->tellg();
+        if(stream->seekg(0, std::ios_base::end))
+        {
+            *stream_length = stream->tellg();
+            stream->seekg(pos);
+        }
+
+        if(!stream->good())
+            return FLAC__STREAM_DECODER_LENGTH_STATUS_ERROR;
         return FLAC__STREAM_DECODER_LENGTH_STATUS_OK;
     }
     static FLAC__bool EofCallback(const FLAC__StreamDecoder*, void *client_data)
     {
-        MemDataInfo *data = &static_cast<flacStream*>(client_data)->memInfo;
-        return (data->Pos >= data->Length) ? true : false;
+        std::istream *stream = static_cast<flacStream*>(client_data)->fstream;
+        return (stream->eof()) ? true : false;
     }
 };
 #else
