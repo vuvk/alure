@@ -15,6 +15,52 @@
 #include <iostream>
 
 
+static inline ALuint read_le32(std::istream *file)
+{
+    ALubyte buffer[4];
+    if(!file->read(reinterpret_cast<char*>(buffer), 4)) return 0;
+    return buffer[0] | (buffer[1]<<8) | (buffer[2]<<16) | (buffer[3]<<24);
+}
+
+static inline ALushort read_le16(std::istream *file)
+{
+    ALubyte buffer[2];
+    if(!file->read(reinterpret_cast<char*>(buffer), 2)) return 0;
+    return buffer[0] | (buffer[1]<<8);
+}
+
+static inline ALuint read_be32(std::istream *file)
+{
+    ALubyte buffer[4];
+    if(!file->read(reinterpret_cast<char*>(buffer), 4)) return 0;
+    return (buffer[0]<<24) | (buffer[1]<<16) | (buffer[2]<<8) | buffer[3];
+}
+
+static inline ALushort read_be16(std::istream *file)
+{
+    ALubyte buffer[2];
+    if(!file->read(reinterpret_cast<char*>(buffer), 2)) return 0;
+    return (buffer[0]<<8) | buffer[1];
+}
+
+static inline ALuint read_be80extended(std::istream *file)
+{
+    ALubyte buffer[10];
+    if(!file->read(reinterpret_cast<char*>(buffer), 10)) return 0;
+    ALuint mantissa, last = 0;
+    ALubyte exp = buffer[1];
+    exp = 30 - exp;
+    mantissa = (buffer[2]<<24) | (buffer[3]<<16) | (buffer[4]<<8) | buffer[5];
+    while (exp--)
+    {
+        last = mantissa;
+        mantissa >>= 1;
+    }
+    if((last&1)) mantissa++;
+    return mantissa;
+}
+
+
 struct nullStream : public alureStream {
     virtual bool IsValid() { return false; }
     virtual bool GetFormat(ALenum*,ALuint*,ALuint*) { return false; }
@@ -179,20 +225,6 @@ struct wavStream : public alureStream {
     }
 
 private:
-    ALuint read_le32()
-    {
-        ALubyte buffer[4];
-        if(!wavFile->read(reinterpret_cast<char*>(buffer), 4)) return 0;
-        return buffer[0] | (buffer[1]<<8) | (buffer[2]<<16) | (buffer[3]<<24);
-    }
-
-    ALushort read_le16()
-    {
-        ALubyte buffer[2];
-        if(!wavFile->read(reinterpret_cast<char*>(buffer), 2)) return 0;
-        return buffer[0] | (buffer[1]<<8);
-    }
-
     void Init()
     {
         ALubyte buffer[25];
@@ -214,31 +246,31 @@ private:
                 break;
 
             /* read chunk length */
-            length = read_le32();
+            length = read_le32(wavFile);
 
             if(memcmp(tag, "fmt ", 4) == 0 && length >= 16)
             {
                 /* Data type (should be 1 for PCM data) */
-                int type = read_le16();
+                int type = read_le16(wavFile);
                 if(type != 1)
                     break;
 
                 /* mono or stereo data */
-                int channels = read_le16();
+                int channels = read_le16(wavFile);
 
                 /* sample frequency */
-                samplerate = read_le32();
+                samplerate = read_le32(wavFile);
 
                 /* skip four bytes */
                 wavFile->ignore(4);
 
                 /* bytes per block */
-                blockAlign = read_le16();
+                blockAlign = read_le16(wavFile);
                 if(blockAlign == 0)
                     break;
 
                 /* bits per sample */
-                sampleSize = read_le16() / 8;
+                sampleSize = read_le16(wavFile) / 8;
 
                 format = alureGetSampleFormat(channels, sampleSize*8, 0);
 
@@ -351,37 +383,6 @@ struct aiffStream : public alureStream {
     }
 
 private:
-    ALuint read_be32()
-    {
-        ALubyte buffer[4];
-        if(!aiffFile->read(reinterpret_cast<char*>(buffer), 4)) return 0;
-        return (buffer[0]<<24) | (buffer[1]<<16) | (buffer[2]<<8) | buffer[3];
-    }
-
-    ALushort read_be16()
-    {
-        ALubyte buffer[2];
-        if(!aiffFile->read(reinterpret_cast<char*>(buffer), 2)) return 0;
-        return (buffer[0]<<8) | buffer[1];
-    }
-
-    ALuint read_be80extended()
-    {
-        ALubyte buffer[10];
-        if(!aiffFile->read(reinterpret_cast<char*>(buffer), 10)) return 0;
-        ALuint mantissa, last = 0;
-        ALubyte exp = buffer[1];
-        exp = 30 - exp;
-        mantissa = (buffer[2]<<24) | (buffer[3]<<16) | (buffer[4]<<8) | buffer[5];
-        while (exp--)
-        {
-            last = mantissa;
-            mantissa >>= 1;
-        }
-        if (last & 1) mantissa++;
-        return mantissa;
-    }
-
     void Init()
     {
         ALubyte buffer[25];
@@ -402,21 +403,21 @@ private:
                 break;
 
             /* read chunk length */
-            length = read_be32();
+            length = read_be32(aiffFile);
 
             if(memcmp(tag, "COMM", 4) == 0 && length >= 18)
             {
                 /* mono or stereo data */
-                int channels = read_be16();
+                int channels = read_be16(aiffFile);
 
                 /* number of sample frames */
                 aiffFile->ignore(4);
 
                 /* bits per sample */
-                sampleSize = read_be16() / 8;
+                sampleSize = read_be16(aiffFile) / 8;
 
                 /* sample frequency */
-                samplerate = read_be80extended();
+                samplerate = read_be80extended(aiffFile);
 
                 /* block alignment */
                 blockAlign = channels * sampleSize;
