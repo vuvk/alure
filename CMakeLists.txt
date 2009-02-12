@@ -323,7 +323,7 @@ INSTALL(FILES include/AL/alure.h
         DESTINATION "include/${INCPATH}"
 )
 INSTALL(FILES "${ALURE_BINARY_DIR}/alure.pc"
-        DESTINATION lib/pkgconfig
+        DESTINATION "${LIB_INSTALL_DIR}/pkgconfig"
 )
 
 
