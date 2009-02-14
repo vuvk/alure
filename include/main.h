@@ -135,6 +135,44 @@ public:
     { delete rdbuf(); }
 };
 
+
+struct UserFuncs {
+    void* (*open)(const char *filename, ALuint mode);
+    void (*close)(void *f);
+    ALsizei (*read)(void *f, ALubyte *buf, ALuint count);
+    ALsizei (*write)(void *f, const ALubyte *buf, ALuint count);
+    ALsizei (*seek)(void *f, ALsizei offset, ALint whence);
+};
+extern UserFuncs Funcs;
+
+class FileStreamBuf : public std::streambuf {
+    void *usrFile;
+    UserFuncs fio;
+
+    char buffer[1024];
+
+    virtual int_type underflow();
+    virtual pos_type seekoff(off_type offset, std::ios_base::seekdir whence, std::ios_base::openmode mode = std::ios_base::in | std::ios_base::out);
+    virtual pos_type seekpos(pos_type pos, std::ios_base::openmode mode = std::ios_base::in | std::ios_base::out);
+
+public:
+    FileStreamBuf(const char *filename, ALint mode)
+      : usrFile(NULL), fio(Funcs)
+    { usrFile = fio.open(filename, mode); }
+    virtual ~FileStreamBuf()
+    { if(usrFile) fio.close(usrFile); }
+};
+
+class IFileStream : public std::istream {
+public:
+    IFileStream(const char *filename)
+      : std::istream(new FileStreamBuf(filename, 0))
+    { }
+    virtual ~IFileStream()
+    { delete rdbuf(); }
+};
+
+
 template <typename T>
 alureStream *create_stream(const T &fdata);
 

@@ -208,7 +208,7 @@ struct wavStream : public alureStream {
     wavStream(const char *fname)
       : wavFile(NULL), format(0), dataStart(0)
     {
-        wavFile = new std::ifstream(fname, std::ios_base::in|std::ios_base::binary);
+        wavFile = new IFileStream(fname);
         Init();
     }
     wavStream(const MemDataInfo &memData)
@@ -366,7 +366,7 @@ struct aiffStream : public alureStream {
     aiffStream(const char *fname)
       : aiffFile(NULL), format(0), dataStart(0)
     {
-        aiffFile = new std::ifstream(fname, std::ios_base::in|std::ios_base::binary);
+        aiffFile = new IFileStream(fname);
         Init();
     }
     aiffStream(const MemDataInfo &memData)
@@ -488,7 +488,7 @@ struct sndStream : public alureStream {
                 get_filelen, seek,
                 read, write, tell
             };
-            fstream = new std::ifstream(fname, std::ios_base::in|std::ios_base::binary);
+            fstream = new IFileStream(fname);
             sndFile = psf_open_virtual(&streamIO, SFM_READ, &sndInfo, fstream);
         }
     }
@@ -633,7 +633,7 @@ struct oggStream : public alureStream {
     oggStream(const char *fname)
       : oggFile(NULL), oggBitstream(0)
     {
-        std::istream *f = new std::ifstream(fname, std::ios_base::in|std::ios_base::binary);
+        std::istream *f = new IFileStream(fname);
         const ov_callbacks streamIO = {
             read, seek, close, tell
         };
@@ -795,7 +795,7 @@ struct flacStream : public alureStream {
         flacFile = pFLAC__stream_decoder_new();
         if(flacFile)
         {
-            fstream = new std::ifstream(fname, std::ios_base::in|std::ios_base::binary);
+            fstream = new IFileStream(fname);
             if(pFLAC__stream_decoder_init_stream(flacFile, ReadCallback, SeekCallback, TellCallback, LengthCallback, EofCallback, WriteCallback, MetadataCallback, ErrorCallback, this) == FLAC__STREAM_DECODER_INIT_STATUS_OK)
             {
                 if(InitFlac())
