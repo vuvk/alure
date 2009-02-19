@@ -167,7 +167,9 @@ static void init_libs()
             flac_handle = NULL;
     }
 #endif
-
+#ifdef HAS_GSTREAMER
+    gst_init(NULL, NULL);
+#endif
 #undef LOAD_FUNC
 }
 

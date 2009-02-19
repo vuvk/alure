@@ -28,3 +28,6 @@
 
 /* Define if we have FLAC */
 #cmakedefine HAS_FLAC
+
+/* Define if we have GStreamer */
+#cmakedefine HAS_GSTREAMER

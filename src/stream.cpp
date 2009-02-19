@@ -989,6 +989,245 @@ struct flacStream : public nullStream {
 #endif
 
 
+#ifdef HAS_GSTREAMER
+static const gchar *gst_audio_caps =
+      "audio/x-raw-int, "
+      "endianness = (int) { " G_STRINGIFY(G_BYTE_ORDER) " }, "
+      "signed = (boolean) TRUE, "
+      "width = (int) 16, "
+      "depth = (int) 16, "
+      "rate = (int) [ 1, MAX ], " "channels = (int) [ 1, MAX ]; "
+      "audio/x-raw-int, "
+      "signed = (boolean) FALSE, "
+      "width = (int) 8, "
+      "depth = (int) 8, "
+      "rate = (int) [ 1, MAX ], " "channels = (int) [ 1, MAX ]";
+
+struct gstStream : public alureStream {
+    GstElement *gstPipeline;
+    GstElement *gstSrc, *gstSink;
+
+    ALenum format;
+    ALuint samplerate;
+    ALuint blockAlign;
+    std::istream *fstream;
+
+    std::vector<ALubyte> initialData;
+
+    ALubyte *outBytes;
+    ALuint outLen;
+    ALuint outTotal;
+
+    virtual bool IsValid()
+    { return gstPipeline != NULL; }
+
+    virtual bool GetFormat(ALenum *format, ALuint *frequency, ALuint *blockalign)
+    {
+        *format = this->format;
+        *frequency = samplerate;
+        *blockalign = blockAlign;
+        return true;
+    }
+
+    virtual ALuint GetData(ALubyte *data, ALuint bytes)
+    {
+        bytes -= bytes%blockAlign;
+
+        outTotal = 0;
+        outLen = bytes;
+        outBytes = data;
+
+        if(initialData.size() > 0)
+        {
+            ALuint rem = std::min(initialData.size(), bytes);
+            memcpy(data, &initialData[0], rem);
+            outTotal += rem;
+            initialData.erase(initialData.begin(), initialData.begin()+rem);
+        }
+
+        while(outTotal < outLen && !gst_app_sink_is_eos((GstAppSink*)gstSink))
+            on_new_buffer_from_source(gstSink, false);
+
+        return outTotal;
+    }
+
+    virtual bool Rewind()
+    {
+        if(gst_element_seek_simple(gstSink, GST_FORMAT_TIME,
+                                   static_cast<GstSeekFlags>(GST_SEEK_FLAG_FLUSH|GST_SEEK_FLAG_KEY_UNIT),
+                                   0))
+            return true;
+
+        SetError("Seek failed");
+        return false;
+    }
+
+    gstStream(const char *fname)
+      : gstPipeline(NULL), fstream(new IFileStream(fname))
+    { Init(); }
+    gstStream(const MemDataInfo &memData)
+      : gstPipeline(NULL), fstream(new IMemStream(memData))
+    { Init(); }
+
+    virtual ~gstStream()
+    {
+        if(gstPipeline)
+        {
+            gst_element_set_state(gstPipeline, GST_STATE_NULL);
+            if(gstSrc)
+                gst_object_unref(gstSrc);
+            gstSrc = NULL;
+            if(gstSink)
+                gst_object_unref(gstSink);
+            gstSink = NULL;
+            gst_object_unref(gstPipeline);
+            gstPipeline = NULL;
+        }
+        delete fstream;
+        fstream = NULL;
+    }
+
+private:
+    void Init()
+    {
+        fstream->seekg(0, std::ios_base::end);
+        std::streamsize len = fstream->tellg();
+        fstream->seekg(0, std::ios_base::beg);
+        fstream->clear();
+
+        gchar *string = g_strdup_printf("appsrc name=alureSrc ! decodebin ! audioconvert ! appsink caps=\"%s\" name=alureSink", gst_audio_caps);
+        gstPipeline = gst_parse_launch(string, NULL);
+        g_free(string);
+
+        if(gstPipeline)
+        {
+            gstSrc = gst_bin_get_by_name(GST_BIN(gstPipeline), "alureSrc");
+            gstSink = gst_bin_get_by_name(GST_BIN(gstPipeline), "alureSink");
+
+            if(gstSrc && gstSink)
+            {
+                if(len >= 0)
+                    g_object_set(G_OBJECT(gstSrc), "size", (gint64)len, NULL);
+                g_object_set(G_OBJECT(gstSrc), "stream-type", 1, NULL);
+
+                /* configure the appsrc, we will push a buffer to appsrc when it needs more
+                 * data */
+                g_signal_connect(gstSrc, "need-data", G_CALLBACK(feed_data), this);
+                g_signal_connect(gstSrc, "seek-data", G_CALLBACK(seek_data), this);
+
+                g_object_set(G_OBJECT(gstSink), "max_buffers", 2, "drop", FALSE,
+                                                "sync", FALSE, NULL);
+
+                outTotal = 0;
+                outLen = 0;
+                outBytes = NULL;
+
+                gst_element_set_state(gstPipeline, GST_STATE_PLAYING);
+                on_new_buffer_from_source(gstSink, true);
+            }
+
+            if(initialData.size() == 0)
+            {
+                gst_element_set_state(gstPipeline, GST_STATE_NULL);
+                if(gstSrc)
+                    gst_object_unref(gstSrc);
+                gstSrc = NULL;
+                if(gstSink)
+                    gst_object_unref(gstSink);
+                gstSink = NULL;
+                gst_object_unref(gstPipeline);
+                gstPipeline = NULL;
+            }
+        }
+    }
+
+    void on_new_buffer_from_source(GstElement *elt, bool setformat)
+    {
+        // get the buffer from appsink
+        GstBuffer *buffer = gst_app_sink_pull_buffer(GST_APP_SINK(elt));
+        if(!buffer)
+            return;
+
+        if(setformat)
+        {
+            GstCaps *caps = GST_BUFFER_CAPS(buffer);
+            GST_LOG("caps are %" GST_PTR_FORMAT, caps);
+
+            ALint i;
+            gint rate = 0, channels = 0, depth = 0, width = 0;
+            for(i = gst_caps_get_size(caps)-1;i >= 0;i--)
+            {
+                GstStructure *struc = gst_caps_get_structure(caps, i);
+                if(gst_structure_has_field(struc, "channels"))
+                    gst_structure_get_int(struc, "channels", &channels);
+                if(gst_structure_has_field(struc, "rate"))
+                    gst_structure_get_int(struc, "rate", &rate);
+                if(gst_structure_has_field(struc, "depth"))
+                    gst_structure_get_int(struc, "depth", &depth);
+                if(gst_structure_has_field(struc, "width"))
+                    gst_structure_get_int(struc, "width", &width);
+            }
+
+            if(depth != width)
+            {
+                // No support for padded sample formats
+                depth = width = 0;
+            }
+
+            samplerate = rate;
+            format = alureGetSampleFormat(channels, depth, 0);
+            blockAlign = channels * depth / 8;
+        }
+
+        ALubyte *src_buffer = (ALubyte*)(GST_BUFFER_DATA(buffer));
+        guint size = GST_BUFFER_SIZE(buffer);
+        guint rem = std::min(size, outLen-outTotal);
+        if(rem > 0)
+            memcpy(outBytes+outTotal, src_buffer, rem);
+        outTotal += rem;
+
+        if(size > rem)
+        {
+            size_t start = initialData.size();
+            initialData.resize(start+size-rem);
+            memcpy(&initialData[start], src_buffer+rem, initialData.size()-start);
+        }
+
+        /* we don't need the appsink buffer anymore */
+        gst_buffer_unref(buffer);
+    }
+
+    static void feed_data(GstElement */*appsrc*/, guint size, gstStream *app)
+    {
+        GstBuffer *buffer;
+        GstFlowReturn ret;
+
+        if(!app->fstream->good())
+        {
+            // we are EOS, send end-of-stream
+            g_signal_emit_by_name(app->gstSrc, "end-of-stream", &ret);
+            return;
+        }
+
+        // read any amount of data, we are allowed to return less if we are EOS
+        void *data = g_malloc(size);
+        app->fstream->read(static_cast<char*>(data), size);
+        buffer = gst_app_buffer_new(data, app->fstream->gcount(), g_free, data);
+
+        GST_DEBUG("feed buffer %p, %u", buffer, GST_BUFFER_SIZE(buffer));
+        g_signal_emit_by_name(app->gstSrc, "push-buffer", buffer, &ret);
+    }
+
+    static gboolean seek_data(GstElement */*appsrc*/, guint64 position, gstStream *app)
+    {
+        GST_DEBUG("seek to offset %" G_GUINT64_FORMAT, position);
+        app->fstream->clear();
+        return (app->fstream->seekg(position) ? TRUE : FALSE);
+    }
+};
+#endif
+
+
 template <typename T>
 alureStream *create_stream(const T &fdata)
 {
@@ -1023,6 +1262,11 @@ alureStream *create_stream(const T &fdata)
 
     // Try libFLAC
     stream.reset(new flacStream(fdata));
+    if(stream->IsValid())
+        return stream.release();
+
+    // Try GStreamer
+    stream.reset(new gstStream(fdata));
     if(stream->IsValid())
         return stream.release();
 
