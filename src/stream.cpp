@@ -1056,7 +1056,10 @@ struct gstStream : public alureStream {
         if(gst_element_seek_simple(gstSink, GST_FORMAT_TIME,
                                    static_cast<GstSeekFlags>(GST_SEEK_FLAG_FLUSH|GST_SEEK_FLAG_KEY_UNIT),
                                    0))
+        {
+            initialData.clear();
             return true;
+        }
 
         SetError("Seek failed");
         return false;
