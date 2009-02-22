@@ -1096,7 +1096,9 @@ private:
         fstream->seekg(0, std::ios_base::end);
         std::streamsize len = fstream->tellg();
         fstream->seekg(0, std::ios_base::beg);
-        fstream->clear();
+
+        if(!fstream->good() || len <= 0)
+            return;
 
         gchar *string = g_strdup_printf("appsrc name=alureSrc ! decodebin ! audioconvert ! appsink caps=\"%s\" name=alureSink", gst_audio_caps);
         gstPipeline = gst_parse_launch(string, NULL);
@@ -1109,8 +1111,7 @@ private:
 
             if(gstSrc && gstSink)
             {
-                if(len >= 0)
-                    g_object_set(G_OBJECT(gstSrc), "size", (gint64)len, NULL);
+                g_object_set(G_OBJECT(gstSrc), "size", (gint64)len, NULL);
                 g_object_set(G_OBJECT(gstSrc), "stream-type", 1, NULL);
 
                 /* configure the appsrc, we will push a buffer to appsrc when it needs more
