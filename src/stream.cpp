@@ -1229,6 +1229,11 @@ private:
         return (app->fstream->seekg(position) ? TRUE : FALSE);
     }
 };
+#else
+struct gstStream : public nullStream {
+    gstStream(const char*){}
+    gstStream(const MemDataInfo&){}
+};
 #endif
 
 
