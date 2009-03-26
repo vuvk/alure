@@ -74,6 +74,12 @@ ALURE_API ALboolean ALURE_APIENTRY alureInstallDecodeCallbacks(ALint index,
     ALuint    (*decode)(void*,ALubyte*,ALuint),
     ALboolean (*rewind)(void*),
     void      (*close)(void*));
+ALURE_API ALboolean ALURE_APIENTRY alureSetIOCallbacks(
+      void* (*open)(const char*,ALuint),
+      void (*close)(void*),
+      ALsizei (*read)(void*,ALubyte*,ALuint),
+      ALsizei (*write)(void*,const ALubyte*,ALuint),
+      ALsizei (*seek)(void*,ALsizei,ALint));
 
 
 typedef void            (ALURE_APIENTRY *LPALUREGETVERSION)(ALuint*,ALuint*);
@@ -96,6 +102,7 @@ typedef ALsizei         (ALURE_APIENTRY *LPALUREBUFFERDATAFROMSTREAM)(alureStrea
 typedef ALboolean       (ALURE_APIENTRY *LPALUREREWINDSTREAM)(alureStream*);
 typedef ALboolean       (ALURE_APIENTRY *LPALUREDESTROYSTREAM)(alureStream*,ALsizei,ALuint*);
 typedef ALboolean       (ALURE_APIENTRY *LPALUREINSTALLDECODECALLBACKS)(ALint,void*(*)(const char*),void*(*)(const ALubyte*,ALuint),ALboolean(*)(void*,ALenum*,ALuint*,ALuint*),ALuint(*)(void*,ALubyte*,ALuint),ALboolean(*)(void*),void(*)(void*));
+typedef ALboolean       (ALURE_APIENTRY *LPALURESETIOCALLBACKS)(void*(*)(const char*,ALuint),void(*)(void*),ALsizei(*)(void*,ALubyte*,ALuint),ALsizei(*)(void*,const ALubyte*,ALuint),ALsizei(*)(void*,ALsizei,ALint));
 
 #if defined(__cplusplus)
 }  /* extern "C" */
