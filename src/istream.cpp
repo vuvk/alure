@@ -8,6 +8,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <errno.h>
 
 #include <iostream>
 
@@ -137,12 +138,20 @@ static void close_wrap(void *user_data)
 
 ALsizei read_wrap(void *user_data, ALubyte *buf, ALuint bytes)
 {
-    return read(static_cast<int*>(user_data)[0], buf, bytes);
+    ssize_t ret;
+    do {
+        ret = read(static_cast<int*>(user_data)[0], buf, bytes);
+    } while(ret == -1 && errno == EINTR);
+    return ret;
 }
 
 ALsizei write_wrap(void *user_data, const ALubyte *buf, ALuint bytes)
 {
-    return write(static_cast<int*>(user_data)[0], buf, bytes);
+    ssize_t ret;
+    do {
+        ret = write(static_cast<int*>(user_data)[0], buf, bytes);
+    } while(ret == -1 && errno == EINTR);
+    return ret;
 }
 
 ALsizei seek_wrap(void *user_data, ALsizei offset, ALint whence)
