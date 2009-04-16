@@ -208,13 +208,13 @@ struct wavStream : public alureStream {
     wavStream(const char *fname)
       : wavFile(NULL), format(0), dataStart(0)
     {
-        wavFile = new IFileStream(fname);
+        wavFile = new IStream(fname);
         Init();
     }
     wavStream(const MemDataInfo &memData)
       : wavFile(NULL), format(0), dataStart(0)
     {
-        wavFile = new IMemStream(memData);
+        wavFile = new IStream(memData);
         Init();
     }
 
@@ -366,13 +366,13 @@ struct aiffStream : public alureStream {
     aiffStream(const char *fname)
       : aiffFile(NULL), format(0), dataStart(0)
     {
-        aiffFile = new IFileStream(fname);
+        aiffFile = new IStream(fname);
         Init();
     }
     aiffStream(const MemDataInfo &memData)
       : aiffFile(NULL), format(0), dataStart(0)
     {
-        aiffFile = new IMemStream(memData);
+        aiffFile = new IStream(memData);
         Init();
     }
 
@@ -488,7 +488,7 @@ struct sndStream : public alureStream {
                 get_filelen, seek,
                 read, write, tell
             };
-            fstream = new IFileStream(fname);
+            fstream = new IStream(fname);
             sndFile = psf_open_virtual(&streamIO, SFM_READ, &sndInfo, fstream);
         }
     }
@@ -502,7 +502,7 @@ struct sndStream : public alureStream {
                 get_filelen, seek,
                 read, write, tell
             };
-            fstream = new IMemStream(memData);
+            fstream = new IStream(memData);
             sndFile = psf_open_virtual(&streamIO, SFM_READ, &sndInfo, fstream);
         }
     }
@@ -633,7 +633,7 @@ struct oggStream : public alureStream {
     oggStream(const char *fname)
       : oggFile(NULL), oggBitstream(0)
     {
-        std::istream *f = new IFileStream(fname);
+        std::istream *f = new IStream(fname);
         const ov_callbacks streamIO = {
             read, seek, close, tell
         };
@@ -650,7 +650,7 @@ struct oggStream : public alureStream {
     oggStream(const MemDataInfo &memData)
       : oggFile(NULL), oggBitstream(0)
     {
-        std::istream *f = new IMemStream(memData);
+        std::istream *f = new IStream(memData);
         const ov_callbacks streamIO = {
             read, seek, close, tell
         };
@@ -795,7 +795,7 @@ struct flacStream : public alureStream {
         flacFile = pFLAC__stream_decoder_new();
         if(flacFile)
         {
-            fstream = new IFileStream(fname);
+            fstream = new IStream(fname);
             if(pFLAC__stream_decoder_init_stream(flacFile, ReadCallback, SeekCallback, TellCallback, LengthCallback, EofCallback, WriteCallback, MetadataCallback, ErrorCallback, this) == FLAC__STREAM_DECODER_INIT_STATUS_OK)
             {
                 if(InitFlac())
@@ -818,7 +818,7 @@ struct flacStream : public alureStream {
         flacFile = pFLAC__stream_decoder_new();
         if(flacFile)
         {
-            fstream = new IMemStream(memData);
+            fstream = new IStream(memData);
             if(pFLAC__stream_decoder_init_stream(flacFile, ReadCallback, SeekCallback, TellCallback, LengthCallback, EofCallback, WriteCallback, MetadataCallback, ErrorCallback, this) == FLAC__STREAM_DECODER_INIT_STATUS_OK)
             {
                 if(InitFlac())
@@ -1066,10 +1066,10 @@ struct gstStream : public alureStream {
     }
 
     gstStream(const char *fname)
-      : gstPipeline(NULL), fstream(new IFileStream(fname))
+      : gstPipeline(NULL), fstream(new IStream(fname))
     { Init(); }
     gstStream(const MemDataInfo &memData)
-      : gstPipeline(NULL), fstream(new IMemStream(memData))
+      : gstPipeline(NULL), fstream(new IStream(memData))
     { Init(); }
 
     virtual ~gstStream()

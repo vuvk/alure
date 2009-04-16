@@ -133,16 +133,6 @@ public:
     virtual ~MemStreamBuf() { }
 };
 
-class IMemStream : public std::istream {
-public:
-    IMemStream(const MemDataInfo &memInfo)
-      : std::istream(new MemStreamBuf(memInfo))
-    { }
-    virtual ~IMemStream()
-    { delete rdbuf(); }
-};
-
-
 struct UserFuncs {
     void* (*open)(const char *filename, ALuint mode);
     void (*close)(void *f);
@@ -170,12 +160,15 @@ public:
     { if(usrFile) fio.close(usrFile); }
 };
 
-class IFileStream : public std::istream {
+class IStream : public std::istream {
 public:
-    IFileStream(const char *filename)
+    IStream(const char *filename)
       : std::istream(new FileStreamBuf(filename, 0))
     { }
-    virtual ~IFileStream()
+    IStream(const MemDataInfo &memInfo)
+      : std::istream(new MemStreamBuf(memInfo))
+    { }
+    virtual ~IStream()
     { delete rdbuf(); }
 };
 
