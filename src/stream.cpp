@@ -581,6 +581,7 @@ struct sndStream : public nullStream {
 struct oggStream : public alureStream {
     OggVorbis_File *oggFile;
     int oggBitstream;
+    std::istream *fstream;
 
     virtual bool IsValid()
     { return oggFile != NULL; }
@@ -631,37 +632,33 @@ struct oggStream : public alureStream {
     }
 
     oggStream(const char *fname)
-      : oggFile(NULL), oggBitstream(0)
+      : oggFile(NULL), oggBitstream(0), fstream(new IStream(fname))
     {
-        std::istream *f = new IStream(fname);
         const ov_callbacks streamIO = {
-            read, seek, close, tell
+            read, seek, NULL, tell
         };
 
         oggFile = new OggVorbis_File;
         if(!vorbisfile_handle ||
-           pov_open_callbacks(f, oggFile, NULL, 0, streamIO) != 0)
+           pov_open_callbacks(this, oggFile, NULL, 0, streamIO) != 0)
         {
             delete oggFile;
             oggFile = NULL;
-            delete f;
         }
     }
     oggStream(const MemDataInfo &memData)
-      : oggFile(NULL), oggBitstream(0)
+      : oggFile(NULL), oggBitstream(0), fstream(new IStream(memData))
     {
-        std::istream *f = new IStream(memData);
         const ov_callbacks streamIO = {
-            read, seek, close, tell
+            read, seek, NULL, tell
         };
 
         oggFile = new OggVorbis_File;
         if(!vorbisfile_handle ||
-           pov_open_callbacks(f, oggFile, NULL, 0, streamIO) != 0)
+           pov_open_callbacks(this, oggFile, NULL, 0, streamIO) != 0)
         {
             delete oggFile;
             oggFile = NULL;
-            delete f;
         }
     }
 
@@ -672,49 +669,44 @@ struct oggStream : public alureStream {
             pov_clear(oggFile);
             delete oggFile;
         }
+        delete fstream;
+        fstream = NULL;
     }
 
 private:
     // libVorbisFile iostream callbacks
     static int seek(void *user_data, ogg_int64_t offset, int whence)
     {
-        std::istream *stream = static_cast<std::istream*>(user_data);
-        stream->clear();
+        oggStream *This = static_cast<oggStream*>(user_data);
+        This->fstream->clear();
 
         if(whence == SEEK_CUR)
-            stream->seekg(offset, std::ios_base::cur);
+            This->fstream->seekg(offset, std::ios_base::cur);
         else if(whence == SEEK_SET)
-            stream->seekg(offset, std::ios_base::beg);
+            This->fstream->seekg(offset, std::ios_base::beg);
         else if(whence == SEEK_END)
-            stream->seekg(offset, std::ios_base::end);
+            This->fstream->seekg(offset, std::ios_base::end);
         else
             return -1;
 
-        return stream->tellg();
+        return This->fstream->tellg();
     }
 
     static size_t read(void *ptr, size_t size, size_t nmemb, void *user_data)
     {
-        std::istream *stream = static_cast<std::istream*>(user_data);
-        stream->clear();
+        oggStream *This = static_cast<oggStream*>(user_data);
+        This->fstream->clear();
 
-        stream->read(static_cast<char*>(ptr), nmemb*size);
-        size_t ret = stream->gcount();
+        This->fstream->read(static_cast<char*>(ptr), nmemb*size);
+        size_t ret = This->fstream->gcount();
         return ret/size;
     }
 
     static long tell(void *user_data)
     {
-        std::istream *stream = static_cast<std::istream*>(user_data);
-        stream->clear();
-        return stream->tellg();
-    }
-
-    static int close(void *user_data)
-    {
-        std::istream *stream = static_cast<std::istream*>(user_data);
-        delete stream;
-        return 0;
+        oggStream *This = static_cast<oggStream*>(user_data);
+        This->fstream->clear();
+        return This->fstream->tellg();
     }
 };
 #else
