@@ -97,6 +97,7 @@ struct alureStream {
     virtual bool GetFormat(ALenum*,ALuint*,ALuint*) = 0;
     virtual ALuint GetData(ALubyte*,ALuint) = 0;
     virtual bool Rewind() = 0;
+    virtual void ReleaseFile() = 0;
 
     alureStream() : data(NULL), dataChunk(NULL)
     { }
@@ -153,6 +154,9 @@ class FileStreamBuf : public std::streambuf {
     virtual pos_type seekpos(pos_type pos, std::ios_base::openmode mode = std::ios_base::in | std::ios_base::out);
 
 public:
+    bool IsOpen()
+    { return usrFile != NULL; }
+
     FileStreamBuf(const char *filename, ALint mode)
       : usrFile(NULL), fio(Funcs)
     { usrFile = fio.open(filename, mode); }
@@ -162,6 +166,13 @@ public:
 
 class IStream : public std::istream {
 public:
+    bool IsOpen()
+    {
+        FileStreamBuf *fbuf = dynamic_cast<FileStreamBuf*>(rdbuf());
+        if(fbuf) return fbuf->IsOpen();
+        return true;
+    }
+
     IStream(const char *filename)
       : std::istream(new FileStreamBuf(filename, 0))
     { }

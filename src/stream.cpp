@@ -66,6 +66,7 @@ struct nullStream : public alureStream {
     virtual bool GetFormat(ALenum*,ALuint*,ALuint*) { return false; }
     virtual ALuint GetData(ALubyte*,ALuint) { return 0; }
     virtual bool Rewind() { return false; }
+    virtual void ReleaseFile() { }
     nullStream(){}
 };
 
@@ -112,6 +113,9 @@ struct customStream : public alureStream {
         return false;
     }
 
+    virtual void ReleaseFile()
+    { }
+
     customStream(const char *fname, const UserCallbacks &callbacks)
       : usrFile(NULL), format(0), samplerate(0), blockAlign(0), cb(callbacks)
     {
@@ -147,7 +151,7 @@ struct wavStream : public alureStream {
     size_t remLen;
 
     virtual bool IsValid()
-    { return wavFile != NULL; }
+    { return (dataStart > 0 && format != AL_NONE); }
 
     virtual bool GetFormat(ALenum *format, ALuint *frequency, ALuint *blockalign)
     {
@@ -205,18 +209,12 @@ struct wavStream : public alureStream {
         return false;
     }
 
-    wavStream(const char *fname)
-      : wavFile(NULL), format(0), dataStart(0)
-    {
-        wavFile = new IStream(fname);
-        Init();
-    }
-    wavStream(const MemDataInfo &memData)
-      : wavFile(NULL), format(0), dataStart(0)
-    {
-        wavFile = new IStream(memData);
-        Init();
-    }
+    virtual void ReleaseFile()
+    { wavFile = NULL; }
+
+    wavStream(std::istream *_fstream)
+      : wavFile(_fstream), format(0), dataStart(0)
+    { Init(); }
 
     virtual ~wavStream()
     {
@@ -232,12 +230,7 @@ private:
 
         if(!wavFile->read(reinterpret_cast<char*>(buffer), 12) ||
            memcmp(buffer, "RIFF", 4) != 0 || memcmp(buffer+8, "WAVE", 4) != 0)
-        {
-            delete wavFile;
-            wavFile = NULL;
-
             return;
-        }
 
         while(!dataStart || format == AL_NONE)
         {
@@ -285,12 +278,7 @@ private:
             wavFile->seekg(length, std::ios_base::cur);
         }
 
-        if(dataStart <= 0 || format == AL_NONE)
-        {
-            delete wavFile;
-            wavFile = NULL;
-        }
-        else
+        if(dataStart > 0 && format != AL_NONE)
             wavFile->seekg(dataStart);
     }
 };
@@ -305,7 +293,7 @@ struct aiffStream : public alureStream {
     size_t remLen;
 
     virtual bool IsValid()
-    { return aiffFile != NULL; }
+    { return (dataStart > 0 && format != AL_NONE); }
 
     virtual bool GetFormat(ALenum *format, ALuint *frequency, ALuint *blockalign)
     {
@@ -363,18 +351,12 @@ struct aiffStream : public alureStream {
         return false;
     }
 
-    aiffStream(const char *fname)
-      : aiffFile(NULL), format(0), dataStart(0)
-    {
-        aiffFile = new IStream(fname);
-        Init();
-    }
-    aiffStream(const MemDataInfo &memData)
-      : aiffFile(NULL), format(0), dataStart(0)
-    {
-        aiffFile = new IStream(memData);
-        Init();
-    }
+    virtual void ReleaseFile()
+    { aiffFile = NULL; }
+
+    aiffStream(std::istream *_fstream)
+      : aiffFile(_fstream), format(0), dataStart(0)
+    { Init(); }
 
     virtual ~aiffStream()
     {
@@ -390,11 +372,7 @@ private:
 
         if(!aiffFile->read(reinterpret_cast<char*>(buffer), 12) ||
            memcmp(buffer, "FORM", 4) != 0 || memcmp(buffer+8, "AIFF", 4) != 0)
-        {
-            delete aiffFile;
-            aiffFile = NULL;
             return;
-        }
 
         while(!dataStart || format == AL_NONE)
         {
@@ -436,12 +414,7 @@ private:
             aiffFile->seekg(length, std::ios_base::cur);
         }
 
-        if(dataStart <= 0 || format == AL_NONE)
-        {
-            delete aiffFile;
-            aiffFile = NULL;
-        }
-        else
+        if(dataStart > 0 && format != AL_NONE)
             aiffFile->seekg(dataStart);
     }
 };
@@ -478,8 +451,11 @@ struct sndStream : public alureStream {
         return false;
     }
 
-    sndStream(const char *fname)
-      : sndFile(NULL), fstream(NULL)
+    virtual void ReleaseFile()
+    { fstream = NULL; }
+
+    sndStream(std::istream *_fstream)
+      : sndFile(NULL), fstream(_fstream)
     {
         memset(&sndInfo, 0, sizeof(sndInfo));
         if(sndfile_handle)
@@ -488,21 +464,6 @@ struct sndStream : public alureStream {
                 get_filelen, seek,
                 read, write, tell
             };
-            fstream = new IStream(fname);
-            sndFile = psf_open_virtual(&streamIO, SFM_READ, &sndInfo, fstream);
-        }
-    }
-    sndStream(const MemDataInfo &memData)
-      : sndFile(NULL), fstream(NULL)
-    {
-        memset(&sndInfo, 0, sizeof(sndInfo));
-        if(sndfile_handle)
-        {
-            static SF_VIRTUAL_IO streamIO = {
-                get_filelen, seek,
-                read, write, tell
-            };
-            fstream = new IStream(memData);
             sndFile = psf_open_virtual(&streamIO, SFM_READ, &sndInfo, fstream);
         }
     }
@@ -572,8 +533,7 @@ private:
 };
 #else
 struct sndStream : public nullStream {
-    sndStream(const char*){}
-    sndStream(const MemDataInfo&){}
+    sndStream(std::istream*){}
 };
 #endif
 
@@ -631,23 +591,11 @@ struct oggStream : public alureStream {
         return false;
     }
 
-    oggStream(const char *fname)
-      : oggFile(NULL), oggBitstream(0), fstream(new IStream(fname))
-    {
-        const ov_callbacks streamIO = {
-            read, seek, NULL, tell
-        };
+    virtual void ReleaseFile()
+    { fstream = NULL; }
 
-        oggFile = new OggVorbis_File;
-        if(!vorbisfile_handle ||
-           pov_open_callbacks(this, oggFile, NULL, 0, streamIO) != 0)
-        {
-            delete oggFile;
-            oggFile = NULL;
-        }
-    }
-    oggStream(const MemDataInfo &memData)
-      : oggFile(NULL), oggBitstream(0), fstream(new IStream(memData))
+    oggStream(std::istream *_fstream)
+      : oggFile(NULL), oggBitstream(0), fstream(_fstream)
     {
         const ov_callbacks streamIO = {
             read, seek, NULL, tell
@@ -711,8 +659,7 @@ private:
 };
 #else
 struct oggStream : public nullStream {
-    oggStream(const char*){}
-    oggStream(const MemDataInfo&){}
+    oggStream(std::istream*){}
 };
 #endif
 
@@ -779,38 +726,17 @@ struct flacStream : public alureStream {
         return false;
     }
 
-    flacStream(const char *fname)
-      : flacFile(NULL), fstream(NULL)
+    virtual void ReleaseFile()
+    { fstream = NULL; }
+
+    flacStream(std::istream *_fstream)
+      : flacFile(NULL), fstream(_fstream)
     {
         if(!flac_handle) return;
 
         flacFile = pFLAC__stream_decoder_new();
         if(flacFile)
         {
-            fstream = new IStream(fname);
-            if(pFLAC__stream_decoder_init_stream(flacFile, ReadCallback, SeekCallback, TellCallback, LengthCallback, EofCallback, WriteCallback, MetadataCallback, ErrorCallback, this) == FLAC__STREAM_DECODER_INIT_STATUS_OK)
-            {
-                if(InitFlac())
-                {
-                    // all ok
-                    return;
-                }
-
-                pFLAC__stream_decoder_finish(flacFile);
-            }
-            pFLAC__stream_decoder_delete(flacFile);
-            flacFile = NULL;
-        }
-    }
-    flacStream(const MemDataInfo &memData)
-      : flacFile(NULL), fstream(NULL)
-    {
-        if(!flac_handle) return;
-
-        flacFile = pFLAC__stream_decoder_new();
-        if(flacFile)
-        {
-            fstream = new IStream(memData);
             if(pFLAC__stream_decoder_init_stream(flacFile, ReadCallback, SeekCallback, TellCallback, LengthCallback, EofCallback, WriteCallback, MetadataCallback, ErrorCallback, this) == FLAC__STREAM_DECODER_INIT_STATUS_OK)
             {
                 if(InitFlac())
@@ -975,8 +901,7 @@ private:
 };
 #else
 struct flacStream : public nullStream {
-    flacStream(const char*){}
-    flacStream(const MemDataInfo&){}
+    flacStream(std::istream*){}
 };
 #endif
 
@@ -1057,11 +982,11 @@ struct gstStream : public alureStream {
         return false;
     }
 
-    gstStream(const char *fname)
-      : gstPipeline(NULL), fstream(new IStream(fname))
-    { Init(); }
-    gstStream(const MemDataInfo &memData)
-      : gstPipeline(NULL), fstream(new IStream(memData))
+    virtual void ReleaseFile()
+    { fstream = NULL; }
+
+    gstStream(std::istream *_fstream)
+      : gstPipeline(NULL), fstream(_fstream)
     { Init(); }
 
     virtual ~gstStream()
@@ -1223,8 +1148,7 @@ private:
 };
 #else
 struct gstStream : public nullStream {
-    gstStream(const char*){}
-    gstStream(const MemDataInfo&){}
+    gstStream(std::istream*){}
 };
 #endif
 
@@ -1243,33 +1167,59 @@ alureStream *create_stream(const T &fdata)
         i++;
     }
 
-    stream.reset(new wavStream(fdata));
-    if(stream->IsValid())
-        return stream.release();
+    IStream *file = new IStream(fdata);
+    if(file->IsOpen())
+    {
+        stream.reset(new wavStream(file));
+        if(stream->IsValid())
+            return stream.release();
+        stream->ReleaseFile();
 
-    stream.reset(new aiffStream(fdata));
-    if(stream->IsValid())
-        return stream.release();
+        file->clear();
+        file->seekg(0, std::ios_base::beg);
+        stream.reset(new aiffStream(file));
+        if(stream->IsValid())
+            return stream.release();
+        stream->ReleaseFile();
 
-    // Try libSndFile
-    stream.reset(new sndStream(fdata));
-    if(stream->IsValid())
-        return stream.release();
+        // Try libSndFile
+        file->clear();
+        file->seekg(0, std::ios_base::beg);
+        stream.reset(new sndStream(file));
+        if(stream->IsValid())
+            return stream.release();
+        stream->ReleaseFile();
 
-    // Try libVorbisFile
-    stream.reset(new oggStream(fdata));
-    if(stream->IsValid())
-        return stream.release();
+        // Try libVorbisFile
+        file->clear();
+        file->seekg(0, std::ios_base::beg);
+        stream.reset(new oggStream(file));
+        if(stream->IsValid())
+            return stream.release();
+        stream->ReleaseFile();
 
-    // Try libFLAC
-    stream.reset(new flacStream(fdata));
-    if(stream->IsValid())
-        return stream.release();
+        // Try libFLAC
+        file->clear();
+        file->seekg(0, std::ios_base::beg);
+        stream.reset(new flacStream(file));
+        if(stream->IsValid())
+            return stream.release();
+        stream->ReleaseFile();
 
-    // Try GStreamer
-    stream.reset(new gstStream(fdata));
-    if(stream->IsValid())
-        return stream.release();
+        // Try GStreamer
+        file->clear();
+        file->seekg(0, std::ios_base::beg);
+        stream.reset(new gstStream(file));
+        if(stream->IsValid())
+            return stream.release();
+
+        SetError("Unsupported type");
+    }
+    else
+    {
+        SetError("Failed to open file");
+        delete file;
+    }
 
     while(i != InstalledCallbacks.end())
     {
@@ -1279,7 +1229,7 @@ alureStream *create_stream(const T &fdata)
         i++;
     }
 
-    return stream.release();
+    return new nullStream;
 }
 
 static alureStream *InitStream(alureStream *instream, ALsizei chunkLength, ALsizei numBufs, ALuint *bufs)
@@ -1396,7 +1346,6 @@ ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromFile(const ALchar *fn
     if(!stream->IsValid())
     {
         delete stream;
-        SetError("Unsupported type");
         return NULL;
     }
 
@@ -1458,7 +1407,6 @@ ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromMemory(const ALubyte 
     if(!stream->IsValid())
     {
         delete stream;
-        SetError("Unsupported type");
         return NULL;
     }
 
@@ -1516,7 +1464,6 @@ ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromStaticMemory(const AL
     if(!stream->IsValid())
     {
         delete stream;
-        SetError("Unsupported type");
         return NULL;
     }
 
