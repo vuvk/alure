@@ -37,18 +37,31 @@ ALURE_API ALuint ALURE_APIENTRY alureCreateBufferFromFile(const ALchar *fname)
 
     std::auto_ptr<alureStream> stream(create_stream(fname));
     if(!stream->IsValid())
-    {
-        SetError("Unsupported type");
         return AL_NONE;
-    }
 
     ALenum format;
     ALuint freq, blockAlign;
 
     if(!stream->GetFormat(&format, &freq, &blockAlign))
     {
-        SetError("Unsupported format");
-        return AL_NONE;
+        SetError("Could not get sample format");
+        return NULL;
+    }
+
+    if(format == AL_NONE)
+    {
+        SetError("No valid format");
+        return NULL;
+    }
+    if(blockAlign == 0)
+    {
+        SetError("Invalid block size");
+        return NULL;
+    }
+    if(freq == 0)
+    {
+        SetError("Invalid sample rate");
+        return NULL;
     }
 
     ALuint writePos = 0, got;
@@ -116,18 +129,31 @@ ALURE_API ALuint ALURE_APIENTRY alureCreateBufferFromMemory(const ALubyte *fdata
 
     std::auto_ptr<alureStream> stream(create_stream(memData));
     if(!stream->IsValid())
-    {
-        SetError("Unsupported type");
         return AL_NONE;
-    }
 
     ALenum format;
     ALuint freq, blockAlign;
 
     if(!stream->GetFormat(&format, &freq, &blockAlign))
     {
-        SetError("Unsupported format");
-        return AL_NONE;
+        SetError("Could not get sample format");
+        return NULL;
+    }
+
+    if(format == AL_NONE)
+    {
+        SetError("No valid format");
+        return NULL;
+    }
+    if(blockAlign == 0)
+    {
+        SetError("Invalid block size");
+        return NULL;
+    }
+    if(freq == 0)
+    {
+        SetError("Invalid sample rate");
+        return NULL;
     }
 
     ALuint writePos = 0, got;
@@ -184,18 +210,31 @@ ALURE_API ALboolean ALURE_APIENTRY alureBufferDataFromFile(const ALchar *fname, 
 
     std::auto_ptr<alureStream> stream(create_stream(fname));
     if(!stream->IsValid())
-    {
-        SetError("Unsupported type");
         return AL_FALSE;
-    }
 
     ALenum format;
     ALuint freq, blockAlign;
 
     if(!stream->GetFormat(&format, &freq, &blockAlign))
     {
-        SetError("Unsupported format");
-        return AL_FALSE;
+        SetError("Could not get sample format");
+        return NULL;
+    }
+
+    if(format == AL_NONE)
+    {
+        SetError("No valid format");
+        return NULL;
+    }
+    if(blockAlign == 0)
+    {
+        SetError("Invalid block size");
+        return NULL;
+    }
+    if(freq == 0)
+    {
+        SetError("Invalid sample rate");
+        return NULL;
     }
 
     ALuint writePos = 0, got;
@@ -252,18 +291,31 @@ ALURE_API ALboolean ALURE_APIENTRY alureBufferDataFromMemory(const ALubyte *fdat
 
     std::auto_ptr<alureStream> stream(create_stream(memData));
     if(!stream->IsValid())
-    {
-        SetError("Unsupported type");
         return AL_FALSE;
-    }
 
     ALenum format;
     ALuint freq, blockAlign;
 
     if(!stream->GetFormat(&format, &freq, &blockAlign))
     {
-        SetError("Unsupported format");
-        return AL_FALSE;
+        SetError("Could not get sample format");
+        return NULL;
+    }
+
+    if(format == AL_NONE)
+    {
+        SetError("No valid format");
+        return NULL;
+    }
+    if(blockAlign == 0)
+    {
+        SetError("Invalid block size");
+        return NULL;
+    }
+    if(freq == 0)
+    {
+        SetError("Invalid sample rate");
+        return NULL;
     }
 
     ALuint writePos = 0, got;
