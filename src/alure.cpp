@@ -14,6 +14,7 @@
 #include <vector>
 
 std::map<ALint,UserCallbacks> InstalledCallbacks;
+std::map<std::string,void*> FunctionList;
 
 
 #define MAKE_FUNC(x) typeof(x) * p##x
@@ -180,6 +181,29 @@ void init_alure()
     done = true;
 
     init_libs();
+
+#define ADD_FUNCTION(x) FunctionList[#x] = (void*)(x)
+    ADD_FUNCTION(alureGetVersion);
+    ADD_FUNCTION(alureGetErrorString);
+    ADD_FUNCTION(alureGetDeviceNames);
+    ADD_FUNCTION(alureFreeDeviceNames);
+    ADD_FUNCTION(alureInitDevice);
+    ADD_FUNCTION(alureShutdownDevice);
+    ADD_FUNCTION(alureGetSampleFormat);
+    ADD_FUNCTION(alureSleep);
+    ADD_FUNCTION(alureCreateBufferFromFile);
+    ADD_FUNCTION(alureCreateBufferFromMemory);
+    ADD_FUNCTION(alureBufferDataFromFile);
+    ADD_FUNCTION(alureBufferDataFromMemory);
+    ADD_FUNCTION(alureCreateStreamFromFile);
+    ADD_FUNCTION(alureCreateStreamFromMemory);
+    ADD_FUNCTION(alureCreateStreamFromStaticMemory);
+    ADD_FUNCTION(alureCreateStreamFromCallback);
+    ADD_FUNCTION(alureRewindStream);
+    ADD_FUNCTION(alureDestroyStream);
+    ADD_FUNCTION(alureInstallDecodeCallbacks);
+    ADD_FUNCTION(alureSetIOCallbacks);
+#undef ADD_FUNCTION
 }
 
 
@@ -585,5 +609,24 @@ ALURE_API ALboolean ALURE_APIENTRY alureSleep(ALfloat duration)
     return AL_TRUE;
 }
 
+
+/* Function: alureGetProcAddress
+ *
+ * Returns a pointer for the named ALURE function.
+ *
+ * Returns:
+ * NULL on error.
+ */
+ALURE_API void* ALURE_APIENTRY alureGetProcAddress(ALchar *funcname)
+{
+    init_alure();
+
+    std::map<std::string,void*>::iterator i = FunctionList.find(funcname);
+    if(i != FunctionList.end())
+        return i->second;
+
+    SetError("Function not found");
+    return NULL;
+}
 
 } // extern "C"
