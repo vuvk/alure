@@ -933,12 +933,14 @@ static const gchar *gst_audio_caps =
       "signed = (boolean) TRUE, "
       "width = (int) 16, "
       "depth = (int) 16, "
-      "rate = (int) [ 1, MAX ], " "channels = (int) [ 1, MAX ]; "
+      "rate = (int) [ 1, MAX ], "
+      "channels = (int) [ 1, MAX ]; "
       "audio/x-raw-int, "
       "signed = (boolean) FALSE, "
       "width = (int) 8, "
       "depth = (int) 8, "
-      "rate = (int) [ 1, MAX ], " "channels = (int) [ 1, MAX ]";
+      "rate = (int) [ 1, MAX ], "
+      "channels = (int) [ 1, MAX ]";
 
 struct gstStream : public alureStream {
     GstElement *gstPipeline;
@@ -1092,7 +1094,7 @@ private:
         if(setformat)
         {
             GstCaps *caps = GST_BUFFER_CAPS(buffer);
-            GST_LOG("caps are %" GST_PTR_FORMAT, caps);
+            //GST_LOG("caps are %" GST_PTR_FORMAT, caps);
 
             ALint i;
             gint rate = 0, channels = 0, depth = 0, width = 0;
@@ -1155,13 +1157,13 @@ private:
         app->fstream->read(static_cast<char*>(data), size);
         buffer = gst_app_buffer_new(data, app->fstream->gcount(), g_free, data);
 
-        GST_DEBUG("feed buffer %p, %u", buffer, GST_BUFFER_SIZE(buffer));
+        //GST_DEBUG("feed buffer %p, %u", buffer, GST_BUFFER_SIZE(buffer));
         g_signal_emit_by_name(app->gstSrc, "push-buffer", buffer, &ret);
     }
 
     static gboolean seek_data(GstElement */*appsrc*/, guint64 position, gstStream *app)
     {
-        GST_DEBUG("seek to offset %" G_GUINT64_FORMAT, position);
+        //GST_DEBUG("seek to offset %" G_GUINT64_FORMAT, position);
         app->fstream->clear();
         return (app->fstream->seekg(position) ? TRUE : FALSE);
     }
@@ -1187,7 +1189,7 @@ alureStream *create_stream(const T &fdata)
         i++;
     }
 
-    IStream *file = new IStream(fdata);
+    InStream *file = new InStream(fdata);
     if(file->IsOpen())
     {
         stream.reset(new wavStream(file));

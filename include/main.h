@@ -164,7 +164,7 @@ public:
     { if(usrFile) fio.close(usrFile); }
 };
 
-class IStream : public std::istream {
+class InStream : public std::istream {
 public:
     bool IsOpen()
     {
@@ -173,13 +173,13 @@ public:
         return true;
     }
 
-    IStream(const char *filename)
+    InStream(const char *filename)
       : std::istream(new FileStreamBuf(filename, 0))
     { }
-    IStream(const MemDataInfo &memInfo)
+    InStream(const MemDataInfo &memInfo)
       : std::istream(new MemStreamBuf(memInfo))
     { }
-    virtual ~IStream()
+    virtual ~InStream()
     { delete rdbuf(); }
 };
 

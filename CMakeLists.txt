@@ -258,6 +258,53 @@ IF(GSTREAMER)
             LINK_DIRECTORIES(${GST_LIBRARY_DIRS})
             SET(EXTRA_LIBS gstapp-0.10 ${EXTRA_LIBS})
         ENDIF(HAS_GSTAPP)
+    ELSE(GST_FOUND)
+        SET(GST_SEARCH_PATHS
+            ENV GSTSDK_DIR
+            ENV MINGDIR
+            "C:/Program Files/gstreamer"
+            "C:/gstreamer" )
+
+        MESSAGE(STATUS "Looking for glib.h")
+        FIND_PATH(GLIB_INCLUDE_DIR glib.h
+                  PATHS ${GST_SEARCH_PATHS}
+                  PATH_SUFFIXES include include/glib-2.0)
+        IF(GLIB_INCLUDE_DIR)
+            MESSAGE(STATUS "Looking for glib.h - found: ${GLIB_INCLUDE_DIR}")
+        ELSE(GLIB_INCLUDE_DIR)
+            MESSAGE(STATUS "Looking for glib.h - not found")
+        ENDIF(GLIB_INCLUDE_DIR)
+
+        MESSAGE(STATUS "Looking for gst/gst.h")
+        FIND_PATH(GST_INCLUDE_DIR gst/gst.h
+                  PATHS ${GST_SEARCH_PATHS}
+                  PATH_SUFFIXES include include/gstreamer-0.10)
+        IF(GST_INCLUDE_DIR)
+            MESSAGE(STATUS "Looking for gst/gst.h - found: ${GST_INCLUDE_DIR}")
+        ELSE(GST_INCLUDE_DIR)
+            MESSAGE(STATUS "Looking for gst/gst.h - not found")
+        ENDIF(GST_INCLUDE_DIR)
+
+        IF(GLIB_INCLUDE_DIR AND GST_INCLUDE_DIR)
+            INCLUDE_DIRECTORIES("${GLIB_INCLUDE_DIR}" "${GST_INCLUDE_DIR}")
+            FIND_LIBRARY(GST_LIBRARY1 NAMES gstapp-0.10
+                         PATHS ${GST_SEARCH_PATHS} PATH_SUFFIXES lib )
+            FIND_LIBRARY(GST_LIBRARY2 NAMES gstreamer-0.10
+                         PATHS ${GST_SEARCH_PATHS} PATH_SUFFIXES lib )
+            FIND_LIBRARY(GST_LIBRARY3 NAMES gthread-2.0
+                         PATHS ${GST_SEARCH_PATHS} PATH_SUFFIXES lib )
+            FIND_LIBRARY(GST_LIBRARY4 NAMES gmodule-2.0
+                         PATHS ${GST_SEARCH_PATHS} PATH_SUFFIXES lib )
+            FIND_LIBRARY(GST_LIBRARY5 NAMES gobject-2.0
+                         PATHS ${GST_SEARCH_PATHS} PATH_SUFFIXES lib )
+            FIND_LIBRARY(GST_LIBRARY6 NAMES glib-2.0
+                         PATHS ${GST_SEARCH_PATHS} PATH_SUFFIXES lib )
+            IF(GST_LIBRARY1 AND GST_LIBRARY2 AND GST_LIBRARY3 AND GST_LIBRARY4 AND GST_LIBRARY5 AND GST_LIBRARY6)
+                SET(GST_LIBRARIES "${GST_LIBRARY1}" "${GST_LIBRARY2}" "${GST_LIBRARY3}" "${GST_LIBRARY4}" "${GST_LIBRARY5}" "${GST_LIBRARY6}")
+                MESSAGE(STATUS "GStreamer libs: ${GST_LIBRARIES}")
+                SET(HAS_GSTREAMER 1)
+            ENDIF(GST_LIBRARY1 AND GST_LIBRARY2 AND GST_LIBRARY3 AND GST_LIBRARY4 AND GST_LIBRARY5 AND GST_LIBRARY6)
+        ENDIF(GLIB_INCLUDE_DIR AND GST_INCLUDE_DIR)
     ENDIF(GST_FOUND)
 ELSE(GSTREAMER)
     SET(GST_LIBRARIES "")
