@@ -65,23 +65,23 @@ ALURE_API ALuint ALURE_APIENTRY alureCreateBufferFromFile(const ALchar *fname)
     if(!stream->GetFormat(&format, &freq, &blockAlign))
     {
         SetError("Could not get sample format");
-        return NULL;
+        return AL_NONE;
     }
 
     if(format == AL_NONE)
     {
         SetError("No valid format");
-        return NULL;
+        return AL_NONE;
     }
     if(blockAlign == 0)
     {
         SetError("Invalid block size");
-        return NULL;
+        return AL_NONE;
     }
     if(freq == 0)
     {
         SetError("Invalid sample rate");
-        return NULL;
+        return AL_NONE;
     }
 
     ALuint writePos = 0, got;
@@ -157,23 +157,23 @@ ALURE_API ALuint ALURE_APIENTRY alureCreateBufferFromMemory(const ALubyte *fdata
     if(!stream->GetFormat(&format, &freq, &blockAlign))
     {
         SetError("Could not get sample format");
-        return NULL;
+        return AL_NONE;
     }
 
     if(format == AL_NONE)
     {
         SetError("No valid format");
-        return NULL;
+        return AL_NONE;
     }
     if(blockAlign == 0)
     {
         SetError("Invalid block size");
-        return NULL;
+        return AL_NONE;
     }
     if(freq == 0)
     {
         SetError("Invalid sample rate");
-        return NULL;
+        return AL_NONE;
     }
 
     ALuint writePos = 0, got;
@@ -238,23 +238,23 @@ ALURE_API ALboolean ALURE_APIENTRY alureBufferDataFromFile(const ALchar *fname, 
     if(!stream->GetFormat(&format, &freq, &blockAlign))
     {
         SetError("Could not get sample format");
-        return NULL;
+        return AL_FALSE;
     }
 
     if(format == AL_NONE)
     {
         SetError("No valid format");
-        return NULL;
+        return AL_FALSE;
     }
     if(blockAlign == 0)
     {
         SetError("Invalid block size");
-        return NULL;
+        return AL_FALSE;
     }
     if(freq == 0)
     {
         SetError("Invalid sample rate");
-        return NULL;
+        return AL_FALSE;
     }
 
     ALuint writePos = 0, got;
@@ -319,23 +319,23 @@ ALURE_API ALboolean ALURE_APIENTRY alureBufferDataFromMemory(const ALubyte *fdat
     if(!stream->GetFormat(&format, &freq, &blockAlign))
     {
         SetError("Could not get sample format");
-        return NULL;
+        return AL_FALSE;
     }
 
     if(format == AL_NONE)
     {
         SetError("No valid format");
-        return NULL;
+        return AL_FALSE;
     }
     if(blockAlign == 0)
     {
         SetError("Invalid block size");
-        return NULL;
+        return AL_FALSE;
     }
     if(freq == 0)
     {
         SetError("Invalid sample rate");
-        return NULL;
+        return AL_FALSE;
     }
 
     ALuint writePos = 0, got;
