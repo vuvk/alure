@@ -1186,64 +1186,73 @@ struct gstStream : public nullStream {
 template <typename T>
 alureStream *create_stream(const T &fdata)
 {
-    std::auto_ptr<alureStream> stream(NULL);
+    alureStream *stream;
 
     std::map<ALint,UserCallbacks>::iterator i = InstalledCallbacks.begin();
     while(i != InstalledCallbacks.end() && i->first < 0)
     {
-        stream.reset(new customStream(fdata, i->second));
+        stream = new customStream(fdata, i->second);
         if(stream->IsValid())
-            return stream.release();
+            return stream;
+        delete stream;
         i++;
     }
 
     InStream *file = new InStream(fdata);
     if(file->IsOpen())
     {
-        stream.reset(new wavStream(file));
+        stream = new wavStream(file);
         if(stream->IsValid())
-            return stream.release();
+            return stream;
         stream->ReleaseFile();
+        delete stream;
 
         file->clear();
         file->seekg(0, std::ios_base::beg);
-        stream.reset(new aiffStream(file));
+        stream = new aiffStream(file);
         if(stream->IsValid())
-            return stream.release();
+            return stream;
         stream->ReleaseFile();
+        delete stream;
 
         // Try libSndFile
         file->clear();
         file->seekg(0, std::ios_base::beg);
-        stream.reset(new sndStream(file));
+        stream = new sndStream(file);
         if(stream->IsValid())
-            return stream.release();
+            return stream;
         stream->ReleaseFile();
+        delete stream;
 
         // Try libVorbisFile
         file->clear();
         file->seekg(0, std::ios_base::beg);
-        stream.reset(new oggStream(file));
+        stream = new oggStream(file);
         if(stream->IsValid())
-            return stream.release();
+            return stream;
         stream->ReleaseFile();
+        delete stream;
 
         // Try libFLAC
         file->clear();
         file->seekg(0, std::ios_base::beg);
-        stream.reset(new flacStream(file));
+        stream = new flacStream(file);
         if(stream->IsValid())
-            return stream.release();
+            return stream;
         stream->ReleaseFile();
+        delete stream;
 
         // Try GStreamer
         file->clear();
         file->seekg(0, std::ios_base::beg);
-        stream.reset(new gstStream(file));
+        stream = new gstStream(file);
         if(stream->IsValid())
-            return stream.release();
+            return stream;
+        stream->ReleaseFile();
+        delete stream;
 
         SetError("Unsupported type");
+        delete file;
     }
     else
     {
@@ -1253,9 +1262,10 @@ alureStream *create_stream(const T &fdata)
 
     while(i != InstalledCallbacks.end())
     {
-        stream.reset(new customStream(fdata, i->second));
+        stream = new customStream(fdata, i->second);
         if(stream->IsValid())
-            return stream.release();
+            return stream;
+        delete stream;
         i++;
     }
 
