@@ -223,6 +223,7 @@ void init_alure()
     ADD_FUNCTION(alureDestroyStream);
     ADD_FUNCTION(alureInstallDecodeCallbacks);
     ADD_FUNCTION(alureSetIOCallbacks);
+    ADD_FUNCTION(alureGetProcAddress);
 #undef ADD_FUNCTION
 }
 
@@ -637,7 +638,7 @@ ALURE_API ALboolean ALURE_APIENTRY alureSleep(ALfloat duration)
  * Returns:
  * NULL on error.
  */
-ALURE_API void* ALURE_APIENTRY alureGetProcAddress(ALchar *funcname)
+ALURE_API void* ALURE_APIENTRY alureGetProcAddress(const ALchar *funcname)
 {
     init_alure();
 
