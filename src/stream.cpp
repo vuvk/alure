@@ -168,6 +168,7 @@ struct wavStream : public alureStream {
     int blockAlign;
     int sampleSize;
     long dataStart;
+    long dataLen;
     size_t remLen;
 
     virtual bool IsValid()
@@ -223,7 +224,10 @@ struct wavStream : public alureStream {
     {
         wavFile->clear();
         if(wavFile->seekg(dataStart))
+        {
+            remLen = dataLen;
             return true;
+        }
 
         SetError("Seek failed");
         return false;
@@ -292,7 +296,7 @@ private:
             else if(memcmp(tag, "data", 4) == 0)
             {
                 dataStart = wavFile->tellg();
-                remLen = length;
+                dataLen = remLen = length;
             }
 
             wavFile->seekg(length, std::ios_base::cur);
@@ -310,6 +314,7 @@ struct aiffStream : public alureStream {
     int blockAlign;
     int sampleSize;
     long dataStart;
+    long dataLen;
     size_t remLen;
 
     virtual bool IsValid()
@@ -365,7 +370,10 @@ struct aiffStream : public alureStream {
     {
         aiffFile->clear();
         if(aiffFile->seekg(dataStart))
+        {
+            remLen = dataLen;
             return true;
+        }
 
         SetError("Seek failed");
         return false;
@@ -428,7 +436,7 @@ private:
             {
                 dataStart = aiffFile->tellg();
                 dataStart += 8;
-                remLen = length - 8;
+                dataLen = remLen = length - 8;
             }
 
             aiffFile->seekg(length, std::ios_base::cur);
