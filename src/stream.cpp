@@ -986,7 +986,7 @@ struct gstStream : public alureStream {
 
         if(initialData.size() > 0)
         {
-            ALuint rem = std::min(initialData.size(), bytes);
+            size_t rem = std::min(initialData.size(), (size_t)bytes);
             memcpy(data, &initialData[0], rem);
             outTotal += rem;
             initialData.erase(initialData.begin(), initialData.begin()+rem);
