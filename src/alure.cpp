@@ -40,7 +40,6 @@ std::map<std::string,void*> FunctionList;
 #define MAKE_FUNC(x) typeof(x) * p##x
 #ifdef HAS_SNDFILE
 void *sndfile_handle;
-MAKE_FUNC(sf_open);
 MAKE_FUNC(sf_open_virtual);
 MAKE_FUNC(sf_close);
 MAKE_FUNC(sf_readf_short);
@@ -58,7 +57,6 @@ MAKE_FUNC(ov_pcm_seek);
 void *flac_handle;
 MAKE_FUNC(FLAC__stream_decoder_get_state);
 MAKE_FUNC(FLAC__stream_decoder_get_channels);
-MAKE_FUNC(FLAC__stream_decoder_init_file);
 MAKE_FUNC(FLAC__stream_decoder_finish);
 MAKE_FUNC(FLAC__stream_decoder_new);
 MAKE_FUNC(FLAC__stream_decoder_get_blocksize);
@@ -140,13 +138,11 @@ static void init_libs()
 #ifdef HAS_SNDFILE
     if(sndfile_handle)
     {
-        LOAD_FUNC(sndfile_handle, sf_open);
         LOAD_FUNC(sndfile_handle, sf_open_virtual);
         LOAD_FUNC(sndfile_handle, sf_close);
         LOAD_FUNC(sndfile_handle, sf_readf_short);
         LOAD_FUNC(sndfile_handle, sf_seek);
-        if(!psf_open || !psf_open_virtual || !psf_close || !psf_readf_short ||
-           !psf_seek)
+        if(!psf_open_virtual || !psf_close || !psf_readf_short || !psf_seek)
             sndfile_handle = NULL;
     }
 #endif
@@ -168,7 +164,6 @@ static void init_libs()
     {
         LOAD_FUNC(flac_handle, FLAC__stream_decoder_get_state);
         LOAD_FUNC(flac_handle, FLAC__stream_decoder_get_channels);
-        LOAD_FUNC(flac_handle, FLAC__stream_decoder_init_file);
         LOAD_FUNC(flac_handle, FLAC__stream_decoder_finish);
         LOAD_FUNC(flac_handle, FLAC__stream_decoder_new);
         LOAD_FUNC(flac_handle, FLAC__stream_decoder_get_blocksize);
@@ -179,8 +174,8 @@ static void init_libs()
         LOAD_FUNC(flac_handle, FLAC__stream_decoder_process_single);
         LOAD_FUNC(flac_handle, FLAC__stream_decoder_init_stream);
         if(!pFLAC__stream_decoder_get_state || !pFLAC__stream_decoder_get_channels ||
-           !pFLAC__stream_decoder_init_file || !pFLAC__stream_decoder_finish ||
-           !pFLAC__stream_decoder_new || !pFLAC__stream_decoder_get_blocksize ||
+           !pFLAC__stream_decoder_finish || !pFLAC__stream_decoder_new ||
+           !pFLAC__stream_decoder_get_blocksize ||
            !pFLAC__stream_decoder_get_bits_per_sample ||
            !pFLAC__stream_decoder_seek_absolute || !pFLAC__stream_decoder_delete ||
            !pFLAC__stream_decoder_get_sample_rate ||

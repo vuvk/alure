@@ -56,7 +56,6 @@ extern std::map<ALint,UserCallbacks> InstalledCallbacks;
 #define MAKE_FUNC(x) extern typeof(x) * p##x
 #ifdef HAS_SNDFILE
 extern void *sndfile_handle;
-MAKE_FUNC(sf_open);
 MAKE_FUNC(sf_open_virtual);
 MAKE_FUNC(sf_close);
 MAKE_FUNC(sf_readf_short);
@@ -74,7 +73,6 @@ MAKE_FUNC(ov_pcm_seek);
 extern void *flac_handle;
 MAKE_FUNC(FLAC__stream_decoder_get_state);
 MAKE_FUNC(FLAC__stream_decoder_get_channels);
-MAKE_FUNC(FLAC__stream_decoder_init_file);
 MAKE_FUNC(FLAC__stream_decoder_finish);
 MAKE_FUNC(FLAC__stream_decoder_new);
 MAKE_FUNC(FLAC__stream_decoder_get_blocksize);
