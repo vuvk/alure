@@ -467,12 +467,12 @@ struct sndStream : public alureStream {
     virtual ALuint GetData(ALubyte *data, ALuint bytes)
     {
         const ALuint frameSize = 2*sndInfo.channels;
-        return psf_readf_short(sndFile, (short*)data, bytes/frameSize) * frameSize;
+        return sf_readf_short(sndFile, (short*)data, bytes/frameSize) * frameSize;
     }
 
     virtual bool Rewind()
     {
-        if(psf_seek(sndFile, 0, SEEK_SET) != -1)
+        if(sf_seek(sndFile, 0, SEEK_SET) != -1)
             return true;
 
         SetError("Seek failed");
@@ -486,20 +486,18 @@ struct sndStream : public alureStream {
       : sndFile(NULL), fstream(_fstream)
     {
         memset(&sndInfo, 0, sizeof(sndInfo));
-        if(sndfile_handle)
-        {
-            static SF_VIRTUAL_IO streamIO = {
-                get_filelen, seek,
-                read, write, tell
-            };
-            sndFile = psf_open_virtual(&streamIO, SFM_READ, &sndInfo, fstream);
-        }
+
+        static SF_VIRTUAL_IO streamIO = {
+            get_filelen, seek,
+            read, write, tell
+        };
+        sndFile = sf_open_virtual(&streamIO, SFM_READ, &sndInfo, fstream);
     }
 
     virtual ~sndStream()
     {
         if(sndFile)
-            psf_close(sndFile);
+            sf_close(sndFile);
         sndFile = NULL;
 
         delete fstream;
@@ -576,7 +574,7 @@ struct oggStream : public alureStream {
 
     virtual bool GetFormat(ALenum *format, ALuint *frequency, ALuint *blockalign)
     {
-        vorbis_info *info = pov_info(oggFile, -1);
+        vorbis_info *info = ov_info(oggFile, -1);
         if(!info) return false;
 
         *format = alureGetSampleFormat(info->channels, 16, 0);
@@ -592,7 +590,7 @@ struct oggStream : public alureStream {
             char b[sizeof(short)];
         } endian = { 0x0100 };
 
-        vorbis_info *info = pov_info(oggFile, -1);
+        vorbis_info *info = ov_info(oggFile, -1);
         if(!info) return 0;
 
         ALuint blockAlign = info->channels*2;
@@ -601,7 +599,7 @@ struct oggStream : public alureStream {
         int got = 0;
         while(bytes > 0)
         {
-            int res = pov_read(oggFile, (char*)&data[got], bytes, endian.b[0], 2, 1, &oggBitstream);
+            int res = ov_read(oggFile, (char*)&data[got], bytes, endian.b[0], 2, 1, &oggBitstream);
             if(res <= 0)
                 break;
             bytes -= res;
@@ -612,7 +610,7 @@ struct oggStream : public alureStream {
 
     virtual bool Rewind()
     {
-        if(pov_pcm_seek(oggFile, 0) == 0)
+        if(ov_pcm_seek(oggFile, 0) == 0)
             return true;
 
         SetError("Seek failed");
@@ -630,8 +628,7 @@ struct oggStream : public alureStream {
         };
 
         oggFile = new OggVorbis_File;
-        if(!vorbisfile_handle ||
-           pov_open_callbacks(this, oggFile, NULL, 0, streamIO) != 0)
+        if(ov_open_callbacks(this, oggFile, NULL, 0, streamIO) != 0)
         {
             delete oggFile;
             oggFile = NULL;
@@ -642,7 +639,7 @@ struct oggStream : public alureStream {
     {
         if(oggFile)
         {
-            pov_clear(oggFile);
+            ov_clear(oggFile);
             delete oggFile;
         }
         delete fstream;
@@ -734,8 +731,8 @@ struct flacStream : public alureStream {
 
         while(outTotal < bytes)
         {
-            if(pFLAC__stream_decoder_process_single(flacFile) == false ||
-               pFLAC__stream_decoder_get_state(flacFile) == FLAC__STREAM_DECODER_END_OF_STREAM)
+            if(FLAC__stream_decoder_process_single(flacFile) == false ||
+               FLAC__stream_decoder_get_state(flacFile) == FLAC__STREAM_DECODER_END_OF_STREAM)
                 break;
         }
 
@@ -744,7 +741,7 @@ struct flacStream : public alureStream {
 
     virtual bool Rewind()
     {
-        if(pFLAC__stream_decoder_seek_absolute(flacFile, 0) != false)
+        if(FLAC__stream_decoder_seek_absolute(flacFile, 0) != false)
         {
             initialData.clear();
             return true;
@@ -760,12 +757,10 @@ struct flacStream : public alureStream {
     flacStream(std::istream *_fstream)
       : flacFile(NULL), fstream(_fstream)
     {
-        if(!flac_handle) return;
-
-        flacFile = pFLAC__stream_decoder_new();
+        flacFile = FLAC__stream_decoder_new();
         if(flacFile)
         {
-            if(pFLAC__stream_decoder_init_stream(flacFile, ReadCallback, SeekCallback, TellCallback, LengthCallback, EofCallback, WriteCallback, MetadataCallback, ErrorCallback, this) == FLAC__STREAM_DECODER_INIT_STATUS_OK)
+            if(FLAC__stream_decoder_init_stream(flacFile, ReadCallback, SeekCallback, TellCallback, LengthCallback, EofCallback, WriteCallback, MetadataCallback, ErrorCallback, this) == FLAC__STREAM_DECODER_INIT_STATUS_OK)
             {
                 if(InitFlac())
                 {
@@ -773,9 +768,9 @@ struct flacStream : public alureStream {
                     return;
                 }
 
-                pFLAC__stream_decoder_finish(flacFile);
+                FLAC__stream_decoder_finish(flacFile);
             }
-            pFLAC__stream_decoder_delete(flacFile);
+            FLAC__stream_decoder_delete(flacFile);
             flacFile = NULL;
         }
     }
@@ -784,8 +779,8 @@ struct flacStream : public alureStream {
     {
         if(flacFile)
         {
-            pFLAC__stream_decoder_finish(flacFile);
-            pFLAC__stream_decoder_delete(flacFile);
+            FLAC__stream_decoder_finish(flacFile);
+            FLAC__stream_decoder_delete(flacFile);
             flacFile = NULL;
         }
         delete fstream;
@@ -803,18 +798,18 @@ private:
         outTotal = 0;
         while(initialData.size() == 0)
         {
-            if(pFLAC__stream_decoder_process_single(flacFile) == false ||
-               pFLAC__stream_decoder_get_state(flacFile) == FLAC__STREAM_DECODER_END_OF_STREAM)
+            if(FLAC__stream_decoder_process_single(flacFile) == false ||
+               FLAC__stream_decoder_get_state(flacFile) == FLAC__STREAM_DECODER_END_OF_STREAM)
                 break;
         }
 
         if(initialData.size() > 0)
         {
-            blockAlign = pFLAC__stream_decoder_get_channels(flacFile) *
-                         pFLAC__stream_decoder_get_bits_per_sample(flacFile)/8;
-            samplerate = pFLAC__stream_decoder_get_sample_rate(flacFile);
-            format = alureGetSampleFormat(pFLAC__stream_decoder_get_channels(flacFile),
-                                          pFLAC__stream_decoder_get_bits_per_sample(flacFile), 0);
+            blockAlign = FLAC__stream_decoder_get_channels(flacFile) *
+                         FLAC__stream_decoder_get_bits_per_sample(flacFile)/8;
+            samplerate = FLAC__stream_decoder_get_sample_rate(flacFile);
+            format = alureGetSampleFormat(FLAC__stream_decoder_get_channels(flacFile),
+                                          FLAC__stream_decoder_get_bits_per_sample(flacFile), 0);
             return true;
         }
         return false;
