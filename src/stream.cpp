@@ -937,17 +937,16 @@ static const gchar *gst_audio_caps =
       "width = (int) 16, "
       "depth = (int) 16, "
       "rate = (int) [ 1, MAX ], "
-      "channels = (int) [ 1, MAX ]; "
+      "channels = (int) [ 1, 2 ]; "
       "audio/x-raw-int, "
       "signed = (boolean) FALSE, "
       "width = (int) 8, "
       "depth = (int) 8, "
       "rate = (int) [ 1, MAX ], "
-      "channels = (int) [ 1, MAX ]";
+      "channels = (int) [ 1, 2 ]";
 
 struct gstStream : public alureStream {
     GstElement *gstPipeline;
-    GstElement *gstSrc, *gstSink;
 
     ALenum format;
     ALuint samplerate;
@@ -987,17 +986,17 @@ struct gstStream : public alureStream {
             initialData.erase(initialData.begin(), initialData.begin()+rem);
         }
 
+        GstElement *gstSink = gst_bin_get_by_name(GST_BIN(gstPipeline), "alureSink");
         while(outTotal < outLen && !gst_app_sink_is_eos((GstAppSink*)gstSink))
-            on_new_buffer_from_source(gstSink, false);
+            on_new_buffer_from_source(gstSink);
 
         return outTotal;
     }
 
     virtual bool Rewind()
     {
-        if(gst_element_seek_simple(gstSink, GST_FORMAT_TIME,
-                                   static_cast<GstSeekFlags>(GST_SEEK_FLAG_FLUSH|GST_SEEK_FLAG_KEY_UNIT),
-                                   0))
+        GstSeekFlags flags = GstSeekFlags(GST_SEEK_FLAG_FLUSH|GST_SEEK_FLAG_KEY_UNIT);
+        if(gst_element_seek_simple(gstPipeline, GST_FORMAT_TIME, flags, 0))
         {
             initialData.clear();
             return true;
@@ -1011,7 +1010,7 @@ struct gstStream : public alureStream {
     { fstream = NULL; }
 
     gstStream(std::istream *_fstream)
-      : gstPipeline(NULL), fstream(_fstream)
+      : gstPipeline(NULL), format(AL_NONE), fstream(_fstream)
     { Init(); }
 
     virtual ~gstStream()
@@ -1019,12 +1018,6 @@ struct gstStream : public alureStream {
         if(gstPipeline)
         {
             gst_element_set_state(gstPipeline, GST_STATE_NULL);
-            if(gstSrc)
-                gst_object_unref(gstSrc);
-            gstSrc = NULL;
-            if(gstSink)
-                gst_object_unref(gstSink);
-            gstSink = NULL;
             gst_object_unref(gstPipeline);
             gstPipeline = NULL;
         }
@@ -1046,61 +1039,63 @@ private:
         gstPipeline = gst_parse_launch(string, NULL);
         g_free(string);
 
-        if(gstPipeline)
+        if(!gstPipeline)
+            return;
+
+        GstElement *gstSrc = gst_bin_get_by_name(GST_BIN(gstPipeline), "alureSrc");
+        GstElement *gstSink = gst_bin_get_by_name(GST_BIN(gstPipeline), "alureSink");
+
+        if(gstSrc && gstSink)
         {
-            gstSrc = gst_bin_get_by_name(GST_BIN(gstPipeline), "alureSrc");
-            gstSink = gst_bin_get_by_name(GST_BIN(gstPipeline), "alureSink");
+            g_object_set(G_OBJECT(gstSrc), "size", (gint64)len, NULL);
+            g_object_set(G_OBJECT(gstSrc), "stream-type", 2, NULL);
 
-            if(gstSrc && gstSink)
-            {
-                g_object_set(G_OBJECT(gstSrc), "size", (gint64)len, NULL);
-                g_object_set(G_OBJECT(gstSrc), "stream-type", 1, NULL);
+            /* configure the appsrc, we will push a buffer to appsrc when it
+             * needs more data */
+            g_signal_connect(gstSrc, "need-data", G_CALLBACK(feed_data), this);
+            g_signal_connect(gstSrc, "seek-data", G_CALLBACK(seek_data), this);
 
-                /* configure the appsrc, we will push a buffer to appsrc when it needs more
-                 * data */
-                g_signal_connect(gstSrc, "need-data", G_CALLBACK(feed_data), this);
-                g_signal_connect(gstSrc, "seek-data", G_CALLBACK(seek_data), this);
+            g_object_set(G_OBJECT(gstSink), "preroll-queue-len", 1, NULL);
+            g_object_set(G_OBJECT(gstSink), "max-buffers", 1, NULL);
+            g_object_set(G_OBJECT(gstSink), "drop", FALSE, NULL);
+            g_object_set(G_OBJECT(gstSink), "sync", FALSE, NULL);
 
-                g_object_set(G_OBJECT(gstSink), "max_buffers", 2, "drop", FALSE,
-                                                "sync", FALSE, NULL);
+            outTotal = 0;
+            outLen = 0;
+            outBytes = NULL;
 
-                outTotal = 0;
-                outLen = 0;
-                outBytes = NULL;
+            GstState newstate;
+            if(gst_element_set_state(gstPipeline, GST_STATE_PLAYING) != GST_STATE_CHANGE_FAILURE &&
+               gst_element_get_state(gstPipeline, &newstate, NULL, GST_SECOND) == GST_STATE_CHANGE_SUCCESS &&
+               newstate == GST_STATE_PLAYING)
+                on_new_preroll_from_source(gstSink);
+        }
 
-                gst_element_set_state(gstPipeline, GST_STATE_PLAYING);
-                on_new_buffer_from_source(gstSink, true);
-            }
+        if(gstSrc)  gst_object_unref(gstSrc);
+        if(gstSink) gst_object_unref(gstSink);
 
-            if(initialData.size() == 0)
-            {
-                gst_element_set_state(gstPipeline, GST_STATE_NULL);
-                if(gstSrc)
-                    gst_object_unref(gstSrc);
-                gstSrc = NULL;
-                if(gstSink)
-                    gst_object_unref(gstSink);
-                gstSink = NULL;
-                gst_object_unref(gstPipeline);
-                gstPipeline = NULL;
-            }
+        if(format == AL_NONE)
+        {
+            gst_element_set_state(gstPipeline, GST_STATE_NULL);
+            gst_object_unref(gstPipeline);
+            gstPipeline = NULL;
         }
     }
 
-    void on_new_buffer_from_source(GstElement *elt, bool setformat)
+    void on_new_preroll_from_source(GstElement *elt)
     {
         // get the buffer from appsink
-        GstBuffer *buffer = gst_app_sink_pull_buffer(GST_APP_SINK(elt));
+        GstBuffer *buffer = gst_app_sink_pull_preroll(GST_APP_SINK(elt));
         if(!buffer)
             return;
 
-        if(setformat)
+        if(format == AL_NONE)
         {
             GstCaps *caps = GST_BUFFER_CAPS(buffer);
             //GST_LOG("caps are %" GST_PTR_FORMAT, caps);
 
             ALint i;
-            gint rate = 0, channels = 0, depth = 0, width = 0;
+            gint rate = 0, channels = 0, depth = 0;
             for(i = gst_caps_get_size(caps)-1;i >= 0;i--)
             {
                 GstStructure *struc = gst_caps_get_structure(caps, i);
@@ -1110,20 +1105,23 @@ private:
                     gst_structure_get_int(struc, "rate", &rate);
                 if(gst_structure_has_field(struc, "depth"))
                     gst_structure_get_int(struc, "depth", &depth);
-                if(gst_structure_has_field(struc, "width"))
-                    gst_structure_get_int(struc, "width", &width);
-            }
-
-            if(depth != width)
-            {
-                // No support for padded sample formats
-                depth = width = 0;
             }
 
             samplerate = rate;
             format = alureGetSampleFormat(channels, depth, 0);
             blockAlign = channels * depth / 8;
         }
+
+        /* we don't need the appsink buffer anymore */
+        gst_buffer_unref(buffer);
+    }
+
+    void on_new_buffer_from_source(GstElement *elt)
+    {
+        // get the buffer from appsink
+        GstBuffer *buffer = gst_app_sink_pull_buffer(GST_APP_SINK(elt));
+        if(!buffer)
+            return;
 
         ALubyte *src_buffer = (ALubyte*)(GST_BUFFER_DATA(buffer));
         guint size = GST_BUFFER_SIZE(buffer);
@@ -1143,7 +1141,7 @@ private:
         gst_buffer_unref(buffer);
     }
 
-    static void feed_data(GstElement */*appsrc*/, guint size, gstStream *app)
+    static void feed_data(GstElement *appsrc, guint size, gstStream *app)
     {
         GstBuffer *buffer;
         GstFlowReturn ret;
@@ -1151,7 +1149,7 @@ private:
         if(!app->fstream->good())
         {
             // we are EOS, send end-of-stream
-            g_signal_emit_by_name(app->gstSrc, "end-of-stream", &ret);
+            g_signal_emit_by_name(appsrc, "end-of-stream", &ret);
             return;
         }
 
@@ -1161,7 +1159,7 @@ private:
         buffer = gst_app_buffer_new(data, app->fstream->gcount(), g_free, data);
 
         //GST_DEBUG("feed buffer %p, %u", buffer, GST_BUFFER_SIZE(buffer));
-        g_signal_emit_by_name(app->gstSrc, "push-buffer", buffer, &ret);
+        g_signal_emit_by_name(appsrc, "push-buffer", buffer, &ret);
     }
 
     static gboolean seek_data(GstElement */*appsrc*/, guint64 position, gstStream *app)
