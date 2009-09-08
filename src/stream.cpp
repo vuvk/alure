@@ -955,7 +955,8 @@ struct gstStream : public alureStream {
     }
 
     gstStream(std::istream *_fstream)
-      : alureStream(_fstream), gstPipeline(NULL), format(AL_NONE)
+      : alureStream(_fstream), gstPipeline(NULL), format(AL_NONE), outBytes(NULL),
+        outLen(0), outTotal(0)
     { Init(); }
 
     virtual ~gstStream()
@@ -979,7 +980,7 @@ private:
             return;
 
         std::string gst_audio_caps;
-        if(alIsExtensionPresent("AL_EXT_float32"))
+        if(alIsExtensionPresent("AL_EXT_FLOAT32"))
         {
             gst_audio_caps +=
                 "audio/x-raw-float, "
@@ -988,7 +989,7 @@ private:
                 "width = (int) 32, "
                 "depth = (int) 32, "
                 "rate = (int) [ 1, MAX ], "
-                "channels = (int) { 1, 2 }; ";
+                "channels = (int) [ 1, 2 ]; ";
         }
         gst_audio_caps +=
             "audio/x-raw-int, "
@@ -997,14 +998,14 @@ private:
             "width = (int) 16, "
             "depth = (int) 16, "
             "rate = (int) [ 1, MAX ], "
-            "channels = (int) { 1, 2 }; ";
+            "channels = (int) [ 1, 2 ]; ";
         gst_audio_caps +=
             "audio/x-raw-int, "
             "signed = (boolean) FALSE, "
             "width = (int) 8, "
             "depth = (int) 8, "
             "rate = (int) [ 1, MAX ], "
-            "channels = (int) { 1, 2 }; ";
+            "channels = (int) [ 1, 2 ]; ";
 
         gchar *string = g_strdup_printf("appsrc name=alureSrc ! decodebin ! audioconvert ! appsink caps=\"%s\" name=alureSink", gst_audio_caps.c_str());
         gstPipeline = gst_parse_launch(string, NULL);
@@ -1027,19 +1028,45 @@ private:
             g_signal_connect(gstSrc, "seek-data", G_CALLBACK(seek_data), this);
 
             g_object_set(G_OBJECT(gstSink), "preroll-queue-len", 1, NULL);
-            g_object_set(G_OBJECT(gstSink), "max-buffers", 1, NULL);
+            g_object_set(G_OBJECT(gstSink), "max-buffers", 2, NULL);
             g_object_set(G_OBJECT(gstSink), "drop", FALSE, NULL);
             g_object_set(G_OBJECT(gstSink), "sync", FALSE, NULL);
 
-            outTotal = 0;
-            outLen = 0;
-            outBytes = NULL;
+            GstBus *bus = gst_element_get_bus(gstPipeline);
+            if(bus)
+            {
+                //bool allok = false;
 
-            GstState newstate;
-            if(gst_element_set_state(gstPipeline, GST_STATE_PLAYING) != GST_STATE_CHANGE_FAILURE &&
-               gst_element_get_state(gstPipeline, &newstate, NULL, GST_SECOND) == GST_STATE_CHANGE_SUCCESS &&
-               newstate == GST_STATE_PLAYING)
-                on_new_preroll_from_source(gstSink);
+                gst_element_set_state(gstPipeline, GST_STATE_PLAYING);
+                while(1)
+                {
+                    GstMessageType types = GstMessageType(GST_MESSAGE_ERROR|GST_MESSAGE_ASYNC_DONE);
+                    GstMessage *msg = gst_bus_timed_pop_filtered(bus, GST_CLOCK_TIME_NONE, types);
+                    if(!msg) continue;
+
+                    if(GST_MESSAGE_TYPE(msg) == GST_MESSAGE_ASYNC_DONE)
+                    {
+                        on_new_preroll_from_source(gstSink);
+                        break;
+                    }
+
+                    if(GST_MESSAGE_TYPE(msg) == GST_MESSAGE_ERROR)
+                    {
+                        gchar  *debug;
+                        GError *error;
+
+                        gst_message_parse_error(msg, &error, &debug);
+                        g_free(debug);
+
+                        g_printerr("GST Error: %s\n", error->message);
+                        g_error_free(error);
+                        break;
+                    }
+                }
+
+                gst_object_unref(bus);
+                bus = NULL;
+            }
         }
 
         if(gstSrc)  gst_object_unref(gstSrc);
