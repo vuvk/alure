@@ -980,32 +980,124 @@ private:
             return;
 
         std::string gst_audio_caps;
-        if(alIsExtensionPresent("AL_EXT_FLOAT32"))
+        if(alIsExtensionPresent("AL_EXT_MCFORMATS"))
         {
-            gst_audio_caps +=
-                "audio/x-raw-float, "
-                "endianness = (int) { " G_STRINGIFY(G_BYTE_ORDER) " }, "
-                "signed = (boolean) TRUE, "
-                "width = (int) 32, "
-                "depth = (int) 32, "
-                "rate = (int) [ 1, MAX ], "
-                "channels = (int) [ 1, 2 ]; ";
+            static const struct {
+                const char *ename;
+                const char *chans;
+                const char *order;
+            } fmts32[] = {
+                { "AL_FORMAT_71CHN32", "8", "GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT, GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT, GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER, GST_AUDIO_CHANNEL_POSITION_LFE, GST_AUDIO_CHANNEL_POSITION_REAR_LEFT, GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT, GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT, GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT" },
+                { "AL_FORMAT_51CHN32", "6", "GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT, GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT, GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER, GST_AUDIO_CHANNEL_POSITION_LFE, GST_AUDIO_CHANNEL_POSITION_REAR_LEFT, GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT" },
+                { "AL_FORMAT_QUAD32", "4", "GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT, GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT, GST_AUDIO_CHANNEL_POSITION_REAR_LEFT, GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT" },
+                { "AL_FORMAT_STEREO_FLOAT32", "2", "GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT, GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT" },
+                { "AL_FORMAT_MONO_FLOAT32", "1", "GST_AUDIO_CHANNEL_POSITION_FRONT_MONO" },
+                { NULL, NULL, NULL }
+            }, fmts16[] = {
+                { "AL_FORMAT_71CHN16", "8", "GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT, GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT, GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER, GST_AUDIO_CHANNEL_POSITION_LFE, GST_AUDIO_CHANNEL_POSITION_REAR_LEFT, GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT, GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT, GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT" },
+                { "AL_FORMAT_51CHN16", "6", "GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT, GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT, GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER, GST_AUDIO_CHANNEL_POSITION_LFE, GST_AUDIO_CHANNEL_POSITION_REAR_LEFT, GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT" },
+                { "AL_FORMAT_QUAD16", "4", "GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT, GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT, GST_AUDIO_CHANNEL_POSITION_REAR_LEFT, GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT" },
+                { "AL_FORMAT_STEREO16", "2", "GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT, GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT" },
+                { "AL_FORMAT_MONO16", "1", "GST_AUDIO_CHANNEL_POSITION_FRONT_MONO" },
+                { NULL, NULL, NULL }
+            }, fmts8[] = {
+                { "AL_FORMAT_71CHN8", "8", "GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT, GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT, GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER, GST_AUDIO_CHANNEL_POSITION_LFE, GST_AUDIO_CHANNEL_POSITION_REAR_LEFT, GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT, GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT, GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT" },
+                { "AL_FORMAT_51CHN8", "6", "GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT, GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT, GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER, GST_AUDIO_CHANNEL_POSITION_LFE, GST_AUDIO_CHANNEL_POSITION_REAR_LEFT, GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT" },
+                { "AL_FORMAT_QUAD8", "4", "GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT, GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT, GST_AUDIO_CHANNEL_POSITION_REAR_LEFT, GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT" },
+                { "AL_FORMAT_STEREO8", "2", "GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT, GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT" },
+                { "AL_FORMAT_MONO8", "1", "GST_AUDIO_CHANNEL_POSITION_FRONT_MONO" },
+                { NULL, NULL, NULL }
+            };
+
+            if(alIsExtensionPresent("AL_EXT_FLOAT32"))
+            {
+                for(int i = 0;fmts32[i].ename;i++)
+                {
+                    if(alGetEnumValue(fmts32[i].ename) == 0)
+                        continue;
+
+                    gst_audio_caps +=
+                        "audio/x-raw-float, \n\t"
+                        "endianness = (int) { " G_STRINGIFY(G_BYTE_ORDER) " }, \n\t"
+                        "signed = (boolean) TRUE, \n\t"
+                        "width = (int) 32, \n\t"
+                        "depth = (int) 32, \n\t"
+                        "rate = (int) [ 1, MAX ], \n\t"
+                        "channels = (int) ";
+                    gst_audio_caps += fmts32[i].chans;
+                    gst_audio_caps += ", \n\t"
+                        "channel-positions = (GstAudioChannelPosition) < ";
+                    gst_audio_caps += fmts32[i].order;
+                    gst_audio_caps += " >; \n";
+                }
+            }
+            for(int i = 0;fmts16[i].ename;i++)
+            {
+                if(alGetEnumValue(fmts16[i].ename) == 0)
+                    continue;
+
+                gst_audio_caps +=
+                    "audio/x-raw-int, \n\t"
+                    "endianness = (int) { " G_STRINGIFY(G_BYTE_ORDER) " }, \n\t"
+                    "signed = (boolean) TRUE, \n\t"
+                    "width = (int) 16, \n\t"
+                    "depth = (int) 16, \n\t"
+                    "rate = (int) [ 1, MAX ], \n\t"
+                    "channels = (int) ";
+                gst_audio_caps += fmts16[i].chans;
+                gst_audio_caps += ", \n\t"
+                    "channel-positions = (GstAudioChannelPosition) < ";
+                gst_audio_caps += fmts16[i].order;
+                gst_audio_caps += " >; \n";
+            }
+            for(int i = 0;fmts8[i].ename;i++)
+            {
+                if(alGetEnumValue(fmts8[i].ename) == 0)
+                    continue;
+
+                gst_audio_caps +=
+                    "audio/x-raw-int, \n\t"
+                    "signed = (boolean) FALSE, \n\t"
+                    "width = (int) 8, \n\t"
+                    "depth = (int) 8, \n\t"
+                    "rate = (int) [ 1, MAX ], \n\t"
+                    "channels = (int) ";
+                gst_audio_caps += fmts8[i].chans;
+                gst_audio_caps += ", \n\t"
+                    "channel-positions = (GstAudioChannelPosition) < ";
+                gst_audio_caps += fmts8[i].order;
+                gst_audio_caps += " >; \n";
+            }
         }
-        gst_audio_caps +=
-            "audio/x-raw-int, "
-            "endianness = (int) { " G_STRINGIFY(G_BYTE_ORDER) " }, "
-            "signed = (boolean) TRUE, "
-            "width = (int) 16, "
-            "depth = (int) 16, "
-            "rate = (int) [ 1, MAX ], "
-            "channels = (int) [ 1, 2 ]; ";
-        gst_audio_caps +=
-            "audio/x-raw-int, "
-            "signed = (boolean) FALSE, "
-            "width = (int) 8, "
-            "depth = (int) 8, "
-            "rate = (int) [ 1, MAX ], "
-            "channels = (int) [ 1, 2 ]; ";
+        else
+        {
+            if(alIsExtensionPresent("AL_EXT_FLOAT32"))
+            {
+                gst_audio_caps +=
+                    "audio/x-raw-float, \n\t"
+                    "endianness = (int) { " G_STRINGIFY(G_BYTE_ORDER) " }, \n\t"
+                    "signed = (boolean) TRUE, \n\t"
+                    "width = (int) 32, \n\t"
+                    "depth = (int) 32, \n\t"
+                    "rate = (int) [ 1, MAX ], \n\t"
+                    "channels = (int) [ 1, 2 ]; \n";
+            }
+            gst_audio_caps +=
+                "audio/x-raw-int, \n\t"
+                "endianness = (int) { " G_STRINGIFY(G_BYTE_ORDER) " }, \n\t"
+                "signed = (boolean) TRUE, \n\t"
+                "width = (int) 16, \n\t"
+                "depth = (int) 16, \n\t"
+                "rate = (int) [ 1, MAX ], \n\t"
+                "channels = (int) [ 1, 2 ]; \n";
+            gst_audio_caps +=
+                "audio/x-raw-int, \n\t"
+                "signed = (boolean) FALSE, \n\t"
+                "width = (int) 8, \n\t"
+                "depth = (int) 8, \n\t"
+                "rate = (int) [ 1, MAX ], \n\t"
+                "channels = (int) [ 1, 2 ]; \n";
+        }
 
         gchar *string = g_strdup_printf("appsrc name=alureSrc ! decodebin ! audioconvert ! appsink caps=\"%s\" name=alureSink", gst_audio_caps.c_str());
         gstPipeline = gst_parse_launch(string, NULL);
@@ -1047,6 +1139,7 @@ private:
                     if(GST_MESSAGE_TYPE(msg) == GST_MESSAGE_ASYNC_DONE)
                     {
                         on_new_preroll_from_source(gstSink);
+                        gst_object_unref(msg);
                         break;
                     }
 
@@ -1056,12 +1149,15 @@ private:
                         GError *error;
 
                         gst_message_parse_error(msg, &error, &debug);
-                        g_free(debug);
-
                         g_printerr("GST Error: %s\n", error->message);
+
+                        g_free(debug);
                         g_error_free(error);
+
+                        gst_object_unref(msg);
                         break;
                     }
+                    gst_object_unref(msg);
                 }
 
                 gst_object_unref(bus);
