@@ -930,21 +930,6 @@ struct flacStream : public nullStream {
 
 
 #ifdef HAS_GSTREAMER
-static const gchar *gst_audio_caps =
-      "audio/x-raw-int, "
-      "endianness = (int) { " G_STRINGIFY(G_BYTE_ORDER) " }, "
-      "signed = (boolean) TRUE, "
-      "width = (int) 16, "
-      "depth = (int) 16, "
-      "rate = (int) [ 1, MAX ], "
-      "channels = (int) [ 1, 2 ]; "
-      "audio/x-raw-int, "
-      "signed = (boolean) FALSE, "
-      "width = (int) 8, "
-      "depth = (int) 8, "
-      "rate = (int) [ 1, MAX ], "
-      "channels = (int) [ 1, 2 ]";
-
 struct gstStream : public alureStream {
     GstElement *gstPipeline;
 
@@ -1035,7 +1020,35 @@ private:
         if(!fstream->good() || len <= 0)
             return;
 
-        gchar *string = g_strdup_printf("appsrc name=alureSrc ! decodebin ! audioconvert ! appsink caps=\"%s\" name=alureSink", gst_audio_caps);
+        std::string gst_audio_caps;
+        if(alIsExtensionPresent("AL_EXT_float32"))
+        {
+            gst_audio_caps +=
+                "audio/x-raw-float, "
+                "endianness = (int) { " G_STRINGIFY(G_BYTE_ORDER) " }, "
+                "signed = (boolean) TRUE, "
+                "width = (int) 32, "
+                "depth = (int) 32, "
+                "rate = (int) [ 1, MAX ], "
+                "channels = (int) { 1, 2 }; ";
+        }
+        gst_audio_caps +=
+            "audio/x-raw-int, "
+            "endianness = (int) { " G_STRINGIFY(G_BYTE_ORDER) " }, "
+            "signed = (boolean) TRUE, "
+            "width = (int) 16, "
+            "depth = (int) 16, "
+            "rate = (int) [ 1, MAX ], "
+            "channels = (int) { 1, 2 }; ";
+        gst_audio_caps +=
+            "audio/x-raw-int, "
+            "signed = (boolean) FALSE, "
+            "width = (int) 8, "
+            "depth = (int) 8, "
+            "rate = (int) [ 1, MAX ], "
+            "channels = (int) { 1, 2 }; ";
+
+        gchar *string = g_strdup_printf("appsrc name=alureSrc ! decodebin ! audioconvert ! appsink caps=\"%s\" name=alureSink", gst_audio_caps.c_str());
         gstPipeline = gst_parse_launch(string, NULL);
         g_free(string);
 
@@ -1095,7 +1108,7 @@ private:
             //GST_LOG("caps are %" GST_PTR_FORMAT, caps);
 
             ALint i;
-            gint rate = 0, channels = 0, depth = 0;
+            gint rate = 0, channels = 0, bits = 0;
             for(i = gst_caps_get_size(caps)-1;i >= 0;i--)
             {
                 GstStructure *struc = gst_caps_get_structure(caps, i);
@@ -1103,13 +1116,16 @@ private:
                     gst_structure_get_int(struc, "channels", &channels);
                 if(gst_structure_has_field(struc, "rate"))
                     gst_structure_get_int(struc, "rate", &rate);
-                if(gst_structure_has_field(struc, "depth"))
-                    gst_structure_get_int(struc, "depth", &depth);
+                if(gst_structure_has_field(struc, "width"))
+                    gst_structure_get_int(struc, "width", &bits);
             }
 
             samplerate = rate;
-            format = alureGetSampleFormat(channels, depth, 0);
-            blockAlign = channels * depth / 8;
+            if(bits == 32)
+                format = alureGetSampleFormat(channels, 0, bits);
+            else
+                format = alureGetSampleFormat(channels, bits, 0);
+            blockAlign = channels * bits / 8;
         }
 
         /* we don't need the appsink buffer anymore */
@@ -1208,6 +1224,15 @@ alureStream *create_stream(const T &fdata)
         stream->ReleaseFile();
         delete stream;
 
+        // Try GStreamer
+        file->clear();
+        file->seekg(0, std::ios_base::beg);
+        stream = new gstStream(file);
+        if(stream->IsValid())
+            return stream;
+        stream->ReleaseFile();
+        delete stream;
+
         // Try libSndFile
         file->clear();
         file->seekg(0, std::ios_base::beg);
@@ -1230,15 +1255,6 @@ alureStream *create_stream(const T &fdata)
         file->clear();
         file->seekg(0, std::ios_base::beg);
         stream = new flacStream(file);
-        if(stream->IsValid())
-            return stream;
-        stream->ReleaseFile();
-        delete stream;
-
-        // Try GStreamer
-        file->clear();
-        file->seekg(0, std::ios_base::beg);
-        stream = new gstStream(file);
         if(stream->IsValid())
             return stream;
         stream->ReleaseFile();
