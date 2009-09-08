@@ -59,13 +59,15 @@ struct alureStream {
     ALubyte *dataChunk;
     ALsizei chunkLen;
 
+    std::istream *fstream;
+
     virtual bool IsValid() = 0;
     virtual bool GetFormat(ALenum*,ALuint*,ALuint*) = 0;
     virtual ALuint GetData(ALubyte*,ALuint) = 0;
     virtual bool Rewind() = 0;
-    virtual void ReleaseFile() = 0;
 
-    alureStream() : data(NULL), dataChunk(NULL)
+    alureStream(std::istream *_stream=NULL)
+      : data(NULL), dataChunk(NULL), fstream(_stream)
     { }
     virtual ~alureStream()
     { delete[] data; delete[] dataChunk; }

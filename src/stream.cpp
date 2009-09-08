@@ -86,7 +86,6 @@ struct nullStream : public alureStream {
     virtual bool GetFormat(ALenum*,ALuint*,ALuint*) { return false; }
     virtual ALuint GetData(ALubyte*,ALuint) { return 0; }
     virtual bool Rewind() { return false; }
-    virtual void ReleaseFile() { }
     nullStream(){}
 };
 
@@ -133,9 +132,6 @@ struct customStream : public alureStream {
         return false;
     }
 
-    virtual void ReleaseFile()
-    { }
-
     customStream(const char *fname, const UserCallbacks &callbacks)
       : usrFile(NULL), format(0), samplerate(0), blockAlign(0), cb(callbacks)
     {
@@ -162,7 +158,6 @@ struct customStream : public alureStream {
 };
 
 struct wavStream : public alureStream {
-    std::istream *wavFile;
     ALenum format;
     int samplerate;
     int blockAlign;
@@ -190,9 +185,9 @@ struct wavStream : public alureStream {
         } endian = { 1 };
 
         std::streamsize rem = ((remLen >= bytes) ? bytes : remLen) / blockAlign;
-        wavFile->read(reinterpret_cast<char*>(data), rem*blockAlign);
+        fstream->read(reinterpret_cast<char*>(data), rem*blockAlign);
 
-        std::streamsize got = wavFile->gcount();
+        std::streamsize got = fstream->gcount();
         got -= got%blockAlign;
         remLen -= got;
 
@@ -222,8 +217,8 @@ struct wavStream : public alureStream {
 
     virtual bool Rewind()
     {
-        wavFile->clear();
-        if(wavFile->seekg(dataStart))
+        fstream->clear();
+        if(fstream->seekg(dataStart))
         {
             remLen = dataLen;
             return true;
@@ -233,18 +228,12 @@ struct wavStream : public alureStream {
         return false;
     }
 
-    virtual void ReleaseFile()
-    { wavFile = NULL; }
-
     wavStream(std::istream *_fstream)
-      : wavFile(_fstream), format(0), dataStart(0)
+      : alureStream(_fstream), format(0), dataStart(0)
     { Init(); }
 
     virtual ~wavStream()
-    {
-        delete wavFile;
-        wavFile = NULL;
-    }
+    { }
 
 private:
     void Init()
@@ -252,42 +241,42 @@ private:
         ALubyte buffer[25];
         int length;
 
-        if(!wavFile->read(reinterpret_cast<char*>(buffer), 12) ||
+        if(!fstream->read(reinterpret_cast<char*>(buffer), 12) ||
            memcmp(buffer, "RIFF", 4) != 0 || memcmp(buffer+8, "WAVE", 4) != 0)
             return;
 
         while(!dataStart || format == AL_NONE)
         {
             char tag[4];
-            if(!wavFile->read(tag, 4))
+            if(!fstream->read(tag, 4))
                 break;
 
             /* read chunk length */
-            length = read_le32(wavFile);
+            length = read_le32(fstream);
 
             if(memcmp(tag, "fmt ", 4) == 0 && length >= 16)
             {
                 /* Data type (should be 1 for PCM data) */
-                int type = read_le16(wavFile);
+                int type = read_le16(fstream);
                 if(type != 1)
                     break;
 
                 /* mono or stereo data */
-                int channels = read_le16(wavFile);
+                int channels = read_le16(fstream);
 
                 /* sample frequency */
-                samplerate = read_le32(wavFile);
+                samplerate = read_le32(fstream);
 
                 /* skip four bytes */
-                wavFile->ignore(4);
+                fstream->ignore(4);
 
                 /* bytes per block */
-                blockAlign = read_le16(wavFile);
+                blockAlign = read_le16(fstream);
                 if(blockAlign == 0)
                     break;
 
                 /* bits per sample */
-                sampleSize = read_le16(wavFile) / 8;
+                sampleSize = read_le16(fstream) / 8;
 
                 format = alureGetSampleFormat(channels, sampleSize*8, 0);
 
@@ -295,20 +284,19 @@ private:
             }
             else if(memcmp(tag, "data", 4) == 0)
             {
-                dataStart = wavFile->tellg();
+                dataStart = fstream->tellg();
                 dataLen = remLen = length;
             }
 
-            wavFile->seekg(length, std::ios_base::cur);
+            fstream->seekg(length, std::ios_base::cur);
         }
 
         if(dataStart > 0 && format != AL_NONE)
-            wavFile->seekg(dataStart);
+            fstream->seekg(dataStart);
     }
 };
 
 struct aiffStream : public alureStream {
-    std::istream *aiffFile;
     ALenum format;
     int samplerate;
     int blockAlign;
@@ -336,9 +324,9 @@ struct aiffStream : public alureStream {
         } endian = { 1 };
 
         std::streamsize rem = ((remLen >= bytes) ? bytes : remLen) / blockAlign;
-        aiffFile->read(reinterpret_cast<char*>(data), rem*blockAlign);
+        fstream->read(reinterpret_cast<char*>(data), rem*blockAlign);
 
-        std::streamsize got = aiffFile->gcount();
+        std::streamsize got = fstream->gcount();
         got -= got%blockAlign;
         remLen -= got;
 
@@ -368,8 +356,8 @@ struct aiffStream : public alureStream {
 
     virtual bool Rewind()
     {
-        aiffFile->clear();
-        if(aiffFile->seekg(dataStart))
+        fstream->clear();
+        if(fstream->seekg(dataStart))
         {
             remLen = dataLen;
             return true;
@@ -379,18 +367,12 @@ struct aiffStream : public alureStream {
         return false;
     }
 
-    virtual void ReleaseFile()
-    { aiffFile = NULL; }
-
     aiffStream(std::istream *_fstream)
-      : aiffFile(_fstream), format(0), dataStart(0)
+      : alureStream(_fstream), format(0), dataStart(0)
     { Init(); }
 
     virtual ~aiffStream()
-    {
-        delete aiffFile;
-        aiffFile = NULL;
-    }
+    { }
 
 private:
     void Init()
@@ -398,32 +380,32 @@ private:
         ALubyte buffer[25];
         int length;
 
-        if(!aiffFile->read(reinterpret_cast<char*>(buffer), 12) ||
+        if(!fstream->read(reinterpret_cast<char*>(buffer), 12) ||
            memcmp(buffer, "FORM", 4) != 0 || memcmp(buffer+8, "AIFF", 4) != 0)
             return;
 
         while(!dataStart || format == AL_NONE)
         {
             char tag[4];
-            if(!aiffFile->read(tag, 4))
+            if(!fstream->read(tag, 4))
                 break;
 
             /* read chunk length */
-            length = read_be32(aiffFile);
+            length = read_be32(fstream);
 
             if(memcmp(tag, "COMM", 4) == 0 && length >= 18)
             {
                 /* mono or stereo data */
-                int channels = read_be16(aiffFile);
+                int channels = read_be16(fstream);
 
                 /* number of sample frames */
-                aiffFile->ignore(4);
+                fstream->ignore(4);
 
                 /* bits per sample */
-                sampleSize = read_be16(aiffFile) / 8;
+                sampleSize = read_be16(fstream) / 8;
 
                 /* sample frequency */
-                samplerate = read_be80extended(aiffFile);
+                samplerate = read_be80extended(fstream);
 
                 /* block alignment */
                 blockAlign = channels * sampleSize;
@@ -434,16 +416,16 @@ private:
             }
             else if(memcmp(tag, "SSND", 4) == 0)
             {
-                dataStart = aiffFile->tellg();
+                dataStart = fstream->tellg();
                 dataStart += 8;
                 dataLen = remLen = length - 8;
             }
 
-            aiffFile->seekg(length, std::ios_base::cur);
+            fstream->seekg(length, std::ios_base::cur);
         }
 
         if(dataStart > 0 && format != AL_NONE)
-            aiffFile->seekg(dataStart);
+            fstream->seekg(dataStart);
     }
 };
 
@@ -451,7 +433,6 @@ private:
 struct sndStream : public alureStream {
     SNDFILE *sndFile;
     SF_INFO sndInfo;
-    std::istream *fstream;
 
     virtual bool IsValid()
     { return sndFile != NULL; }
@@ -479,11 +460,8 @@ struct sndStream : public alureStream {
         return false;
     }
 
-    virtual void ReleaseFile()
-    { fstream = NULL; }
-
     sndStream(std::istream *_fstream)
-      : sndFile(NULL), fstream(_fstream)
+      : alureStream(_fstream), sndFile(NULL)
     {
         memset(&sndInfo, 0, sizeof(sndInfo));
 
@@ -499,9 +477,6 @@ struct sndStream : public alureStream {
         if(sndFile)
             sf_close(sndFile);
         sndFile = NULL;
-
-        delete fstream;
-        fstream = NULL;
     }
 
 private:
@@ -567,7 +542,6 @@ struct sndStream : public nullStream {
 struct oggStream : public alureStream {
     OggVorbis_File *oggFile;
     int oggBitstream;
-    std::istream *fstream;
 
     virtual bool IsValid()
     { return oggFile != NULL; }
@@ -617,11 +591,8 @@ struct oggStream : public alureStream {
         return false;
     }
 
-    virtual void ReleaseFile()
-    { fstream = NULL; }
-
     oggStream(std::istream *_fstream)
-      : oggFile(NULL), oggBitstream(0), fstream(_fstream)
+      : alureStream(_fstream), oggFile(NULL), oggBitstream(0)
     {
         const ov_callbacks streamIO = {
             read, seek, NULL, tell
@@ -642,8 +613,6 @@ struct oggStream : public alureStream {
             ov_clear(oggFile);
             delete oggFile;
         }
-        delete fstream;
-        fstream = NULL;
     }
 
 private:
@@ -694,7 +663,6 @@ struct flacStream : public alureStream {
     ALenum format;
     ALuint samplerate;
     ALuint blockAlign;
-    std::istream *fstream;
 
     std::vector<ALubyte> initialData;
 
@@ -751,11 +719,8 @@ struct flacStream : public alureStream {
         return false;
     }
 
-    virtual void ReleaseFile()
-    { fstream = NULL; }
-
     flacStream(std::istream *_fstream)
-      : flacFile(NULL), fstream(_fstream)
+      : alureStream(_fstream), flacFile(NULL)
     {
         flacFile = FLAC__stream_decoder_new();
         if(flacFile)
@@ -783,8 +748,6 @@ struct flacStream : public alureStream {
             FLAC__stream_decoder_delete(flacFile);
             flacFile = NULL;
         }
-        delete fstream;
-        fstream = NULL;
     }
 
 private:
@@ -936,7 +899,6 @@ struct gstStream : public alureStream {
     ALenum format;
     ALuint samplerate;
     ALuint blockAlign;
-    std::istream *fstream;
 
     std::vector<ALubyte> initialData;
 
@@ -992,11 +954,8 @@ struct gstStream : public alureStream {
         return false;
     }
 
-    virtual void ReleaseFile()
-    { fstream = NULL; }
-
     gstStream(std::istream *_fstream)
-      : gstPipeline(NULL), format(AL_NONE), fstream(_fstream)
+      : alureStream(_fstream), gstPipeline(NULL), format(AL_NONE)
     { Init(); }
 
     virtual ~gstStream()
@@ -1007,8 +966,6 @@ struct gstStream : public alureStream {
             gst_object_unref(gstPipeline);
             gstPipeline = NULL;
         }
-        delete fstream;
-        fstream = NULL;
     }
 
 private:
@@ -1214,7 +1171,6 @@ alureStream *create_stream(const T &fdata)
         stream = new wavStream(file);
         if(stream->IsValid())
             return stream;
-        stream->ReleaseFile();
         delete stream;
 
         file->clear();
@@ -1222,7 +1178,6 @@ alureStream *create_stream(const T &fdata)
         stream = new aiffStream(file);
         if(stream->IsValid())
             return stream;
-        stream->ReleaseFile();
         delete stream;
 
         // Try GStreamer
@@ -1231,7 +1186,6 @@ alureStream *create_stream(const T &fdata)
         stream = new gstStream(file);
         if(stream->IsValid())
             return stream;
-        stream->ReleaseFile();
         delete stream;
 
         // Try libSndFile
@@ -1240,7 +1194,6 @@ alureStream *create_stream(const T &fdata)
         stream = new sndStream(file);
         if(stream->IsValid())
             return stream;
-        stream->ReleaseFile();
         delete stream;
 
         // Try libVorbisFile
@@ -1249,7 +1202,6 @@ alureStream *create_stream(const T &fdata)
         stream = new oggStream(file);
         if(stream->IsValid())
             return stream;
-        stream->ReleaseFile();
         delete stream;
 
         // Try libFLAC
@@ -1258,7 +1210,6 @@ alureStream *create_stream(const T &fdata)
         stream = new flacStream(file);
         if(stream->IsValid())
             return stream;
-        stream->ReleaseFile();
         delete stream;
 
         SetError("Unsupported type");
@@ -1709,6 +1660,11 @@ ALURE_API ALboolean ALURE_APIENTRY alureDestroyStream(alureStream *stream, ALsiz
         return AL_FALSE;
     }
 
+    if(stream)
+    {
+        delete stream->fstream;
+        stream->fstream = NULL;
+    }
     delete stream;
     return AL_TRUE;
 }
