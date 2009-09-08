@@ -1136,7 +1136,7 @@ private:
                     if(GST_MESSAGE_TYPE(msg) == GST_MESSAGE_ASYNC_DONE)
                     {
                         on_new_preroll_from_source(gstSink);
-                        gst_object_unref(msg);
+                        gst_message_unref(msg);
                         break;
                     }
 
@@ -1151,10 +1151,10 @@ private:
                         g_free(debug);
                         g_error_free(error);
 
-                        gst_object_unref(msg);
+                        gst_message_unref(msg);
                         break;
                     }
-                    gst_object_unref(msg);
+                    gst_message_unref(msg);
                 }
 
                 gst_object_unref(bus);
