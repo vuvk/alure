@@ -1127,15 +1127,12 @@ private:
             GstBus *bus = gst_element_get_bus(gstPipeline);
             if(bus)
             {
-                //bool allok = false;
+                const GstMessageType types = GstMessageType(GST_MESSAGE_ERROR|GST_MESSAGE_ASYNC_DONE);
+                GstMessage *msg;
 
                 gst_element_set_state(gstPipeline, GST_STATE_PLAYING);
-                while(1)
+                while((msg=gst_bus_timed_pop_filtered(bus, GST_CLOCK_TIME_NONE, types)) != NULL)
                 {
-                    GstMessageType types = GstMessageType(GST_MESSAGE_ERROR|GST_MESSAGE_ASYNC_DONE);
-                    GstMessage *msg = gst_bus_timed_pop_filtered(bus, GST_CLOCK_TIME_NONE, types);
-                    if(!msg) continue;
-
                     if(GST_MESSAGE_TYPE(msg) == GST_MESSAGE_ASYNC_DONE)
                     {
                         on_new_preroll_from_source(gstSink);
