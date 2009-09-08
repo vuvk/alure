@@ -974,6 +974,7 @@ struct gstStream : public alureStream {
         GstElement *gstSink = gst_bin_get_by_name(GST_BIN(gstPipeline), "alureSink");
         while(outTotal < outLen && !gst_app_sink_is_eos((GstAppSink*)gstSink))
             on_new_buffer_from_source(gstSink);
+        gst_object_unref(gstSink);
 
         return outTotal;
     }
