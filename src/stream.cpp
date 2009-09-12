@@ -1237,7 +1237,6 @@ private:
 
     static void feed_data(GstElement *appsrc, guint size, gstStream *app)
     {
-        GstBuffer *buffer;
         GstFlowReturn ret;
 
         if(!app->fstream->good())
@@ -1248,9 +1247,14 @@ private:
         }
 
         // read any amount of data, we are allowed to return less if we are EOS
+        GstBuffer *buffer = gst_buffer_new();
         void *data = g_malloc(size);
+
         app->fstream->read(static_cast<char*>(data), size);
-        buffer = gst_app_buffer_new(data, app->fstream->gcount(), g_free, data);
+
+        GST_BUFFER_SIZE(buffer) = app->fstream->gcount();
+        GST_BUFFER_MALLOCDATA(buffer) = static_cast<guint8*>(data);
+        GST_BUFFER_DATA(buffer) = GST_BUFFER_MALLOCDATA(buffer);
 
         //GST_DEBUG("feed buffer %p, %u", buffer, GST_BUFFER_SIZE(buffer));
         g_signal_emit_by_name(appsrc, "push-buffer", buffer, &ret);
