@@ -1254,6 +1254,7 @@ private:
 
         //GST_DEBUG("feed buffer %p, %u", buffer, GST_BUFFER_SIZE(buffer));
         g_signal_emit_by_name(appsrc, "push-buffer", buffer, &ret);
+        gst_buffer_unref(buffer);
     }
 
     static gboolean seek_data(GstElement */*appsrc*/, guint64 position, gstStream *app)
