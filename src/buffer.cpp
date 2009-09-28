@@ -98,8 +98,6 @@ extern "C" {
  */
 ALURE_API ALuint ALURE_APIENTRY alureCreateBufferFromFile(const ALchar *fname)
 {
-    init_alure();
-
     if(alGetError() != AL_NO_ERROR)
     {
         SetError("Existing OpenAL error");
@@ -137,8 +135,6 @@ ALURE_API ALuint ALURE_APIENTRY alureCreateBufferFromFile(const ALchar *fname)
  */
 ALURE_API ALuint ALURE_APIENTRY alureCreateBufferFromMemory(const ALubyte *fdata, ALsizei length)
 {
-    init_alure();
-
     if(alGetError() != AL_NO_ERROR)
     {
         SetError("Existing OpenAL error");
@@ -176,8 +172,6 @@ ALURE_API ALuint ALURE_APIENTRY alureCreateBufferFromMemory(const ALubyte *fdata
  */
 ALURE_API ALboolean ALURE_APIENTRY alureBufferDataFromFile(const ALchar *fname, ALuint buffer)
 {
-    init_alure();
-
     if(alGetError() != AL_NO_ERROR)
     {
         SetError("Existing OpenAL error");
@@ -202,8 +196,6 @@ ALURE_API ALboolean ALURE_APIENTRY alureBufferDataFromFile(const ALchar *fname, 
  */
 ALURE_API ALboolean ALURE_APIENTRY alureBufferDataFromMemory(const ALubyte *fdata, ALsizei length, ALuint buffer)
 {
-    init_alure();
-
     if(alGetError() != AL_NO_ERROR)
     {
         SetError("Existing OpenAL error");

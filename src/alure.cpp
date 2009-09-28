@@ -37,7 +37,30 @@ std::map<ALint,UserCallbacks> InstalledCallbacks;
 std::map<std::string,void*> FunctionList;
 
 
-void init_alure()
+#ifdef _WIN32
+static void init_alure(void);
+BOOL APIENTRY DllMain(HANDLE hModule,DWORD ul_reason_for_call,LPVOID lpReserved)
+{
+    (void)lpReserved;
+
+    // Perform actions based on the reason for calling.
+    switch(ul_reason_for_call)
+    {
+        case DLL_PROCESS_ATTACH:
+            DisableThreadLibraryCalls(hModule);
+            init_alure();
+            break;
+
+        case DLL_PROCESS_DETACH:
+            break;
+    }
+    return TRUE;
+}
+#elif defined(HAVE_GCC_CONSTRUCTOR)
+static void init_alure(void) __attribute__((constructor));
+#endif
+
+static void init_alure(void)
 {
     static bool done = false;
     if(done) return;
@@ -89,8 +112,6 @@ extern "C" {
  */
 ALURE_API void ALURE_APIENTRY alureGetVersion(ALuint *major, ALuint *minor)
 {
-    init_alure();
-
     if(major) *major = ALURE_VER_MAJOR;
     if(minor) *minor = ALURE_VER_MINOR;
 }
@@ -122,8 +143,6 @@ ALURE_API const ALchar* ALURE_APIENTRY alureGetErrorString(void)
  */
 ALURE_API const ALCchar** ALURE_APIENTRY alureGetDeviceNames(ALCboolean all, ALCsizei *count)
 {
-    init_alure();
-
     const ALCchar *list = NULL;
     if(all && alcIsExtensionPresent(NULL, "ALC_ENUMERATE_ALL_EXT"))
         list = alcGetString(NULL, ALC_ALL_DEVICES_SPECIFIER);
@@ -173,8 +192,6 @@ ALURE_API const ALCchar** ALURE_APIENTRY alureGetDeviceNames(ALCboolean all, ALC
  */
 ALURE_API ALvoid ALURE_APIENTRY alureFreeDeviceNames(const ALCchar **names)
 {
-    init_alure();
-
     if(names)
     {
         for(ALCuint i = 0;names[i];i++)
@@ -198,8 +215,6 @@ ALURE_API ALvoid ALURE_APIENTRY alureFreeDeviceNames(const ALCchar **names)
  */
 ALURE_API ALboolean ALURE_APIENTRY alureInitDevice(const ALCchar *name, const ALCint *attribs)
 {
-    init_alure();
-
     ALCdevice *device = alcOpenDevice(name);
     if(!device)
     {
@@ -243,8 +258,6 @@ ALURE_API ALboolean ALURE_APIENTRY alureInitDevice(const ALCchar *name, const AL
  */
 ALURE_API ALboolean ALURE_APIENTRY alureShutdownDevice(void)
 {
-    init_alure();
-
     ALCcontext *context = alcGetCurrentContext();
     ALCdevice *device = alcGetContextsDevice(context);
     if(alcGetError(device) != ALC_NO_ERROR || !device)
@@ -282,8 +295,6 @@ ALURE_API ALboolean ALURE_APIENTRY alureShutdownDevice(void)
  */
 ALURE_API ALenum ALURE_APIENTRY alureGetSampleFormat(ALuint channels, ALuint bits, ALuint floatbits)
 {
-    init_alure();
-
     if(alGetError() != AL_NO_ERROR)
     {
         SetError("Existing OpenAL error");
@@ -441,8 +452,6 @@ ALURE_API ALboolean ALURE_APIENTRY alureInstallDecodeCallbacks(ALint index,
  */
 ALURE_API ALboolean ALURE_APIENTRY alureSleep(ALfloat duration)
 {
-    init_alure();
-
     if(duration < 0.0f)
     {
         SetError("Invalid duration");
@@ -485,8 +494,6 @@ ALURE_API ALboolean ALURE_APIENTRY alureSleep(ALfloat duration)
  */
 ALURE_API void* ALURE_APIENTRY alureGetProcAddress(const ALchar *funcname)
 {
-    init_alure();
-
     std::map<std::string,void*>::iterator i = FunctionList.find(funcname);
     if(i != FunctionList.end())
         return i->second;

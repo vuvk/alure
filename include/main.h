@@ -38,8 +38,6 @@
 #include <istream>
 
 
-void init_alure();
-
 void SetError(const char *err);
 
 struct UserCallbacks {

@@ -236,8 +236,6 @@ ALURE_API ALboolean ALURE_APIENTRY alureSetIOCallbacks(
       ALsizei (*write)(void *handle, const ALubyte *buf, ALuint bytes),
       ALsizei (*seek)(void *handle, ALsizei offset, ALint whence))
 {
-    init_alure();
-
     if(open && close && read && write && seek)
     {
         Funcs.open = open;

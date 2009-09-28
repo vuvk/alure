@@ -1448,8 +1448,6 @@ extern "C" {
  */
 ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromFile(const ALchar *fname, ALsizei chunkLength, ALsizei numBufs, ALuint *bufs)
 {
-    init_alure();
-
     if(alGetError() != AL_NO_ERROR)
     {
         SetError("Existing OpenAL error");
@@ -1494,8 +1492,6 @@ ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromFile(const ALchar *fn
  */
 ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromMemory(const ALubyte *fdata, ALuint length, ALsizei chunkLength, ALsizei numBufs, ALuint *bufs)
 {
-    init_alure();
-
     if(alGetError() != AL_NO_ERROR)
     {
         SetError("Existing OpenAL error");
@@ -1555,8 +1551,6 @@ ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromMemory(const ALubyte 
  */
 ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromStaticMemory(const ALubyte *fdata, ALuint length, ALsizei chunkLength, ALsizei numBufs, ALuint *bufs)
 {
-    init_alure();
-
     if(alGetError() != AL_NO_ERROR)
     {
         SetError("Existing OpenAL error");
@@ -1626,8 +1620,6 @@ ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromCallback(
       void *userdata, ALenum format, ALuint samplerate,
       ALsizei chunkLength, ALsizei numBufs, ALuint *bufs)
 {
-    init_alure();
-
     if(alGetError() != AL_NO_ERROR)
     {
         SetError("Existing OpenAL error");

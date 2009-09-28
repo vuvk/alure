@@ -54,6 +54,9 @@ IF(MSVC)
     # ???
 ELSE(MSVC)
     IF(NOT WIN32)
+        CHECK_C_SOURCE_COMPILES("int foo() __attribute__((constructor));
+                                 int main() {return 0;}" HAVE_GCC_CONSTRUCTOR)
+
         CHECK_C_COMPILER_FLAG(-fvisibility=hidden HAVE_GCC_VISIBILITY)
         IF(HAVE_GCC_VISIBILITY)
             ADD_DEFINITIONS(-fvisibility=hidden)
