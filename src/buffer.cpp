@@ -67,6 +67,7 @@ ALURE_API ALuint ALURE_APIENTRY alureCreateBufferFromFile(const ALchar *fname)
     {
         alDeleteBuffers(1, &buf);
         alGetError();
+        buf = AL_NONE;
     }
 
     return buf;
@@ -105,6 +106,7 @@ ALURE_API ALuint ALURE_APIENTRY alureCreateBufferFromMemory(const ALubyte *fdata
     {
         alDeleteBuffers(1, &buf);
         alGetError();
+        buf = AL_NONE;
     }
 
     return buf;
