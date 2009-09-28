@@ -38,7 +38,6 @@ std::map<std::string,void*> FunctionList;
 
 
 #ifdef _WIN32
-static void init_alure(void);
 BOOL APIENTRY DllMain(HANDLE hModule,DWORD ul_reason_for_call,LPVOID lpReserved)
 {
     (void)lpReserved;
@@ -48,7 +47,6 @@ BOOL APIENTRY DllMain(HANDLE hModule,DWORD ul_reason_for_call,LPVOID lpReserved)
     {
         case DLL_PROCESS_ATTACH:
             DisableThreadLibraryCalls(hModule);
-            init_alure();
             break;
 
         case DLL_PROCESS_DETACH:
@@ -56,16 +54,10 @@ BOOL APIENTRY DllMain(HANDLE hModule,DWORD ul_reason_for_call,LPVOID lpReserved)
     }
     return TRUE;
 }
-#elif defined(HAVE_GCC_CONSTRUCTOR)
-static void init_alure(void) __attribute__((constructor));
 #endif
 
 static void init_alure(void)
 {
-    static bool done = false;
-    if(done) return;
-    done = true;
-
 #ifdef HAS_GSTREAMER
     gst_init(NULL, NULL);
 #endif
@@ -95,6 +87,10 @@ static void init_alure(void)
 #undef ADD_FUNCTION
 }
 
+static struct MyConstructorClass {
+    MyConstructorClass()
+    { init_alure(); };
+} MyConstructor;
 
 static const ALchar *last_error = "No error";
 
