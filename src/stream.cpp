@@ -1305,22 +1305,6 @@ alureStream *create_stream(const T &fdata)
             return stream;
         delete stream;
 
-        // Try libSndFile
-        file->clear();
-        file->seekg(0, std::ios_base::beg);
-        stream = new sndStream(file);
-        if(stream->IsValid())
-            return stream;
-        delete stream;
-
-        // Try GStreamer
-        file->clear();
-        file->seekg(0, std::ios_base::beg);
-        stream = new gstStream(file);
-        if(stream->IsValid())
-            return stream;
-        delete stream;
-
         // Try libVorbisFile
         file->clear();
         file->seekg(0, std::ios_base::beg);
@@ -1333,6 +1317,22 @@ alureStream *create_stream(const T &fdata)
         file->clear();
         file->seekg(0, std::ios_base::beg);
         stream = new flacStream(file);
+        if(stream->IsValid())
+            return stream;
+        delete stream;
+
+        // Try libSndFile
+        file->clear();
+        file->seekg(0, std::ios_base::beg);
+        stream = new sndStream(file);
+        if(stream->IsValid())
+            return stream;
+        delete stream;
+
+        // Try GStreamer
+        file->clear();
+        file->seekg(0, std::ios_base::beg);
+        stream = new gstStream(file);
         if(stream->IsValid())
             return stream;
         delete stream;
