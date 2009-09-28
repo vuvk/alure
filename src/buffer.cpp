@@ -30,6 +30,57 @@
 #include <memory>
 
 
+bool load_stream(alureStream *_stream, ALuint buffer)
+{
+    std::auto_ptr<alureStream> stream(_stream);
+    if(!stream->IsValid())
+        return false;
+
+    ALenum format;
+    ALuint freq, blockAlign;
+
+    if(!stream->GetFormat(&format, &freq, &blockAlign))
+    {
+        SetError("Could not get sample format");
+        return false;
+    }
+
+    if(format == AL_NONE)
+    {
+        SetError("No valid format");
+        return false;
+    }
+    if(blockAlign == 0)
+    {
+        SetError("Invalid block size");
+        return false;
+    }
+    if(freq == 0)
+    {
+        SetError("Invalid sample rate");
+        return false;
+    }
+
+    ALuint writePos = 0, got;
+    std::vector<ALubyte> data(freq*4);
+    while((got=stream->GetData(&data[writePos], data.size()-writePos)) > 0)
+    {
+        writePos += got;
+        data.resize(data.size() * 2);
+    }
+    data.resize(writePos);
+    stream.reset(NULL);
+
+    alBufferData(buffer, format, &data[0], data.size(), freq);
+    if(alGetError() != AL_NO_ERROR)
+    {
+        SetError("Buffer load failed");
+        return false;
+    }
+
+    return true;
+}
+
 extern "C" {
 
 /* Function: alureCreateBufferFromFile
@@ -133,52 +184,8 @@ ALURE_API ALboolean ALURE_APIENTRY alureBufferDataFromFile(const ALchar *fname, 
         return AL_FALSE;
     }
 
-    std::auto_ptr<alureStream> stream(create_stream(fname));
-    if(!stream->IsValid())
+    if(load_stream(create_stream(fname), buffer) == false)
         return AL_FALSE;
-
-    ALenum format;
-    ALuint freq, blockAlign;
-
-    if(!stream->GetFormat(&format, &freq, &blockAlign))
-    {
-        SetError("Could not get sample format");
-        return AL_FALSE;
-    }
-
-    if(format == AL_NONE)
-    {
-        SetError("No valid format");
-        return AL_FALSE;
-    }
-    if(blockAlign == 0)
-    {
-        SetError("Invalid block size");
-        return AL_FALSE;
-    }
-    if(freq == 0)
-    {
-        SetError("Invalid sample rate");
-        return AL_FALSE;
-    }
-
-    ALuint writePos = 0, got;
-    std::vector<ALubyte> data(freq*4);
-    while((got=stream->GetData(&data[writePos], data.size()-writePos)) > 0)
-    {
-        writePos += got;
-        data.resize(data.size() * 2);
-    }
-    data.resize(writePos);
-    stream.reset(NULL);
-
-    alBufferData(buffer, format, &data[0], data.size(), freq);
-    if(alGetError() != AL_NO_ERROR)
-    {
-        SetError("Buffer load failed");
-        return AL_FALSE;
-    }
-
     return AL_TRUE;
 }
 
@@ -214,52 +221,8 @@ ALURE_API ALboolean ALURE_APIENTRY alureBufferDataFromMemory(const ALubyte *fdat
     memData.Length = length;
     memData.Pos = 0;
 
-    std::auto_ptr<alureStream> stream(create_stream(memData));
-    if(!stream->IsValid())
+    if(load_stream(create_stream(memData), buffer) == false)
         return AL_FALSE;
-
-    ALenum format;
-    ALuint freq, blockAlign;
-
-    if(!stream->GetFormat(&format, &freq, &blockAlign))
-    {
-        SetError("Could not get sample format");
-        return AL_FALSE;
-    }
-
-    if(format == AL_NONE)
-    {
-        SetError("No valid format");
-        return AL_FALSE;
-    }
-    if(blockAlign == 0)
-    {
-        SetError("Invalid block size");
-        return AL_FALSE;
-    }
-    if(freq == 0)
-    {
-        SetError("Invalid sample rate");
-        return AL_FALSE;
-    }
-
-    ALuint writePos = 0, got;
-    std::vector<ALubyte> data(freq*4);
-    while((got=stream->GetData(&data[writePos], data.size()-writePos)) > 0)
-    {
-        writePos += got;
-        data.resize(data.size() * 2);
-    }
-    data.resize(writePos);
-    stream.reset(NULL);
-
-    alBufferData(buffer, format, &data[0], data.size(), freq);
-    if(alGetError() != AL_NO_ERROR)
-    {
-        SetError("Buffer load failed");
-        return AL_FALSE;
-    }
-
     return AL_TRUE;
 }
 
