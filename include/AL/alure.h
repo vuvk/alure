@@ -32,6 +32,8 @@ extern "C" {
 
 #if defined(_WIN32)
  #define ALURE_APIENTRY __cdecl
+
+ #include <sys/types.h>
  typedef __int64 alureInt64;
 #else
  #define ALURE_APIENTRY

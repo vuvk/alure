@@ -37,25 +37,6 @@ std::map<ALint,UserCallbacks> InstalledCallbacks;
 std::map<std::string,void*> FunctionList;
 
 
-#ifdef _WIN32
-BOOL APIENTRY DllMain(HANDLE hModule,DWORD ul_reason_for_call,LPVOID lpReserved)
-{
-    (void)lpReserved;
-
-    // Perform actions based on the reason for calling.
-    switch(ul_reason_for_call)
-    {
-        case DLL_PROCESS_ATTACH:
-            DisableThreadLibraryCalls(hModule);
-            break;
-
-        case DLL_PROCESS_DETACH:
-            break;
-    }
-    return TRUE;
-}
-#endif
-
 static void init_alure(void)
 {
 #ifdef HAS_GSTREAMER
