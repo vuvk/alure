@@ -54,24 +54,24 @@ MemStreamBuf::pos_type MemStreamBuf::seekoff(off_type offset, std::ios_base::see
     if((mode&std::ios_base::out))
         return traits_type::eof();
 
-    ALuint ptell = memInfo.Pos;
+    pos_type pos;
     switch(whence)
     {
         case std::ios_base::beg:
+            pos = pos_type(offset);
             break;
         case std::ios_base::cur:
-            if(offset == 0)
-                return pos_type(ptell) - pos_type(egptr()-gptr());
-            offset += off_type(ptell) - off_type(egptr()-gptr());
+            pos = pos_type(memInfo.Pos) - pos_type(egptr()-gptr());
+            pos += offset;
             break;
         case std::ios_base::end:
-            offset += off_type(memInfo.Length);
+            pos = memInfo.Length + pos_type(offset);
             break;
         default:
             return traits_type::eof();
     }
 
-    return seekpos(pos_type(offset), mode);
+    return seekpos(pos, mode);
 }
 
 MemStreamBuf::pos_type MemStreamBuf::seekpos(pos_type pos, std::ios_base::openmode mode)
@@ -79,7 +79,7 @@ MemStreamBuf::pos_type MemStreamBuf::seekpos(pos_type pos, std::ios_base::openmo
     if((mode&std::ios_base::out))
         return traits_type::eof();
 
-    if(pos < 0 || pos > pos_type(memInfo.Length))
+    if(pos < 0 || pos > pos_type(memInfo.Length) || pos != size_t(pos))
         return traits_type::eof();
     memInfo.Pos = pos;
 
@@ -113,14 +113,8 @@ FileStreamBuf::pos_type FileStreamBuf::seekoff(off_type offset, std::ios_base::s
             break;
 
         case std::ios_base::cur:
-            pos = pos_type(fio.seek(usrFile, 0, SEEK_CUR));
-            if(pos >= 0)
-            {
-                if(offset == 0)
-                    return pos_type(pos) - pos_type(egptr()-gptr());
-                offset += off_type(pos) - off_type(egptr()-gptr());
-                pos = pos_type(fio.seek(usrFile, offset, SEEK_SET));
-            }
+            offset -= off_type(egptr()-gptr());
+            pos = pos_type(fio.seek(usrFile, offset, SEEK_CUR));
             break;
 
         case std::ios_base::end:
@@ -136,7 +130,11 @@ FileStreamBuf::pos_type FileStreamBuf::seekoff(off_type offset, std::ios_base::s
 }
 
 FileStreamBuf::pos_type FileStreamBuf::seekpos(pos_type pos, std::ios_base::openmode mode)
-{ return seekoff(off_type(pos), std::ios_base::beg, mode); }
+{
+    if(pos != off_type(pos))
+        return traits_type::eof();
+    return seekoff(off_type(pos), std::ios_base::beg, mode);
+}
 
 
 static void *open_wrap(const char *filename, ALuint mode)
@@ -174,8 +172,10 @@ ALsizei write_wrap(void *user_data, const ALubyte *buf, ALuint bytes)
     return ret;
 }
 
-ALsizei seek_wrap(void *user_data, ALsizei offset, ALint whence)
+alureInt64 seek_wrap(void *user_data, alureInt64 offset, int whence)
 {
+    if(offset != (off_t)offset)
+        return -1;
     return lseek(static_cast<int*>(user_data)[0], offset, whence);
 }
 
@@ -234,7 +234,7 @@ ALURE_API ALboolean ALURE_APIENTRY alureSetIOCallbacks(
       void (*close)(void *handle),
       ALsizei (*read)(void *handle, ALubyte *buf, ALuint bytes),
       ALsizei (*write)(void *handle, const ALubyte *buf, ALuint bytes),
-      ALsizei (*seek)(void *handle, ALsizei offset, ALint whence))
+      alureInt64 (*seek)(void *handle, alureInt64 offset, int whence))
 {
     if(open && close && read && write && seek)
     {

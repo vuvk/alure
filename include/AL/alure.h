@@ -32,8 +32,12 @@ extern "C" {
 
 #if defined(_WIN32)
  #define ALURE_APIENTRY __cdecl
+ typedef __int64 alureInt64;
 #else
  #define ALURE_APIENTRY
+
+ #include <stdint.h>
+ typedef int64_t alureInt64;
 #endif
 
 typedef struct alureStream alureStream;
@@ -79,7 +83,7 @@ ALURE_API ALboolean ALURE_APIENTRY alureSetIOCallbacks(
       void (*close)(void*),
       ALsizei (*read)(void*,ALubyte*,ALuint),
       ALsizei (*write)(void*,const ALubyte*,ALuint),
-      ALsizei (*seek)(void*,ALsizei,ALint));
+      alureInt64 (*seek)(void*,alureInt64,int));
 
 ALURE_API void* ALURE_APIENTRY alureGetProcAddress(const ALchar *funcname);
 
@@ -103,7 +107,7 @@ typedef ALsizei         (ALURE_APIENTRY *LPALUREBUFFERDATAFROMSTREAM)(alureStrea
 typedef ALboolean       (ALURE_APIENTRY *LPALUREREWINDSTREAM)(alureStream*);
 typedef ALboolean       (ALURE_APIENTRY *LPALUREDESTROYSTREAM)(alureStream*,ALsizei,ALuint*);
 typedef ALboolean       (ALURE_APIENTRY *LPALUREINSTALLDECODECALLBACKS)(ALint,void*(*)(const char*),void*(*)(const ALubyte*,ALuint),ALboolean(*)(void*,ALenum*,ALuint*,ALuint*),ALuint(*)(void*,ALubyte*,ALuint),ALboolean(*)(void*),void(*)(void*));
-typedef ALboolean       (ALURE_APIENTRY *LPALURESETIOCALLBACKS)(void*(*)(const char*,ALuint),void(*)(void*),ALsizei(*)(void*,ALubyte*,ALuint),ALsizei(*)(void*,const ALubyte*,ALuint),ALsizei(*)(void*,ALsizei,ALint));
+typedef ALboolean       (ALURE_APIENTRY *LPALURESETIOCALLBACKS)(void*(*)(const char*,ALuint),void(*)(void*),ALsizei(*)(void*,ALubyte*,ALuint),ALsizei(*)(void*,const ALubyte*,ALuint),alureInt64(*)(void*,alureInt64,int));
 typedef void*           (ALURE_APIENTRY *LPALUREGETPROCADDRESS)(const ALchar*);
 
 #if defined(__cplusplus)

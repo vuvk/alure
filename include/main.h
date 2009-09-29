@@ -105,7 +105,7 @@ struct UserFuncs {
     void (*close)(void *f);
     ALsizei (*read)(void *f, ALubyte *buf, ALuint count);
     ALsizei (*write)(void *f, const ALubyte *buf, ALuint count);
-    ALsizei (*seek)(void *f, ALsizei offset, ALint whence);
+    alureInt64 (*seek)(void *f, alureInt64 offset, int whence);
 };
 extern UserFuncs Funcs;
 
