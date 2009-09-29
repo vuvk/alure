@@ -71,9 +71,21 @@ static void init_alure(void)
 #undef ADD_FUNCTION
 }
 
+static void deinit_alure(void)
+{
+#ifdef HAS_MPG123
+    mpg123_exit();
+#endif
+#ifdef HAS_GSTREAMER
+    gst_deinit();
+#endif
+}
+
 static struct MyConstructorClass {
     MyConstructorClass()
     { init_alure(); };
+    ~MyConstructorClass()
+    { deinit_alure(); };
 } MyConstructor;
 
 static const ALchar *last_error = "No error";
