@@ -39,6 +39,9 @@ std::map<std::string,void*> FunctionList;
 
 static void init_alure(void)
 {
+#ifdef HAS_MPG123
+    mpg123_init();
+#endif
 #ifdef HAS_GSTREAMER
     gst_init(NULL, NULL);
 #endif

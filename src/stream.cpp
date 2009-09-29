@@ -892,6 +892,133 @@ struct flacStream : public nullStream {
 #endif
 
 
+#ifdef HAS_MPG123
+struct mp3Stream : public alureStream {
+    mpg123_handle *mp3File;
+    long samplerate;
+    int channels;
+    std::istream *fstream;
+
+    virtual bool IsValid()
+    { return mp3File != NULL; }
+
+    virtual bool GetFormat(ALenum *format, ALuint *frequency, ALuint *blockalign)
+    {
+        ALenum fmt = alureGetSampleFormat(channels, 16, 0);
+
+        *format = fmt;
+        *frequency = samplerate;
+        *blockalign = channels*2;
+        return true;
+    }
+
+    virtual ALuint GetData(ALubyte *data, ALuint bytes)
+    {
+        const ALuint blockAlign = channels*2;
+        bytes -= bytes%blockAlign;
+
+        ALuint amt = 0;
+        do {
+            size_t got = 0;
+            int ret = mpg123_read(mp3File, data, bytes, &got);
+
+            bytes -= got;
+            data += got;
+            amt += got;
+
+            if(ret == MPG123_NEED_MORE)
+            {
+                unsigned char data[4096];
+                fstream->read((char*)data, sizeof(data));
+                std::streamsize insize = fstream->gcount();;
+                if(insize > 0 &&
+                   mpg123_decode(mp3File, data, insize, NULL, 0, NULL) == MPG123_OK)
+                    continue;
+            }
+
+            return amt;
+        } while(1);
+    }
+
+    virtual bool Rewind()
+    {
+        std::istream::pos_type oldpos = fstream->tellg();
+        fstream->seekg(0);
+
+        mpg123_handle *newFile = mpg123_new(NULL, NULL);
+        if(mpg123_open_feed(newFile) == MPG123_OK)
+        {
+            unsigned char data[4096];
+            fstream->read((char*)data, sizeof(data));
+            std::streamsize amt = fstream->gcount();
+            long newrate;
+            int newchans;
+            int enc;
+
+            if(mpg123_decode(newFile, data, amt, NULL, 0, NULL) == MPG123_NEW_FORMAT &&
+               mpg123_getformat(newFile, &newrate, &newchans, &enc) == MPG123_OK)
+            {
+                if(newrate == samplerate && newchans == channels &&
+                   (enc == MPG123_ENC_SIGNED_16 ||
+                    (mpg123_format_none(newFile) == MPG123_OK &&
+                     mpg123_format(newFile, samplerate, channels, MPG123_ENC_SIGNED_16) == MPG123_OK)))
+                {
+                    // All OK
+                    mpg123_delete(mp3File);
+                    mp3File = newFile;
+                    return true;
+                }
+            }
+            mpg123_delete(newFile);
+        }
+
+        fstream->seekg(oldpos);
+        SetError("Restart failed");
+        return false;
+    }
+
+    mp3Stream(std::istream *_fstream)
+      : mp3File(NULL), fstream(_fstream)
+    {
+        mp3File = mpg123_new(NULL, NULL);
+        if(mpg123_open_feed(mp3File) == MPG123_OK)
+        {
+            unsigned char data[4096];
+            fstream->read((char*)data, sizeof(data));
+            ALuint amt = fstream->gcount();
+            int enc;
+
+            if(mpg123_decode(mp3File, data, amt, NULL, 0, NULL) == MPG123_NEW_FORMAT &&
+               mpg123_getformat(mp3File, &samplerate, &channels, &enc) == MPG123_OK)
+            {
+                if(enc == MPG123_ENC_SIGNED_16 ||
+                   (mpg123_format_none(mp3File) == MPG123_OK &&
+                    mpg123_format(mp3File, samplerate, channels, MPG123_ENC_SIGNED_16) == MPG123_OK))
+                {
+                    // All OK
+                    return;
+                }
+            }
+        }
+        mpg123_delete(mp3File);
+        mp3File = NULL;
+    }
+
+    virtual ~mp3Stream()
+    {
+        if(mp3File)
+            mpg123_delete(mp3File);
+        mp3File = NULL;
+    }
+};
+#else
+struct mp3Stream : public nullStream {
+    mp3Stream(const char*){}
+    mp3Stream(const MemDataInfo&){}
+};
+#endif
+
+
 #ifdef HAS_GSTREAMER
 struct gstStream : public alureStream {
     GstElement *gstPipeline;
@@ -1317,6 +1444,14 @@ alureStream *create_stream(const T &fdata)
         file->clear();
         file->seekg(0, std::ios_base::beg);
         stream = new flacStream(file);
+        if(stream->IsValid())
+            return stream;
+        delete stream;
+
+        // Try MPG123
+        file->clear();
+        file->seekg(0, std::ios_base::beg);
+        stream = new mp3Stream(file);
         if(stream->IsValid())
             return stream;
         delete stream;

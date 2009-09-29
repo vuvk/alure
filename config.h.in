@@ -23,5 +23,8 @@
 /* Define if we have FLAC */
 #cmakedefine HAS_FLAC
 
+/* Define if we have MPG123 */
+#cmakedefine HAS_MPG123
+
 /* Define if we have GStreamer */
 #cmakedefine HAS_GSTREAMER

@@ -13,6 +13,9 @@
 #ifdef HAS_FLAC
 #include <FLAC/all.h>
 #endif
+#ifdef HAS_MPG123
+#include <mpg123.h>
+#endif
 #ifdef HAS_GSTREAMER
 #include <gst/gst.h>
 #include <gst/app/gstappsrc.h>
