@@ -942,6 +942,7 @@ struct mp3Stream : public alureStream {
 
     virtual bool Rewind()
     {
+        fstream->clear();
         std::istream::pos_type oldpos = fstream->tellg();
         fstream->seekg(0);
 
