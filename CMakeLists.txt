@@ -323,6 +323,7 @@ SET(ALURE_OBJS  src/alure.cpp
                 src/buffer.cpp
                 src/istream.cpp
                 src/stream.cpp
+                src/streamplay.cpp
 )
 
 IF(NOT NO_SHARED)
