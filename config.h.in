@@ -11,6 +11,9 @@
 /* Define if we have windows.h */
 #cmakedefine HAVE_WINDOWS_H
 
+/* Define if we have pthread_np.h */
+#cmakedefine HAVE_PTHREAD_NP_H
+
 /* Define if we have nanosleep */
 #cmakedefine HAVE_NANOSLEEP
 

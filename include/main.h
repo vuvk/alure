@@ -34,12 +34,57 @@
 #include <dlfcn.h>
 #endif
 
+#include <assert.h>
+#include <pthread.h>
+#ifdef HAVE_PTHREAD_NP_H
+#include <pthread_np.h>
+#endif
+#include <errno.h>
+
+typedef pthread_mutex_t CRITICAL_SECTION;
+static inline void EnterCriticalSection(CRITICAL_SECTION *cs)
+{
+    int ret;
+    ret = pthread_mutex_lock(cs);
+    assert(ret == 0);
+}
+static inline void LeaveCriticalSection(CRITICAL_SECTION *cs)
+{
+    int ret;
+    ret = pthread_mutex_unlock(cs);
+    assert(ret == 0);
+}
+static inline void InitializeCriticalSection(CRITICAL_SECTION *cs)
+{
+    pthread_mutexattr_t attrib;
+    int ret;
+
+    ret = pthread_mutexattr_init(&attrib);
+    assert(ret == 0);
+
+    ret = pthread_mutexattr_settype(&attrib, PTHREAD_MUTEX_RECURSIVE);
+#ifdef HAVE_PTHREAD_NP_H
+    if(ret != 0)
+        ret = pthread_mutexattr_setkind_np(&attrib, PTHREAD_MUTEX_RECURSIVE);
+#endif
+    assert(ret == 0);
+    ret = pthread_mutex_init(cs, &attrib);
+    assert(ret == 0);
+
+    pthread_mutexattr_destroy(&attrib);
+}
+static inline void DeleteCriticalSection(CRITICAL_SECTION *cs)
+{
+    int ret;
+    ret = pthread_mutex_destroy(cs);
+    assert(ret == 0);
+}
+
 #endif
 
 #include <map>
 #include <streambuf>
 #include <istream>
-
 
 void SetError(const char *err);
 
