@@ -1014,8 +1014,7 @@ struct mp3Stream : public alureStream {
 };
 #else
 struct mp3Stream : public nullStream {
-    mp3Stream(const char*){}
-    mp3Stream(const MemDataInfo&){}
+    mp3Stream(std::istream*){}
 };
 #endif
 
