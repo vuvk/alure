@@ -76,7 +76,7 @@ ALURE_API ALboolean ALURE_APIENTRY alureDestroyStream(alureStream *stream, ALsiz
 ALURE_API ALboolean ALURE_APIENTRY alurePlayStreamAsync(alureStream *stream,
     ALuint source, ALsizei numBufs, ALsizei loopcount,
     void (*eos_callback)(void *userdata), void *userdata);
-ALURE_API void ALURE_APIENTRY alureStopStream(alureStream *stream, ALboolean call_callback);
+ALURE_API void ALURE_APIENTRY alureStopStream(alureStream *stream, ALboolean run_callback);
 
 ALURE_API ALboolean ALURE_APIENTRY alureInstallDecodeCallbacks(ALint index,
     void*     (*open_file)(const ALchar*),
