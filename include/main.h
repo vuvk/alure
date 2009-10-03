@@ -201,4 +201,6 @@ public:
 template <typename T>
 alureStream *create_stream(const T &fdata);
 
+extern CRITICAL_SECTION cs_StreamPlay;
+
 #endif // MAIN_H

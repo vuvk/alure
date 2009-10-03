@@ -35,10 +35,13 @@
 
 std::map<ALint,UserCallbacks> InstalledCallbacks;
 std::map<std::string,void*> FunctionList;
+CRITICAL_SECTION cs_StreamPlay;
 
 
 static void init_alure(void)
 {
+    InitializeCriticalSection(&cs_StreamPlay);
+
 #ifdef HAS_MPG123
     mpg123_init();
 #endif
@@ -79,6 +82,8 @@ static void deinit_alure(void)
 #ifdef HAS_GSTREAMER
     gst_deinit();
 #endif
+
+    DeleteCriticalSection(&cs_StreamPlay);
 }
 
 static struct MyConstructorClass {
