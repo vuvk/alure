@@ -132,6 +132,11 @@ struct AsyncPlayEntry {
 	AsyncPlayEntry() : stream(NULL), source(0), loopcount(0),
 	                   eos_callback(NULL), user_data(NULL)
 	{ }
+	AsyncPlayEntry(const AsyncPlayEntry &rhs)
+	  : stream(rhs.stream), source(rhs.source), buffers(rhs.buffers),
+	    loopcount(rhs.loopcount), eos_callback(rhs.eos_callback),
+	    user_data(rhs.user_data)
+	{ }
 };
 static std::list<AsyncPlayEntry> AsyncPlayList;
 static ThreadInfo *PlayThreadHandle;
@@ -196,7 +201,7 @@ ALuint AsyncPlayFunc(ALvoid*)
 		}
 		LeaveCriticalSection(&cs_StreamPlay);
 
-		alureSleep(0.01f);
+		alureSleep(0.0078125f);
 	}
 
 	return 0;
@@ -285,43 +290,36 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlayStreamAsync(alureStream *stream,
 		i++;
 	}
 
-	{
-		AsyncPlayEntry ent;
-		AsyncPlayList.push_front(ent);
-	}
-	i = AsyncPlayList.begin();
-	i->stream = stream;
-	i->source = source;
-	i->loopcount = loopcount;
-	i->eos_callback = eos_callback;
-	i->user_data = userdata;
+	AsyncPlayEntry ent;
+	ent.stream = stream;
+	ent.source = source;
+	ent.loopcount = loopcount;
+	ent.eos_callback = eos_callback;
+	ent.user_data = userdata;
 
-	i->buffers.resize(numBufs);
-	alGenBuffers(numBufs, &i->buffers[0]);
+	ent.buffers.resize(numBufs);
+	alGenBuffers(numBufs, &ent.buffers[0]);
 	if(alGetError() != AL_NO_ERROR)
 	{
-		AsyncPlayList.erase(i);
 		LeaveCriticalSection(&cs_StreamPlay);
 		SetError("Error generating buffers");
 		return AL_FALSE;
 	}
 
-	if(alureBufferDataFromStream(stream, numBufs, &i->buffers[0]) < numBufs)
+	if(alureBufferDataFromStream(stream, numBufs, &ent.buffers[0]) < numBufs)
 	{
-		alDeleteBuffers(numBufs, &i->buffers[0]);
+		alDeleteBuffers(numBufs, &ent.buffers[0]);
 		alGetError();
-		AsyncPlayList.erase(i);
 		LeaveCriticalSection(&cs_StreamPlay);
 		SetError("Error buffering from stream (perhaps too short)");
 		return AL_FALSE;
 	}
 
 	if((alSourcei(source, AL_BUFFER, 0),alGetError()) != AL_NO_ERROR ||
-	   (alSourceQueueBuffers(source, numBufs, &i->buffers[0]),alGetError()) != AL_NO_ERROR)
+	   (alSourceQueueBuffers(source, numBufs, &ent.buffers[0]),alGetError()) != AL_NO_ERROR)
 	{
-		alDeleteBuffers(numBufs, &i->buffers[0]);
+		alDeleteBuffers(numBufs, &ent.buffers[0]);
 		alGetError();
-		AsyncPlayList.erase(i);
 		LeaveCriticalSection(&cs_StreamPlay);
 		SetError("Error starting source");
 		return AL_FALSE;
@@ -332,13 +330,14 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlayStreamAsync(alureStream *stream,
 	if(!PlayThreadHandle)
 	{
 		alSourcei(source, AL_BUFFER, 0);
+		alDeleteBuffers(numBufs, &ent.buffers[0]);
 		alGetError();
-		AsyncPlayList.erase(i);
 		LeaveCriticalSection(&cs_StreamPlay);
 		SetError("Error starting async thread");
 		return AL_FALSE;
 	}
 	PlayThread = true;
+	AsyncPlayList.push_front(ent);
 
 	LeaveCriticalSection(&cs_StreamPlay);
 
