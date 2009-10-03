@@ -217,7 +217,7 @@ extern "C" {
  * playing. It is important that the current context is NOT changed while a
  * stream is playing, otherwise the asynchronous method used to play may start
  * calling OpenAL with invalid IDs. Also note that checking the state of the
- * specified source is note a good method to determine if a stream is playing.
+ * specified source is not a good method to determine if a stream is playing.
  * If an underrun occurs, the source will enter a stopped state until it is
  * automatically restarted. Instead, set a flag using the callback to indicate
  * the stream being stopped.
@@ -231,20 +231,22 @@ extern "C" {
  *          will be unqueued. It is valid to set source properties not related
  *          to the buffer queue or playback state (ie. you may change the
  *          source's position, pitch, gain, etc, but you must not stop the
- *          source or change the source's buffer queue). The exception is
- *          that you may pause the source. ALURE will not attempt to restart a
- *          paused source, while a stopped source is indicative of an underrun
- *          and *will* be restarted automatically.
+ *          source or queue/unqueue buffers on it). The exception is that you
+ *          may pause the source, and play the paused source. ALURE will not
+ *          attempt to restart a paused source automatically, while a stopped
+ *          source is indicative of an underrun and *will* be restarted
+ *          automatically.
  * numBufs - The number of buffers used to queue with the OpenAL source. Each
  *           buffer will be filled with the chunk length specified when the
  *           source was created. This value must be at least 2.
  * loopcount - The number of times to loop the stream. When the stream reaches
  *             the end of processing, it will be rewound to continue buffering
  *             data. A value of -1 will cause the stream to loop indefinitely
- *             (until <alureStopStream> is called).
+ *             (or until <alureStopStream> is called).
  * eos_callback - This callback will be called when the stream reaches the end,
  *                no more loops are pending, and the source reaches a stopped
- *                state.
+ *                state. It will also be called if an error occured and
+ *                playback terminated.
  * userdata - An opaque user pointer passed to the callback.
  *
  * Returns:
@@ -349,7 +351,7 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlayStreamAsync(alureStream *stream,
  * Stops a stream currently playing asynchronously. If the stream is not
  * playing (eg. it stopped on its own, or was never started), it is silently
  * ignored. If 'run_callback' is not AL_FALSE, the callback specified by
- * <alurePlayStreamAsync> will be called synchronousely.
+ * <alurePlayStreamAsync> will be called synchronously.
  *
  * See Also:
  * <alurePlayStreamAsync>
