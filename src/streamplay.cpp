@@ -139,11 +139,17 @@ static volatile ALboolean PlayThread;
 
 ALuint AsyncPlayFunc(ALvoid*)
 {
-	while(PlayThread)
+	while(1)
 	{
 		EnterCriticalSection(&cs_StreamPlay);
+		if(!PlayThread)
+		{
+			LeaveCriticalSection(&cs_StreamPlay);
+			break;
+		}
+
 		std::list<AsyncPlayEntry>::iterator i = AsyncPlayList.begin(),
-		                                    end = AsyncPlayList.begin();
+		                                    end = AsyncPlayList.end();
 		while(i != end)
 		{
 			ALuint buf;
@@ -305,10 +311,8 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlayStreamAsync(alureStream *stream,
 		return AL_FALSE;
 	}
 
-	alSourceStop(source);
-	alSourcei(source, AL_BUFFER, 0);
-	alSourceQueueBuffers(source, numBufs, &i->buffers[0]);
-	if(alGetError() != AL_NO_ERROR)
+	if((alSourcei(source, AL_BUFFER, 0),alGetError()) != AL_NO_ERROR ||
+	   (alSourceQueueBuffers(source, numBufs, &i->buffers[0]),alGetError()) != AL_NO_ERROR)
 	{
 		alDeleteBuffers(numBufs, &i->buffers[0]);
 		alGetError();
@@ -318,7 +322,6 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlayStreamAsync(alureStream *stream,
 		return AL_FALSE;
 	}
 
-	PlayThread = true;
 	if(!PlayThreadHandle)
 		PlayThreadHandle = StartThread(AsyncPlayFunc, NULL);
 	if(!PlayThreadHandle)
@@ -330,6 +333,7 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlayStreamAsync(alureStream *stream,
 		SetError("Error starting async thread");
 		return AL_FALSE;
 	}
+	PlayThread = true;
 
 	LeaveCriticalSection(&cs_StreamPlay);
 
@@ -368,7 +372,7 @@ ALURE_API void ALURE_APIENTRY alureStopStream(alureStream *stream, ALboolean ign
 	}
 	PlayThread = (AsyncPlayList.size() > 0);
 	LeaveCriticalSection(&cs_StreamPlay);
-	if(!PlayThread)
+	if(!PlayThread && PlayThreadHandle)
 	{
 		StopThread(PlayThreadHandle);
 		PlayThreadHandle = NULL;
