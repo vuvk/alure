@@ -36,6 +36,7 @@
 std::map<ALint,UserCallbacks> InstalledCallbacks;
 std::map<std::string,void*> FunctionList;
 CRITICAL_SECTION cs_StreamPlay;
+alureStream::ListType alureStream::StreamList;
 
 
 static void init_alure(void)
@@ -76,6 +77,8 @@ static void init_alure(void)
 
 static void deinit_alure(void)
 {
+    alureStream::Clear();
+
 #ifdef HAS_MPG123
     mpg123_exit();
 #endif

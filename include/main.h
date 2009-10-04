@@ -85,6 +85,8 @@ static inline void DeleteCriticalSection(CRITICAL_SECTION *cs)
 #include <map>
 #include <streambuf>
 #include <istream>
+#include <list>
+#include <algorithm>
 
 void SetError(const char *err);
 
@@ -114,9 +116,22 @@ struct alureStream {
 
     alureStream(std::istream *_stream=NULL)
       : data(NULL), dataChunk(NULL), fstream(_stream)
-    { }
+    { StreamList.push_front(this); }
     virtual ~alureStream()
-    { delete[] data; delete[] dataChunk; }
+    {
+        delete[] data; delete[] dataChunk;
+        StreamList.erase(std::find(StreamList.begin(), StreamList.end(), this));
+    }
+
+    static void Clear(void)
+    {
+        while(StreamList.size() > 0)
+            alureDestroyStream(*(StreamList.begin()), 0, NULL);
+    }
+
+private:
+    typedef std::list<alureStream*> ListType;
+    static ListType StreamList;
 };
 
 struct MemDataInfo {
