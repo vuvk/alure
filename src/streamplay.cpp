@@ -140,14 +140,13 @@ struct AsyncPlayEntry {
 };
 static std::list<AsyncPlayEntry> AsyncPlayList;
 static ThreadInfo *PlayThreadHandle;
-static volatile ALboolean PlayThread;
 
 ALuint AsyncPlayFunc(ALvoid*)
 {
 	while(1)
 	{
 		EnterCriticalSection(&cs_StreamPlay);
-		if(!PlayThread)
+		if(AsyncPlayList.size() == 0)
 		{
 			LeaveCriticalSection(&cs_StreamPlay);
 			break;
@@ -338,7 +337,6 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlayStreamAsync(alureStream *stream,
 		SetError("Error starting async thread");
 		return AL_FALSE;
 	}
-	PlayThread = true;
 	AsyncPlayList.push_front(ent);
 
 	LeaveCriticalSection(&cs_StreamPlay);
@@ -376,9 +374,8 @@ ALURE_API void ALURE_APIENTRY alureStopStream(alureStream *stream, ALboolean run
 		}
 		i++;
 	}
-	PlayThread = (AsyncPlayList.size() > 0);
 	LeaveCriticalSection(&cs_StreamPlay);
-	if(!PlayThread && PlayThreadHandle)
+	if(AsyncPlayList.size() == 0 && PlayThreadHandle)
 	{
 		StopThread(PlayThreadHandle);
 		PlayThreadHandle = NULL;
