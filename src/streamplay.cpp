@@ -264,6 +264,12 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlayStreamAsync(alureStream *stream,
 		return AL_FALSE;
 	}
 
+	if(!alureStream::Verify(stream))
+	{
+		SetError("Invalid stream pointer");
+		return AL_FALSE;
+	}
+
 	if(numBufs < 2)
 	{
 		SetError("Invalid buffer count");

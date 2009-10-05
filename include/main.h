@@ -129,6 +129,12 @@ struct alureStream {
             alureDestroyStream(*(StreamList.begin()), 0, NULL);
     }
 
+    static bool Verify(alureStream *stream)
+    {
+        ListType::iterator i = std::find(StreamList.begin(), StreamList.end(), stream);
+        return (i != StreamList.end());
+    }
+
 private:
     typedef std::list<alureStream*> ListType;
     static ListType StreamList;

@@ -1815,9 +1815,9 @@ ALURE_API ALsizei ALURE_APIENTRY alureBufferDataFromStream(alureStream *stream, 
         return -1;
     }
 
-    if(!stream)
+    if(!alureStream::Verify(stream))
     {
-        SetError("Null stream pointer");
+        SetError("Invalid stream pointer");
         return -1;
     }
 
@@ -1868,9 +1868,9 @@ ALURE_API ALsizei ALURE_APIENTRY alureBufferDataFromStream(alureStream *stream, 
  */
 ALURE_API ALboolean ALURE_APIENTRY alureRewindStream(alureStream *stream)
 {
-    if(!stream)
+    if(!alureStream::Verify(stream))
     {
-        SetError("Null stream pointer");
+        SetError("Invalid stream pointer");
         return AL_FALSE;
     }
 
@@ -1905,6 +1905,12 @@ ALURE_API ALboolean ALURE_APIENTRY alureDestroyStream(alureStream *stream, ALsiz
         return AL_FALSE;
     }
 
+    if(stream && !alureStream::Verify(stream))
+    {
+        SetError("Invalid stream pointer");
+        return AL_FALSE;
+    }
+
     alDeleteBuffers(numBufs, bufs);
     if(alGetError() != AL_NO_ERROR)
     {
@@ -1916,7 +1922,6 @@ ALURE_API ALboolean ALURE_APIENTRY alureDestroyStream(alureStream *stream, ALsiz
     {
         alureStopStream(stream, AL_TRUE);
         std::istream *f = stream->fstream;
-        stream->fstream = NULL;
         delete stream;
         delete f;
     }
