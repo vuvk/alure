@@ -2,10 +2,16 @@
 
 #include "AL/alure.h"
 
+volatile int isdone = 0;
+static void eos_callback(void *unused)
+{
+    isdone = 1;
+    (void)unused;
+}
+
 int main( int argc, char **argv)
 {
     ALuint src, buf;
-    ALint state;
 
     if(argc < 2)
     {
@@ -38,8 +44,7 @@ int main( int argc, char **argv)
     }
 
     alSourcei(src, AL_BUFFER, buf);
-    alSourcePlay(src);
-    if(alGetError() != AL_NO_ERROR)
+    if(alurePlaySource(src, eos_callback, NULL) == AL_FALSE)
     {
         fprintf(stderr, "Failed to start source!\n");
         alDeleteSources(1, &src);
@@ -49,10 +54,8 @@ int main( int argc, char **argv)
         return 1;
     }
 
-    do {
-        alureSleep(0.001);
-        alGetSourcei(src, AL_SOURCE_STATE, &state);
-    } while(alGetError() == AL_NO_ERROR && state == AL_PLAYING);
+    while(!isdone)
+        alureSleep(0.125);
 
     alDeleteSources(1, &src);
     alDeleteBuffers(1, &buf);
