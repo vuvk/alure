@@ -18,7 +18,7 @@
  * Or go to http://www.gnu.org/copyleft/lgpl.html
  */
 
-/* Title: Streaming Playback */
+/* Title: Asynchronous Playback */
 
 #include "config.h"
 
@@ -161,6 +161,19 @@ ALuint AsyncPlayFunc(ALvoid*)
 			ALint queued;
 			ALint state;
 
+			if(i->stream == NULL)
+			{
+				alGetSourcei(i->source, AL_SOURCE_STATE, &state);
+				if(state != AL_PLAYING && state != AL_PAUSED)
+				{
+					if(i->eos_callback)
+						i->eos_callback(i->user_data);
+					i = AsyncPlayList.erase(i);
+				}
+				else i++;
+				continue;
+			}
+
 			alGetSourcei(i->source, AL_SOURCE_STATE, &state);
 			alGetSourcei(i->source, AL_BUFFERS_QUEUED, &queued);
 			alGetSourcei(i->source, AL_BUFFERS_PROCESSED, &processed);
@@ -294,6 +307,12 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlayStreamAsync(alureStream *stream,
 			LeaveCriticalSection(&cs_StreamPlay);
 			return AL_FALSE;
 		}
+		if(i->source == source)
+		{
+			SetError("Source is already playing");
+			LeaveCriticalSection(&cs_StreamPlay);
+			return AL_FALSE;
+		}
 		i++;
 	}
 
@@ -386,6 +405,144 @@ ALURE_API void ALURE_APIENTRY alureStopStream(alureStream *stream, ALboolean run
 		StopThread(PlayThreadHandle);
 		PlayThreadHandle = NULL;
 	}
+}
+
+/* Function: alurePlaySource
+ *
+ * Plays the specified source ID and watches for it to stop. When a source
+ * enters the AL_STOPPED state, the specified callback is called to alert the
+ * application. As with <alurePlayStreamAsync>, the current context must not
+ * be changed while the source is being watched (before the callback is called
+ * or <alureStopSource> is called). It also must not be deleted while being
+ * watched.
+ *
+ * Parameters:
+ * source - The source ID to play. As with <alurePlayStreamAsync>, it is valid
+ *          to set source properties not related to the playback state (ie. you
+ *          may change a source's position, pitch, gain, etc). Pausing a source
+ *          and restarting a paused source is allowed, and the callback will
+ *          still be invoked when the source naturally reaches an AL_STOPPED
+ *          state.
+ * callback - The callback to be called when the source stops.
+ * userdata - An opaque user pointer passed to the callback.
+ *
+ * Returns:
+ * AL_FALSE on error.
+ *
+ * See Also:
+ * <alureStopSource>
+ */
+ALURE_API ALboolean ALURE_APIENTRY alurePlaySource(ALuint source,
+    void (*callback)(void *userdata), void *userdata)
+{
+	if(alGetError() != AL_NO_ERROR)
+	{
+		SetError("Existing OpenAL error");
+		return AL_FALSE;
+	}
+
+	EnterCriticalSection(&cs_StreamPlay);
+
+	std::list<AsyncPlayEntry>::iterator i = AsyncPlayList.begin(),
+	                                    end = AsyncPlayList.end();
+	while(i != end)
+	{
+		if(i->source == source)
+		{
+			SetError("Source is already playing");
+			LeaveCriticalSection(&cs_StreamPlay);
+			return AL_FALSE;
+		}
+		i++;
+	}
+
+	if((alSourcePlay(source),alGetError()) != AL_NO_ERROR)
+	{
+		LeaveCriticalSection(&cs_StreamPlay);
+		SetError("Error starting source");
+		return AL_FALSE;
+	}
+
+	if(callback == NULL)
+	{
+		LeaveCriticalSection(&cs_StreamPlay);
+		return AL_TRUE;
+	}
+
+	if(!PlayThreadHandle)
+		PlayThreadHandle = StartThread(AsyncPlayFunc, NULL);
+	if(!PlayThreadHandle)
+	{
+		alSourceStop(source);
+		alGetError();
+		LeaveCriticalSection(&cs_StreamPlay);
+		SetError("Error starting async thread");
+		return AL_FALSE;
+	}
+
+	AsyncPlayEntry ent;
+	ent.source = source;
+	ent.eos_callback = callback;
+	ent.user_data = userdata;
+	AsyncPlayList.push_front(ent);
+
+	LeaveCriticalSection(&cs_StreamPlay);
+
+	return AL_TRUE;
+}
+
+/* Function: alureStopSource
+ *
+ * Stops the specified source ID. The previously specified callback will be
+ * invoked if 'run_callback' is not AL_FALSE. Sources that were not started
+ * with <alurePlaySource> will still be stopped, but will not have any callback
+ * called for them.
+ *
+ * Returns:
+ * AL_FALSE on error.
+ *
+ * See Also:
+ * <alurePlaySource>
+ */
+ALURE_API ALboolean ALURE_APIENTRY alureStopSource(ALuint source, ALboolean run_callback)
+{
+	if(alGetError() != AL_NO_ERROR)
+	{
+		SetError("Existing OpenAL error");
+		return AL_FALSE;
+	}
+
+	EnterCriticalSection(&cs_StreamPlay);
+
+	if((alSourceStop(source),alGetError()) != AL_NO_ERROR)
+	{
+		LeaveCriticalSection(&cs_StreamPlay);
+		SetError("Error stopping source");
+		return AL_FALSE;
+	}
+
+	std::list<AsyncPlayEntry>::iterator i = AsyncPlayList.begin(),
+	                                    end = AsyncPlayList.end();
+	while(i != end)
+	{
+		if(i->source == source)
+		{
+			if(run_callback && i->eos_callback)
+				i->eos_callback(i->user_data);
+			AsyncPlayList.erase(i);
+			break;
+		}
+		i++;
+	}
+
+	LeaveCriticalSection(&cs_StreamPlay);
+	if(AsyncPlayList.size() == 0 && PlayThreadHandle)
+	{
+		StopThread(PlayThreadHandle);
+		PlayThreadHandle = NULL;
+	}
+
+	return AL_TRUE;
 }
 
 } // extern "C"
