@@ -392,7 +392,7 @@ ALURE_API void ALURE_APIENTRY alureStopStream(alureStream *stream, ALboolean run
 			alSourcei(i->source, AL_BUFFER, 0);
 			alDeleteBuffers(i->buffers.size(), &i->buffers[0]);
 			alGetError();
-			if(!run_callback && i->eos_callback)
+			if(run_callback && i->eos_callback)
 				i->eos_callback(i->user_data);
 			AsyncPlayList.erase(i);
 			break;
