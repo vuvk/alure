@@ -128,14 +128,15 @@ struct AsyncPlayEntry {
 	ALsizei loopcount;
 	void (*eos_callback)(void*);
 	void *user_data;
+	bool finished;
 
 	AsyncPlayEntry() : stream(NULL), source(0), loopcount(0),
-	                   eos_callback(NULL), user_data(NULL)
+	                   eos_callback(NULL), user_data(NULL), finished(false)
 	{ }
 	AsyncPlayEntry(const AsyncPlayEntry &rhs)
 	  : stream(rhs.stream), source(rhs.source), buffers(rhs.buffers),
 	    loopcount(rhs.loopcount), eos_callback(rhs.eos_callback),
-	    user_data(rhs.user_data)
+	    user_data(rhs.user_data), finished(rhs.finished)
 	{ }
 };
 static std::list<AsyncPlayEntry> AsyncPlayList;
@@ -182,7 +183,8 @@ ALuint AsyncPlayFunc(ALvoid*)
 				queued--;
 				processed--;
 				alSourceUnqueueBuffers(i->source, 1, &buf);
-				do {
+				while(!i->finished)
+				{
 					ALint filled = alureBufferDataFromStream(i->stream, 1, &buf);
 					if(filled > 0)
 					{
@@ -191,10 +193,14 @@ ALuint AsyncPlayFunc(ALvoid*)
 						break;
 					}
 					if(i->loopcount == 0)
+					{
+						i->finished = true;
 						break;
+					}
 					if(i->loopcount != -1)
 						i->loopcount--;
-				} while(alureRewindStream(i->stream));
+					i->finished = !alureRewindStream(i->stream);
+				}
 			}
 			if(state != AL_PLAYING && state != AL_PAUSED)
 			{
