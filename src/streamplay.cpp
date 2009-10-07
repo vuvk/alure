@@ -525,7 +525,7 @@ ALURE_API ALboolean ALURE_APIENTRY alureStopSource(ALuint source, ALboolean run_
 	                                    end = AsyncPlayList.end();
 	while(i != end)
 	{
-		if(i->source == source)
+		if(i->source == source && i->stream == NULL)
 		{
 			if(run_callback && i->eos_callback)
 				i->eos_callback(i->user_data);
