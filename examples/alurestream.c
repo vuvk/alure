@@ -46,7 +46,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    if(!alurePlayStreamAsync(stream, src, NUM_BUFS, 0, eos_callback, NULL))
+    if(!alurePlaySourceStream(src, stream, NUM_BUFS, 0, eos_callback, NULL))
     {
         fprintf(stderr, "Failed to play stream: %s\n", alureGetErrorString());
         isdone = 1;
@@ -54,7 +54,7 @@ int main(int argc, char **argv)
 
     while(!isdone)
         alureSleep(0.125);
-    alureStopStream(stream, AL_FALSE);
+    alureStopSource(src, AL_FALSE);
 
     alDeleteSources(1, &src);
     alureDestroyStream(stream, 0, NULL);

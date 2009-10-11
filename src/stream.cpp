@@ -1920,7 +1920,6 @@ ALURE_API ALboolean ALURE_APIENTRY alureDestroyStream(alureStream *stream, ALsiz
 
     if(stream)
     {
-        alureStopStream(stream, AL_TRUE);
         std::istream *f = stream->fstream;
         delete stream;
         delete f;
