@@ -126,17 +126,23 @@ struct AsyncPlayEntry {
 	ALuint source;
 	std::vector<ALuint> buffers;
 	ALsizei loopcount;
+	ALsizei maxloops;
 	void (*eos_callback)(void*);
 	void *user_data;
 	bool finished;
+	alureInt64 base_time;
+	alureInt64 max_time;
 
-	AsyncPlayEntry() : stream(NULL), source(0), loopcount(0),
-	                   eos_callback(NULL), user_data(NULL), finished(false)
+	AsyncPlayEntry() : stream(NULL), source(0), loopcount(0), maxloops(0),
+	                   eos_callback(NULL), user_data(NULL), finished(false),
+	                   base_time(0), max_time(0)
 	{ }
 	AsyncPlayEntry(const AsyncPlayEntry &rhs)
 	  : stream(rhs.stream), source(rhs.source), buffers(rhs.buffers),
-	    loopcount(rhs.loopcount), eos_callback(rhs.eos_callback),
-	    user_data(rhs.user_data), finished(rhs.finished)
+	    loopcount(rhs.loopcount), maxloops(rhs.maxloops),
+	    eos_callback(rhs.eos_callback), user_data(rhs.user_data),
+	    finished(rhs.finished), base_time(rhs.base_time),
+	    max_time(rhs.max_time)
 	{ }
 };
 static std::list<AsyncPlayEntry> AsyncPlayList;
@@ -183,6 +189,14 @@ ALuint AsyncPlayFunc(ALvoid*)
 				queued--;
 				processed--;
 				alSourceUnqueueBuffers(i->source, 1, &buf);
+
+				ALint size, channels, bits;
+				alGetBufferi(buf, AL_SIZE, &size);
+				alGetBufferi(buf, AL_CHANNELS, &channels);
+				alGetBufferi(buf, AL_BITS, &bits);
+				i->base_time += size / channels * 8 / bits;
+				i->base_time %= i->max_time;
+
 				while(!i->finished)
 				{
 					ALint filled = alureBufferDataFromStream(i->stream, 1, &buf);
@@ -190,15 +204,22 @@ ALuint AsyncPlayFunc(ALvoid*)
 					{
 						queued++;
 						alSourceQueueBuffers(i->source, 1, &buf);
+						if(i->loopcount == 0)
+						{
+							alGetBufferi(buf, AL_SIZE, &size);
+							alGetBufferi(buf, AL_CHANNELS, &channels);
+							alGetBufferi(buf, AL_BITS, &bits);
+							i->max_time += size / channels * 8 / bits;
+						}
 						break;
 					}
-					if(i->loopcount == 0)
+					if(i->loopcount == i->maxloops)
 					{
 						i->finished = true;
 						break;
 					}
-					if(i->loopcount != -1)
-						i->loopcount--;
+					if(i->maxloops != -1)
+						i->loopcount++;
 					i->finished = !alureRewindStream(i->stream);
 				}
 			}
@@ -270,7 +291,7 @@ extern "C" {
  * AL_FALSE on error.
  *
  * See Also:
- * <alureStopSource>
+ * <alureStopSource>, <alureGetSourceOffset>
  */
 ALURE_API ALboolean ALURE_APIENTRY alurePlaySourceStream(ALuint source,
     alureStream *stream, ALsizei numBufs, ALsizei loopcount,
@@ -324,7 +345,7 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlaySourceStream(ALuint source,
 	AsyncPlayEntry ent;
 	ent.stream = stream;
 	ent.source = source;
-	ent.loopcount = loopcount;
+	ent.maxloops = loopcount;
 	ent.eos_callback = eos_callback;
 	ent.user_data = userdata;
 
@@ -344,6 +365,15 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlaySourceStream(ALuint source,
 		LeaveCriticalSection(&cs_StreamPlay);
 		SetError("Error buffering from stream (perhaps too short)");
 		return AL_FALSE;
+	}
+
+	for(ALsizei idx = 0;idx < numBufs;idx++)
+	{
+		ALint size, channels, bits;
+		alGetBufferi(ent.buffers[idx], AL_SIZE, &size);
+		alGetBufferi(ent.buffers[idx], AL_CHANNELS, &channels);
+		alGetBufferi(ent.buffers[idx], AL_BITS, &bits);
+		ent.max_time += size / channels * 8 / bits;
 	}
 
 	if((alSourcei(source, AL_BUFFER, 0),alGetError()) != AL_NO_ERROR ||
@@ -518,6 +548,57 @@ ALURE_API ALboolean ALURE_APIENTRY alureStopSource(ALuint source, ALboolean run_
 	}
 
 	return AL_TRUE;
+}
+
+/* Function: alureGetSourceOffset
+ *
+ * Gets the sample offset of the specified source. For sources started with
+ * <alurePlaySourceStream>, this will be the total samples played. The offset
+ * will loop back to 0 when the stream rewinds for any specified loopcount. For
+ * non-streamed sources, the function will behave as if retrieving the
+ * AL_SAMPLE_OFFSET source value.
+ *
+ * Returns:
+ * -1 on error.
+ *
+ * See Also:
+ * <alurePlaySourceStream>
+ */
+ALURE_API alureInt64 ALURE_APIENTRY alureGetSourceOffset(ALuint source)
+{
+	if(alGetError() != AL_NO_ERROR)
+	{
+		SetError("Existing OpenAL error");
+		return -1;
+	}
+
+	EnterCriticalSection(&cs_StreamPlay);
+
+	ALint pos;
+	if((alGetSourcei(source, AL_SAMPLE_OFFSET, &pos),alGetError()) != AL_NO_ERROR)
+	{
+		LeaveCriticalSection(&cs_StreamPlay);
+		SetError("Error retrieving source offset");
+		return -1;
+	}
+
+	alureInt64 retval = static_cast<ALuint>(pos);
+	std::list<AsyncPlayEntry>::iterator i = AsyncPlayList.begin(),
+	                                    end = AsyncPlayList.end();
+	while(i != end)
+	{
+		if(i->source == source)
+		{
+			retval += i->base_time;
+			retval %= i->max_time;
+			break;
+		}
+		i++;
+	}
+
+	LeaveCriticalSection(&cs_StreamPlay);
+
+	return retval;
 }
 
 } // extern "C"
