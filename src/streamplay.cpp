@@ -590,7 +590,8 @@ ALURE_API alureInt64 ALURE_APIENTRY alureGetSourceOffset(ALuint source)
 		if(i->source == source)
 		{
 			retval += i->base_time;
-			retval %= i->max_time;
+			if(i->max_time)
+				retval %= i->max_time;
 			break;
 		}
 		i++;
