@@ -130,8 +130,8 @@ struct AsyncPlayEntry {
 	void (*eos_callback)(void*);
 	void *user_data;
 	bool finished;
-	alureInt64 base_time;
-	alureInt64 max_time;
+	alureUInt64 base_time;
+	alureUInt64 max_time;
 
 	AsyncPlayEntry() : stream(NULL), source(0), loopcount(0), maxloops(0),
 	                   eos_callback(NULL), user_data(NULL), finished(false),
@@ -559,7 +559,7 @@ ALURE_API ALboolean ALURE_APIENTRY alureStopSource(ALuint source, ALboolean run_
  * AL_SAMPLE_OFFSET source value.
  *
  * Returns:
- * -1 on error.
+ * (alureUInt)-1 on error.
  *
  * See Also:
  * <alurePlaySourceStream>
@@ -569,7 +569,7 @@ ALURE_API alureInt64 ALURE_APIENTRY alureGetSourceOffset(ALuint source)
 	if(alGetError() != AL_NO_ERROR)
 	{
 		SetError("Existing OpenAL error");
-		return -1;
+		return (alureUInt64)-1;
 	}
 
 	EnterCriticalSection(&cs_StreamPlay);
@@ -579,10 +579,10 @@ ALURE_API alureInt64 ALURE_APIENTRY alureGetSourceOffset(ALuint source)
 	{
 		LeaveCriticalSection(&cs_StreamPlay);
 		SetError("Error retrieving source offset");
-		return -1;
+		return (alureUInt64)-1;
 	}
 
-	alureInt64 retval = static_cast<ALuint>(pos);
+	alureUInt64 retval = static_cast<ALuint>(pos);
 	std::list<AsyncPlayEntry>::iterator i = AsyncPlayList.begin(),
 	                                    end = AsyncPlayList.end();
 	while(i != end)
