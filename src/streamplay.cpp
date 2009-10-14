@@ -564,7 +564,7 @@ ALURE_API ALboolean ALURE_APIENTRY alureStopSource(ALuint source, ALboolean run_
  * See Also:
  * <alurePlaySourceStream>
  */
-ALURE_API alureInt64 ALURE_APIENTRY alureGetSourceOffset(ALuint source)
+ALURE_API alureUInt64 ALURE_APIENTRY alureGetSourceOffset(ALuint source)
 {
 	if(alGetError() != AL_NO_ERROR)
 	{
