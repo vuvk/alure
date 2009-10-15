@@ -77,9 +77,9 @@ ALURE_API ALboolean ALURE_APIENTRY alureDestroyStream(alureStream *stream, ALsiz
 
 ALURE_API ALboolean ALURE_APIENTRY alurePlaySourceStream(ALuint source,
     alureStream *stream, ALsizei numBufs, ALsizei loopcount,
-    void (*eos_callback)(void *userdata), void *userdata);
+    void (*eos_callback)(void *userdata, ALuint source), void *userdata);
 ALURE_API ALboolean ALURE_APIENTRY alurePlaySource(ALuint source,
-    void (*callback)(void *userdata), void *userdata);
+    void (*callback)(void *userdata, ALuint source), void *userdata);
 ALURE_API ALboolean ALURE_APIENTRY alureStopSource(ALuint source, ALboolean run_callback);
 ALURE_API alureUInt64 ALURE_APIENTRY alureGetSourceOffset(ALuint source);
 
@@ -118,8 +118,8 @@ typedef alureStream*    (ALURE_APIENTRY *LPALURECREATESTREAMFROMCALLBACK)(ALuint
 typedef ALsizei         (ALURE_APIENTRY *LPALUREBUFFERDATAFROMSTREAM)(alureStream*,ALsizei,ALuint*);
 typedef ALboolean       (ALURE_APIENTRY *LPALUREREWINDSTREAM)(alureStream*);
 typedef ALboolean       (ALURE_APIENTRY *LPALUREDESTROYSTREAM)(alureStream*,ALsizei,ALuint*);
-typedef ALboolean       (ALURE_APIENTRY *LPALUREPLAYSOURCESTREAM)(ALuint,alureStream*,ALsizei,ALsizei,void(*)(void*),void*);
-typedef ALboolean       (ALURE_APIENTRY *LPALUREPLAYSOURCE)(ALuint,void(*)(void*),void*);
+typedef ALboolean       (ALURE_APIENTRY *LPALUREPLAYSOURCESTREAM)(ALuint,alureStream*,ALsizei,ALsizei,void(*)(void*,ALuint),void*);
+typedef ALboolean       (ALURE_APIENTRY *LPALUREPLAYSOURCE)(ALuint,void(*)(void*,ALuint),void*);
 typedef ALboolean       (ALURE_APIENTRY *LPALURESTOPSOURCE)(ALuint,ALboolean);
 typedef alureUInt64     (ALURE_APIENTRY *LPALUREGETSOURCEOFFSET)(ALuint);
 typedef ALboolean       (ALURE_APIENTRY *LPALUREINSTALLDECODECALLBACKS)(ALint,void*(*)(const char*),void*(*)(const ALubyte*,ALuint),ALboolean(*)(void*,ALenum*,ALuint*,ALuint*),ALuint(*)(void*,ALubyte*,ALuint),ALboolean(*)(void*),void(*)(void*));

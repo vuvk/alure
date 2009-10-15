@@ -122,23 +122,23 @@ static ALuint StopThread(ThreadInfo *inf)
 #endif
 
 struct AsyncPlayEntry {
-	alureStream *stream;
 	ALuint source;
+	alureStream *stream;
 	std::vector<ALuint> buffers;
 	ALsizei loopcount;
 	ALsizei maxloops;
-	void (*eos_callback)(void*);
+	void (*eos_callback)(void*,ALuint);
 	void *user_data;
 	bool finished;
 	alureUInt64 base_time;
 	alureUInt64 max_time;
 
-	AsyncPlayEntry() : stream(NULL), source(0), loopcount(0), maxloops(0),
+	AsyncPlayEntry() : source(0), stream(NULL), loopcount(0), maxloops(0),
 	                   eos_callback(NULL), user_data(NULL), finished(false),
 	                   base_time(0), max_time(0)
 	{ }
 	AsyncPlayEntry(const AsyncPlayEntry &rhs)
-	  : stream(rhs.stream), source(rhs.source), buffers(rhs.buffers),
+	  : source(rhs.source), stream(rhs.stream), buffers(rhs.buffers),
 	    loopcount(rhs.loopcount), maxloops(rhs.maxloops),
 	    eos_callback(rhs.eos_callback), user_data(rhs.user_data),
 	    finished(rhs.finished), base_time(rhs.base_time),
@@ -173,8 +173,7 @@ ALuint AsyncPlayFunc(ALvoid*)
 				alGetSourcei(i->source, AL_SOURCE_STATE, &state);
 				if(state != AL_PLAYING && state != AL_PAUSED)
 				{
-					if(i->eos_callback)
-						i->eos_callback(i->user_data);
+					i->eos_callback(i->user_data, i->source);
 					i = AsyncPlayList.erase(i);
 				}
 				else i++;
@@ -230,7 +229,7 @@ ALuint AsyncPlayFunc(ALvoid*)
 					alSourcei(i->source, AL_BUFFER, 0);
 					alDeleteBuffers(i->buffers.size(), &i->buffers[0]);
 					if(i->eos_callback)
-						i->eos_callback(i->user_data);
+						i->eos_callback(i->user_data, i->source);
 					i = AsyncPlayList.erase(i);
 					continue;
 				}
@@ -295,7 +294,7 @@ extern "C" {
  */
 ALURE_API ALboolean ALURE_APIENTRY alurePlaySourceStream(ALuint source,
     alureStream *stream, ALsizei numBufs, ALsizei loopcount,
-    void (*eos_callback)(void *userdata), void *userdata)
+    void (*eos_callback)(void *userdata, ALuint source), void *userdata)
 {
 	if(alGetError() != AL_NO_ERROR)
 	{
@@ -430,7 +429,7 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlaySourceStream(ALuint source,
  * <alureStopSource>
  */
 ALURE_API ALboolean ALURE_APIENTRY alurePlaySource(ALuint source,
-    void (*callback)(void *userdata), void *userdata)
+    void (*callback)(void *userdata, ALuint source), void *userdata)
 {
 	if(alGetError() != AL_NO_ERROR)
 	{
@@ -533,7 +532,7 @@ ALURE_API ALboolean ALURE_APIENTRY alureStopSource(ALuint source, ALboolean run_
 			}
 
 			if(run_callback && i->eos_callback)
-				i->eos_callback(i->user_data);
+				i->eos_callback(i->user_data, i->source);
 			AsyncPlayList.erase(i);
 			break;
 		}

@@ -3,10 +3,11 @@
 #include "AL/alure.h"
 
 volatile int isdone = 0;
-static void eos_callback(void *unused)
+static void eos_callback(void *unused, ALuint unused2)
 {
     isdone = 1;
     (void)unused;
+    (void)unused2;
 }
 
 int main( int argc, char **argv)
