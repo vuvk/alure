@@ -65,15 +65,10 @@ static ThreadInfo *StartThread(ALuint (*func)(ALvoid*), ALvoid *ptr)
 
 static ALuint StopThread(ThreadInfo *inf)
 {
-    DWORD ret = 0;
-
-    WaitForSingleObject(inf->thread, INFINITE);
-    GetExitCodeThread(inf->thread, &ret);
     CloseHandle(inf->thread);
-
     delete inf;
 
-    return (ALuint)ret;
+    return 0;
 }
 
 #else
@@ -109,14 +104,10 @@ static ThreadInfo *StartThread(ALuint (*func)(ALvoid*), ALvoid *ptr)
 
 static ALuint StopThread(ThreadInfo *inf)
 {
-    ALuint ret;
-
-    pthread_join(inf->thread, NULL);
-    ret = inf->ret;
-
+    pthread_detach(inf->thread);
     delete inf;
 
-    return ret;
+    return 0;
 }
 
 #endif
@@ -155,6 +146,8 @@ ALuint AsyncPlayFunc(ALvoid*)
 		EnterCriticalSection(&cs_StreamPlay);
 		if(AsyncPlayList.size() == 0)
 		{
+			StopThread(PlayThreadHandle);
+			PlayThreadHandle = NULL;
 			LeaveCriticalSection(&cs_StreamPlay);
 			break;
 		}
@@ -540,11 +533,6 @@ ALURE_API ALboolean ALURE_APIENTRY alureStopSource(ALuint source, ALboolean run_
 	}
 
 	LeaveCriticalSection(&cs_StreamPlay);
-	if(AsyncPlayList.size() == 0 && PlayThreadHandle)
-	{
-		StopThread(PlayThreadHandle);
-		PlayThreadHandle = NULL;
-	}
 
 	return AL_TRUE;
 }
