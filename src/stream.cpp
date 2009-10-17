@@ -1791,6 +1791,43 @@ ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromCallback(
     return InitStream(stream, chunkLength, numBufs, bufs);
 }
 
+/* Function: alureGetStreamFormat
+ *
+ * Retrieves the format, frequency, and block-alignment used for the given
+ * stream. If a parameter is NULL, that value will not be returned.
+ *
+ * Returns:
+ * AL_FALSE on error.
+ *
+ * See Also:
+ * <alureCreateStreamFromFile>, <alureCreateStreamFromMemory>,
+ * <alureCreateStreamFromStaticMemory>, <alureCreateStreamFromCallback>,
+ */
+ALURE_API ALboolean ALURE_APIENTRY alureGetStreamFormat(alureStream *stream,
+    ALenum *format, ALuint *frequency, ALuint *blockAlign)
+{
+    ALenum _fmt;
+    ALuint _rate, _balign;
+
+    if(!alureStream::Verify(stream))
+    {
+        SetError("Invalid stream pointer");
+        return AL_FALSE;
+    }
+
+    if(!format) format = &_fmt;
+    if(!frequency) frequency = &_rate;
+    if(!blockAlign) blockAlign = &_balign;
+
+    if(!stream->GetFormat(format, frequency, blockAlign))
+    {
+        SetError("Could not get stream format");
+        return AL_FALSE;
+    }
+
+    return AL_TRUE;
+}
+
 /* Function: alureBufferDataFromStream
  *
  * Buffers the given buffer objects with the next chunks of data from the
