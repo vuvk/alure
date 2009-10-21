@@ -142,41 +142,39 @@ static void *open_wrap(const char *filename, ALuint mode)
     if(mode != 0)
         return NULL;
 
-    int fd = open(filename, O_RDONLY|O_BINARY);
-    if(fd == -1) return NULL;
-
-    return new int(fd);
+    return fopen(filename, "rb");
 }
 
 static void close_wrap(void *user_data)
 {
-    close(static_cast<int*>(user_data)[0]);
-    delete static_cast<int*>(user_data);
+    FILE *f = (FILE*)user_data;
+    fclose(f);
 }
 
 ALsizei read_wrap(void *user_data, ALubyte *buf, ALuint bytes)
 {
-    ssize_t ret;
-    do {
-        ret = read(static_cast<int*>(user_data)[0], buf, bytes);
-    } while(ret == -1 && errno == EINTR);
-    return ret;
+    FILE *f = (FILE*)user_data;
+    return fread(buf, 1, bytes, f);
 }
 
 ALsizei write_wrap(void *user_data, const ALubyte *buf, ALuint bytes)
 {
-    ssize_t ret;
-    do {
-        ret = write(static_cast<int*>(user_data)[0], buf, bytes);
-    } while(ret == -1 && errno == EINTR);
-    return ret;
+    FILE *f = (FILE*)user_data;
+    return fwrite(buf, 1, bytes, f);
 }
 
 alureInt64 seek_wrap(void *user_data, alureInt64 offset, int whence)
 {
+    FILE *f = (FILE*)user_data;
+#ifdef HAVE_FSEEKO
     if(offset != (off_t)offset)
         return -1;
-    return lseek(static_cast<int*>(user_data)[0], offset, whence);
+    return fseeko(f, offset, whence);
+#else
+    if(offset != (long)offset)
+        return -1;
+    return fseek(f, offset, whence);
+#endif
 }
 
 UserFuncs Funcs = {

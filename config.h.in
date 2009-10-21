@@ -17,6 +17,9 @@
 /* Define if we have nanosleep */
 #cmakedefine HAVE_NANOSLEEP
 
+/* Define if we have fseeko */
+#cmakedefine HAVE_FSEEKO
+
 /* Define if we have sndfile */
 #cmakedefine HAS_SNDFILE
 
