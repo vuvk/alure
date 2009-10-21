@@ -79,7 +79,7 @@ MemStreamBuf::pos_type MemStreamBuf::seekpos(pos_type pos, std::ios_base::openmo
     if((mode&std::ios_base::out))
         return traits_type::eof();
 
-    if(pos < 0 || pos > pos_type(memInfo.Length) || pos != size_t(pos))
+    if(pos < 0 || pos > pos_type(memInfo.Length) || pos != pos_type(size_t(pos)))
         return traits_type::eof();
     memInfo.Pos = pos;
 
@@ -131,7 +131,7 @@ FileStreamBuf::pos_type FileStreamBuf::seekoff(off_type offset, std::ios_base::s
 
 FileStreamBuf::pos_type FileStreamBuf::seekpos(pos_type pos, std::ios_base::openmode mode)
 {
-    if(pos != off_type(pos))
+    if(pos != pos_type(off_type(pos)))
         return traits_type::eof();
     return seekoff(off_type(pos), std::ios_base::beg, mode);
 }

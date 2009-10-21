@@ -32,6 +32,8 @@
 #endif
 
 #include <vector>
+#include <string>
+#include <map>
 
 std::map<ALint,UserCallbacks> InstalledCallbacks;
 std::map<std::string,void*> FunctionList;
