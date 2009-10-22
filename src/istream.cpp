@@ -167,13 +167,13 @@ alureInt64 seek_wrap(void *user_data, alureInt64 offset, int whence)
 {
     FILE *f = (FILE*)user_data;
 #ifdef HAVE_FSEEKO
-    if(offset != (off_t)offset)
+    if(offset != (off_t)offset || fseeko(f, offset, whence) != 0)
         return -1;
-    return fseeko(f, offset, whence);
+    return ftello(f);
 #else
-    if(offset != (long)offset)
+    if(offset != (long)offset || fseek(f, offset, whence) != 0)
         return -1;
-    return fseek(f, offset, whence);
+    return ftell(f);
 #endif
 }
 
