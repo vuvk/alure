@@ -106,10 +106,14 @@ IF(NOT HAVE_WINDOWS_H)
     # _GNU_SOURCE is needed on some systems for extra attributes, and
     # _REENTRANT is needed for libc thread-safety
     ADD_DEFINITIONS(-D_GNU_SOURCE=1 -D_REENTRANT)
-    CHECK_SHARED_LIBRARY_EXISTS(pthread pthread_create "" HAVE_LIBPTHREAD)
-    IF(HAVE_LIBPTHREAD)
+    CHECK_FUNCTION_EXISTS(pthread_create HAS_PTHREAD_CREATE)
+    IF(NOT HAS_PTHREAD_CREATE)
+        CHECK_SHARED_LIBRARY_EXISTS(pthread pthread_create "" HAVE_LIBPTHREAD)
+        IF(NOT HAVE_LIBPTHREAD)
+            MESSAGE(FATAL_ERROR "pthread_create not found on non-Windows target!")
+        ENDIF(NOT HAVE_LIBPTHREAD)
         SET(EXTRA_LIBS pthread ${EXTRA_LIBS})
-    ENDIF()
+    ENDIF(NOT HAS_PTHREAD_CREATE)
 ENDIF(NOT HAVE_WINDOWS_H)
 
 
