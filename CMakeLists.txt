@@ -93,6 +93,7 @@ IF(NOT HAVE_WINDOWS_H)
     CHECK_C_COMPILER_FLAG(-pthread HAVE_PTHREAD)
     IF(HAVE_PTHREAD)
         ADD_DEFINITIONS(-pthread)
+        SET(EXTRA_LIBS ${EXTRA_LIBS} -pthread)
     ENDIF(HAVE_PTHREAD)
 
     # We need pthreads outside of Windows
