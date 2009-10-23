@@ -74,6 +74,10 @@ static void init_alure(void)
     ADD_FUNCTION(alureInstallDecodeCallbacks);
     ADD_FUNCTION(alureSetIOCallbacks);
     ADD_FUNCTION(alureGetProcAddress);
+    ADD_FUNCTION(alurePlaySourceStream);
+    ADD_FUNCTION(alurePlaySource);
+    ADD_FUNCTION(alureStopSource);
+    ADD_FUNCTION(alureGetSourceOffset);
 #undef ADD_FUNCTION
 }
 
