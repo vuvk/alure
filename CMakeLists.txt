@@ -8,6 +8,7 @@ ENDIF(COMMAND CMAKE_POLICY)
 SET(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
 INCLUDE(CheckCCompilerFlag)
+INCLUDE(CheckCSourceCompiles)
 INCLUDE(CheckFunctionExists)
 INCLUDE(CheckIncludeFile)
 INCLUDE(CheckIncludeFiles)
@@ -89,23 +90,22 @@ ENDIF(MSVC)
 
 CHECK_INCLUDE_FILE(windows.h HAVE_WINDOWS_H -D_WIN32_WINNT=0x0500)
 IF(NOT HAVE_WINDOWS_H)
-    CHECK_FUNCTION_EXISTS(nanosleep HAVE_NANOSLEEP)
-    IF(NOT HAVE_NANOSLEEP)
-        MESSAGE(FATAL_ERROR "No sleep function found!")
-    ENDIF(NOT HAVE_NANOSLEEP)
+    CHECK_C_COMPILER_FLAG(-pthread HAVE_PTHREAD)
+    IF(HAVE_PTHREAD)
+        ADD_DEFINITIONS(-pthread)
+    ENDIF(HAVE_PTHREAD)
 
     # We need pthreads outside of Windows
     CHECK_INCLUDE_FILE(pthread.h HAVE_PTHREAD_H)
     IF(NOT HAVE_PTHREAD_H)
         MESSAGE(FATAL_ERROR "PThreads is required for non-Windows builds!")
     ENDIF()
-
     # Some systems need pthread_np.h to get recursive mutexes
     CHECK_INCLUDE_FILES("pthread.h;pthread_np.h" HAVE_PTHREAD_NP_H)
 
     # _GNU_SOURCE is needed on some systems for extra attributes, and
     # _REENTRANT is needed for libc thread-safety
-    ADD_DEFINITIONS(-D_GNU_SOURCE=1 -D_REENTRANT)
+    ADD_DEFINITIONS(-D_GNU_SOURCE=1)
     CHECK_FUNCTION_EXISTS(pthread_create HAS_PTHREAD_CREATE)
     IF(NOT HAS_PTHREAD_CREATE)
         CHECK_SHARED_LIBRARY_EXISTS(pthread pthread_create "" HAVE_LIBPTHREAD)
@@ -114,6 +114,11 @@ IF(NOT HAVE_WINDOWS_H)
         ENDIF(NOT HAVE_LIBPTHREAD)
         SET(EXTRA_LIBS pthread ${EXTRA_LIBS})
     ENDIF(NOT HAS_PTHREAD_CREATE)
+
+    CHECK_FUNCTION_EXISTS(nanosleep HAVE_NANOSLEEP)
+    IF(NOT HAVE_NANOSLEEP)
+        MESSAGE(FATAL_ERROR "No sleep function found!")
+    ENDIF(NOT HAVE_NANOSLEEP)
 ENDIF(NOT HAVE_WINDOWS_H)
 
 
