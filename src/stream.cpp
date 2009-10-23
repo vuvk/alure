@@ -950,13 +950,18 @@ struct mp3Stream : public alureStream {
         if(mpg123_open_feed(newFile) == MPG123_OK)
         {
             unsigned char data[4096];
-            fstream->read((char*)data, sizeof(data));
-            std::streamsize amt = fstream->gcount();
             long newrate;
             int newchans;
-            int enc;
+            int ret, enc;
 
-            if(mpg123_decode(newFile, data, amt, NULL, 0, NULL) == MPG123_NEW_FORMAT &&
+            ALuint amt = 0;
+            do {
+                fstream->read((char*)data, sizeof(data));
+                amt = fstream->gcount();
+                ret = mpg123_decode(newFile, data, amt, NULL, 0, NULL);
+            } while(ret == MPG123_NEED_MORE);
+
+            if(ret == MPG123_NEW_FORMAT &&
                mpg123_getformat(newFile, &newrate, &newchans, &enc) == MPG123_OK)
             {
                 if(newrate == samplerate && newchans == channels &&
@@ -985,11 +990,16 @@ struct mp3Stream : public alureStream {
         if(mpg123_open_feed(mp3File) == MPG123_OK)
         {
             unsigned char data[4096];
-            fstream->read((char*)data, sizeof(data));
-            ALuint amt = fstream->gcount();
-            int enc;
+            int ret, enc;
 
-            if(mpg123_decode(mp3File, data, amt, NULL, 0, NULL) == MPG123_NEW_FORMAT &&
+            ALuint amt = 0;
+            do {
+                fstream->read((char*)data, sizeof(data));
+                amt = fstream->gcount();
+                ret = mpg123_decode(mp3File, data, amt, NULL, 0, NULL);
+            } while(ret == MPG123_NEED_MORE);
+
+            if(ret == MPG123_NEW_FORMAT &&
                mpg123_getformat(mp3File, &samplerate, &channels, &enc) == MPG123_OK)
             {
                 if(enc == MPG123_ENC_SIGNED_16 ||
