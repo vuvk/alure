@@ -954,12 +954,13 @@ struct mp3Stream : public alureStream {
             int newchans;
             int ret, enc;
 
-            ALuint amt = 0;
+            ALuint amt, total = 0;
             do {
                 fstream->read((char*)data, sizeof(data));
                 amt = fstream->gcount();
+                total += amt;
                 ret = mpg123_decode(newFile, data, amt, NULL, 0, NULL);
-            } while(ret == MPG123_NEED_MORE);
+            } while(ret == MPG123_NEED_MORE && total < 64*1024);
 
             if(ret == MPG123_NEW_FORMAT &&
                mpg123_getformat(newFile, &newrate, &newchans, &enc) == MPG123_OK)
@@ -992,12 +993,13 @@ struct mp3Stream : public alureStream {
             unsigned char data[4096];
             int ret, enc;
 
-            ALuint amt = 0;
+            ALuint amt, total = 0;
             do {
                 fstream->read((char*)data, sizeof(data));
                 amt = fstream->gcount();
+                total += amt;
                 ret = mpg123_decode(mp3File, data, amt, NULL, 0, NULL);
-            } while(ret == MPG123_NEED_MORE);
+            } while(ret == MPG123_NEED_MORE && total < 64*1024);
 
             if(ret == MPG123_NEW_FORMAT &&
                mpg123_getformat(mp3File, &samplerate, &channels, &enc) == MPG123_OK)
