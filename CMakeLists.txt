@@ -127,7 +127,7 @@ OPTION(SNDFILE   "SoundFile support (for various formats)" ON)
 OPTION(VORBIS    "VorbisFile support (for Ogg Vorbis)"  ON)
 OPTION(FLAC      "FLAC support (for FLAC and Ogg FLAC)" ON)
 OPTION(MPG123    "MPG123 support (for MP1/MP2/MP3)" ON)
-OPTION(GSTREAMER "GStreamer support" ON)
+OPTION(GSTREAMER "GStreamer support" OFF)
 
 IF(WIN32)
     ADD_DEFINITIONS(-D_WIN32)
