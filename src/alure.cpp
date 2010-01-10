@@ -51,34 +51,6 @@ static void init_alure(void)
 #ifdef HAS_GSTREAMER
     gst_init(NULL, NULL);
 #endif
-
-#define ADD_FUNCTION(x) FunctionList[#x] = (void*)(x)
-    ADD_FUNCTION(alureGetVersion);
-    ADD_FUNCTION(alureGetErrorString);
-    ADD_FUNCTION(alureGetDeviceNames);
-    ADD_FUNCTION(alureFreeDeviceNames);
-    ADD_FUNCTION(alureInitDevice);
-    ADD_FUNCTION(alureShutdownDevice);
-    ADD_FUNCTION(alureGetSampleFormat);
-    ADD_FUNCTION(alureSleep);
-    ADD_FUNCTION(alureCreateBufferFromFile);
-    ADD_FUNCTION(alureCreateBufferFromMemory);
-    ADD_FUNCTION(alureBufferDataFromFile);
-    ADD_FUNCTION(alureBufferDataFromMemory);
-    ADD_FUNCTION(alureCreateStreamFromFile);
-    ADD_FUNCTION(alureCreateStreamFromMemory);
-    ADD_FUNCTION(alureCreateStreamFromStaticMemory);
-    ADD_FUNCTION(alureCreateStreamFromCallback);
-    ADD_FUNCTION(alureRewindStream);
-    ADD_FUNCTION(alureDestroyStream);
-    ADD_FUNCTION(alureInstallDecodeCallbacks);
-    ADD_FUNCTION(alureSetIOCallbacks);
-    ADD_FUNCTION(alureGetProcAddress);
-    ADD_FUNCTION(alurePlaySourceStream);
-    ADD_FUNCTION(alurePlaySource);
-    ADD_FUNCTION(alureStopSource);
-    ADD_FUNCTION(alureGetSourceOffset);
-#undef ADD_FUNCTION
 }
 
 static void deinit_alure(void)
@@ -500,6 +472,37 @@ ALURE_API ALboolean ALURE_APIENTRY alureSleep(ALfloat duration)
  */
 ALURE_API void* ALURE_APIENTRY alureGetProcAddress(const ALchar *funcname)
 {
+    if(FunctionList.size() == 0)
+    {
+#define ADD_FUNCTION(x) FunctionList[#x] = (void*)(x)
+        ADD_FUNCTION(alureGetVersion);
+        ADD_FUNCTION(alureGetErrorString);
+        ADD_FUNCTION(alureGetDeviceNames);
+        ADD_FUNCTION(alureFreeDeviceNames);
+        ADD_FUNCTION(alureInitDevice);
+        ADD_FUNCTION(alureShutdownDevice);
+        ADD_FUNCTION(alureGetSampleFormat);
+        ADD_FUNCTION(alureSleep);
+        ADD_FUNCTION(alureCreateBufferFromFile);
+        ADD_FUNCTION(alureCreateBufferFromMemory);
+        ADD_FUNCTION(alureBufferDataFromFile);
+        ADD_FUNCTION(alureBufferDataFromMemory);
+        ADD_FUNCTION(alureCreateStreamFromFile);
+        ADD_FUNCTION(alureCreateStreamFromMemory);
+        ADD_FUNCTION(alureCreateStreamFromStaticMemory);
+        ADD_FUNCTION(alureCreateStreamFromCallback);
+        ADD_FUNCTION(alureRewindStream);
+        ADD_FUNCTION(alureDestroyStream);
+        ADD_FUNCTION(alureInstallDecodeCallbacks);
+        ADD_FUNCTION(alureSetIOCallbacks);
+        ADD_FUNCTION(alureGetProcAddress);
+        ADD_FUNCTION(alurePlaySourceStream);
+        ADD_FUNCTION(alurePlaySource);
+        ADD_FUNCTION(alureStopSource);
+        ADD_FUNCTION(alureGetSourceOffset);
+#undef ADD_FUNCTION
+    }
+
     std::map<std::string,void*>::iterator i = FunctionList.find(funcname);
     if(i != FunctionList.end())
         return i->second;
