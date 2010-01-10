@@ -55,8 +55,6 @@ static void init_alure(void)
 
 static void deinit_alure(void)
 {
-    alureStream::Clear();
-
 #ifdef HAS_MPG123
     mpg123_exit();
 #endif
