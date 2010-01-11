@@ -210,7 +210,7 @@ ALuint AsyncPlayFunc(ALvoid*)
 						i->finished = true;
 						break;
 					}
-					if(i->maxloops != -1 && i->loopcount < 1)
+					if(i->maxloops != -1 || i->loopcount < 1)
 						i->loopcount++;
 					i->finished = !alureRewindStream(i->stream);
 				}
