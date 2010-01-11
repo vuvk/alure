@@ -41,6 +41,26 @@ CRITICAL_SECTION cs_StreamPlay;
 alureStream::ListType alureStream::StreamList;
 
 
+#ifdef HAVE_GCC_CONSTRUCTOR
+static void init_alure(void) __attribute__((constructor));
+static void deinit_alure(void) __attribute__((destructor));
+static struct MyConstructorClass {
+    ~MyConstructorClass()
+    { alureStream::Clear(); };
+} MyConstructor;
+#else
+static void init_alure(void);
+static void deinit_alure(void);
+
+static struct MyConstructorClass {
+    MyConstructorClass()
+    { init_alure(); };
+    ~MyConstructorClass()
+    { alureStream::Clear();
+      deinit_alure(); };
+} MyConstructor;
+#endif
+
 static void init_alure(void)
 {
     InitializeCriticalSection(&cs_StreamPlay);
@@ -65,12 +85,6 @@ static void deinit_alure(void)
     DeleteCriticalSection(&cs_StreamPlay);
 }
 
-static struct MyConstructorClass {
-    MyConstructorClass()
-    { init_alure(); };
-    ~MyConstructorClass()
-    { deinit_alure(); };
-} MyConstructor;
 
 static const ALchar *last_error = "No error";
 
