@@ -238,6 +238,32 @@ ALuint AsyncPlayFunc(ALvoid*)
 	return 0;
 }
 
+void StopStream(alureStream *stream)
+{
+	EnterCriticalSection(&cs_StreamPlay);
+
+	std::list<AsyncPlayEntry>::iterator i = AsyncPlayList.begin(),
+	                                    end = AsyncPlayList.end();
+	while(i != end)
+	{
+		if(i->stream == stream)
+		{
+			alSourceStop(i->source);
+			alSourcei(i->source, AL_BUFFER, 0);
+			alDeleteBuffers(i->buffers.size(), &i->buffers[0]);
+			alGetError();
+
+			if(i->eos_callback)
+				i->eos_callback(i->user_data, i->source);
+			AsyncPlayList.erase(i);
+			break;
+		}
+		i++;
+	}
+
+	LeaveCriticalSection(&cs_StreamPlay);
+}
+
 
 extern "C" {
 

@@ -1969,9 +1969,9 @@ ALURE_API ALboolean ALURE_APIENTRY alureDestroyStream(alureStream *stream, ALsiz
 
     if(stream)
     {
+        StopStream(stream);
         std::istream *f = stream->fstream;
-        delete stream;
-        delete f;
+        delete stream; delete f;
     }
     return AL_TRUE;
 }

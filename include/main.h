@@ -139,6 +139,7 @@ private:
     typedef std::list<alureStream*> ListType;
     static ListType StreamList;
 };
+void StopStream(alureStream *stream);
 
 struct MemDataInfo {
     const ALubyte *Data;
