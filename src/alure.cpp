@@ -297,54 +297,75 @@ ALURE_API ALenum ALURE_APIENTRY alureGetSampleFormat(ALuint channels, ALuint bit
         return AL_NONE;
     }
 
+    const char *fmtstr = NULL;
     if(bits == 8)
     {
-        if(channels == 1) return AL_FORMAT_MONO8;
-        if(channels == 2) return AL_FORMAT_STEREO8;
+        if(channels == 1) fmtstr = "AL_FORMAT_MONO8";
+        if(channels == 2) fmtstr = "AL_FORMAT_STEREO8";
         if(alIsExtensionPresent("AL_EXT_MCFORMATS"))
         {
-            if(channels == 4) return AL_FORMAT_QUAD8;
-            if(channels == 6) return AL_FORMAT_51CHN8;
-            if(channels == 7) return AL_FORMAT_61CHN8;
-            if(channels == 8) return AL_FORMAT_71CHN8;
+            if(channels == 4) fmtstr = "AL_FORMAT_QUAD8";
+            if(channels == 6) fmtstr = "AL_FORMAT_51CHN8";
+            if(channels == 7) fmtstr = "AL_FORMAT_61CHN8";
+            if(channels == 8) fmtstr = "AL_FORMAT_71CHN8";
         }
-        SetError("Unhandled channel count\n");
-        return AL_NONE;
+        if(!fmtstr)
+        {
+            SetError("Unsupported channel count\n");
+            return AL_NONE;
+        }
     }
     if(bits == 16)
     {
-        if(channels == 1) return AL_FORMAT_MONO16;
-        if(channels == 2) return AL_FORMAT_STEREO16;
+        if(channels == 1) fmtstr = "AL_FORMAT_MONO16";
+        if(channels == 2) fmtstr = "AL_FORMAT_STEREO16";
         if(alIsExtensionPresent("AL_EXT_MCFORMATS"))
         {
-            if(channels == 4) return AL_FORMAT_QUAD16;
-            if(channels == 6) return AL_FORMAT_51CHN16;
-            if(channels == 7) return AL_FORMAT_61CHN16;
-            if(channels == 8) return AL_FORMAT_71CHN16;
+            if(channels == 4) fmtstr = "AL_FORMAT_QUAD16";
+            if(channels == 6) fmtstr = "AL_FORMAT_51CHN16";
+            if(channels == 7) fmtstr = "AL_FORMAT_61CHN16";
+            if(channels == 8) fmtstr = "AL_FORMAT_71CHN16";
         }
-        SetError("Unhandled channel count\n");
-        return AL_NONE;
+        if(!fmtstr)
+        {
+            SetError("Unsupported channel count\n");
+            return AL_NONE;
+        }
     }
     if(floatbits == 32)
     {
         if(alIsExtensionPresent("AL_EXT_FLOAT32"))
         {
-            if(channels == 1) return AL_FORMAT_MONO_FLOAT32;
-            if(channels == 2) return AL_FORMAT_STEREO_FLOAT32;
+            if(channels == 1) fmtstr = "AL_FORMAT_MONO_FLOAT32";
+            if(channels == 2) fmtstr = "AL_FORMAT_STEREO_FLOAT32";
             if(alIsExtensionPresent("AL_EXT_MCFORMATS"))
             {
-                if(channels == 4) return AL_FORMAT_QUAD32;
-                if(channels == 6) return AL_FORMAT_51CHN32;
-                if(channels == 7) return AL_FORMAT_61CHN32;
-                if(channels == 8) return AL_FORMAT_71CHN32;
+                if(channels == 4) fmtstr = "AL_FORMAT_QUAD32";
+                if(channels == 6) fmtstr = "AL_FORMAT_51CHN32";
+                if(channels == 7) fmtstr = "AL_FORMAT_61CHN32";
+                if(channels == 8) fmtstr = "AL_FORMAT_71CHN32";
             }
         }
-        SetError("Unhandled channel count\n");
+        if(!fmtstr)
+        {
+            SetError("Unsupported channel count\n");
+            return AL_NONE;
+        }
+    }
+    if(!fmtstr)
+    {
+        SetError("Unsupported bit depth\n");
         return AL_NONE;
     }
 
-    SetError("Unhandled bit-depth\n");
-    return AL_NONE;
+    ALenum fmt = alGetEnumValue(fmtstr);
+    if(alGetError() != AL_NO_ERROR || fmt == AL_NONE || fmt == AL_INVALID)
+    {
+        SetError("Unsupported format\n");
+        return AL_NONE;
+    }
+
+    return fmt;
 }
 
 
