@@ -232,7 +232,7 @@ ALuint AsyncPlayFunc(ALvoid*)
 		}
 		LeaveCriticalSection(&cs_StreamPlay);
 
-		alureSleep(0.0078125f);
+		alureSleep(0.015625f);
 	}
 
 	return 0;
