@@ -176,18 +176,22 @@ ALuint AsyncPlayFunc(ALvoid*)
 			alGetSourcei(i->source, AL_SOURCE_STATE, &state);
 			alGetSourcei(i->source, AL_BUFFERS_QUEUED, &queued);
 			alGetSourcei(i->source, AL_BUFFERS_PROCESSED, &processed);
-			while(processed > 0)
+			while(((ALuint)queued < i->buffers.size() && !i->finished) ||
+			      processed > 0)
 			{
-				queued--;
-				processed--;
-				alSourceUnqueueBuffers(i->source, 1, &buf);
-
 				ALint size, channels, bits;
-				alGetBufferi(buf, AL_SIZE, &size);
-				alGetBufferi(buf, AL_CHANNELS, &channels);
-				alGetBufferi(buf, AL_BITS, &bits);
-				i->base_time += size / channels * 8 / bits;
-				i->base_time %= i->max_time;
+				if(processed > 0)
+				{
+					queued--;
+					processed--;
+					alSourceUnqueueBuffers(i->source, 1, &buf);
+
+					alGetBufferi(buf, AL_SIZE, &size);
+					alGetBufferi(buf, AL_CHANNELS, &channels);
+					alGetBufferi(buf, AL_BITS, &bits);
+					i->base_time += size / channels * 8 / bits;
+					i->base_time %= i->max_time;
+				}
 
 				while(!i->finished)
 				{
@@ -368,7 +372,7 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlaySourceStream(ALuint source,
 	ent.user_data = userdata;
 
 	ent.buffers.resize(numBufs);
-	alGenBuffers(numBufs, &ent.buffers[0]);
+	alGenBuffers(ent.buffers.size(), &ent.buffers[0]);
 	if(alGetError() != AL_NO_ERROR)
 	{
 		LeaveCriticalSection(&cs_StreamPlay);
@@ -376,13 +380,26 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlaySourceStream(ALuint source,
 		return AL_FALSE;
 	}
 
-	if(alureBufferDataFromStream(stream, numBufs, &ent.buffers[0]) < numBufs)
+	numBufs = alureBufferDataFromStream(stream, ent.buffers.size(), &ent.buffers[0]);
+	if(numBufs < 1)
 	{
-		alDeleteBuffers(numBufs, &ent.buffers[0]);
+		alDeleteBuffers(ent.buffers.size(), &ent.buffers[0]);
 		alGetError();
 		LeaveCriticalSection(&cs_StreamPlay);
-		SetError("Error buffering from stream (perhaps too short)");
+		SetError("Error buffering from stream");
 		return AL_FALSE;
+	}
+
+	if((ALuint)numBufs < ent.buffers.size())
+	{
+		if(ent.loopcount == ent.maxloops)
+			ent.finished = true;
+		else
+		{
+			if(ent.maxloops != -1 || ent.loopcount < 1)
+				ent.loopcount++;
+			ent.finished = !alureRewindStream(ent.stream);
+		}
 	}
 
 	for(ALsizei idx = 0;idx < numBufs;idx++)
@@ -397,7 +414,7 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlaySourceStream(ALuint source,
 	if((alSourcei(source, AL_BUFFER, 0),alGetError()) != AL_NO_ERROR ||
 	   (alSourceQueueBuffers(source, numBufs, &ent.buffers[0]),alGetError()) != AL_NO_ERROR)
 	{
-		alDeleteBuffers(numBufs, &ent.buffers[0]);
+		alDeleteBuffers(ent.buffers.size(), &ent.buffers[0]);
 		alGetError();
 		LeaveCriticalSection(&cs_StreamPlay);
 		SetError("Error starting source");
@@ -409,7 +426,7 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlaySourceStream(ALuint source,
 	if(!PlayThreadHandle)
 	{
 		alSourcei(source, AL_BUFFER, 0);
-		alDeleteBuffers(numBufs, &ent.buffers[0]);
+		alDeleteBuffers(ent.buffers.size(), &ent.buffers[0]);
 		alGetError();
 		LeaveCriticalSection(&cs_StreamPlay);
 		SetError("Error starting async thread");
