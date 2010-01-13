@@ -1,6 +1,7 @@
 #ifndef AL_ALURE_H
 #define AL_ALURE_H
 
+#if !defined(ALC_VERSION_0_1) || !defined(AL_VERSION_1_0)
 #ifdef _WIN32
 #include <al.h>
 #include <alc.h>
@@ -10,6 +11,7 @@
 #else
 #include <AL/al.h>
 #include <AL/alc.h>
+#endif
 #endif
 
 #if defined(__cplusplus)
