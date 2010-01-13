@@ -345,6 +345,15 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlaySourceStream(ALuint source,
 
 	EnterCriticalSection(&cs_StreamPlay);
 
+	if(!PlayThreadHandle)
+		PlayThreadHandle = StartThread(AsyncPlayFunc, NULL);
+	if(!PlayThreadHandle)
+	{
+		SetError("Error starting async thread");
+		LeaveCriticalSection(&cs_StreamPlay);
+		return AL_FALSE;
+	}
+
 	std::list<AsyncPlayEntry>::iterator i = AsyncPlayList.begin(),
 	                                    end = AsyncPlayList.end();
 	while(i != end)
@@ -421,17 +430,6 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlaySourceStream(ALuint source,
 		return AL_FALSE;
 	}
 
-	if(!PlayThreadHandle)
-		PlayThreadHandle = StartThread(AsyncPlayFunc, NULL);
-	if(!PlayThreadHandle)
-	{
-		alSourcei(source, AL_BUFFER, 0);
-		alDeleteBuffers(ent.buffers.size(), &ent.buffers[0]);
-		alGetError();
-		LeaveCriticalSection(&cs_StreamPlay);
-		SetError("Error starting async thread");
-		return AL_FALSE;
-	}
 	AsyncPlayList.push_front(ent);
 
 	LeaveCriticalSection(&cs_StreamPlay);
