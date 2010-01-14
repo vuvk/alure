@@ -144,6 +144,7 @@ ALuint AsyncPlayFunc(ALvoid*)
 	while(1)
 	{
 		EnterCriticalSection(&cs_StreamPlay);
+	restart:
 		if(AsyncPlayList.size() == 0)
 		{
 			StopThread(PlayThreadHandle);
@@ -154,7 +155,7 @@ ALuint AsyncPlayFunc(ALvoid*)
 
 		std::list<AsyncPlayEntry>::iterator i = AsyncPlayList.begin(),
 		                                    end = AsyncPlayList.end();
-		while(i != end)
+		for(;i != end;i++)
 		{
 			ALuint buf;
 			ALint processed;
@@ -166,10 +167,11 @@ ALuint AsyncPlayFunc(ALvoid*)
 				alGetSourcei(i->source, AL_SOURCE_STATE, &state);
 				if(state != AL_PLAYING && state != AL_PAUSED)
 				{
-					i->eos_callback(i->user_data, i->source);
-					i = AsyncPlayList.erase(i);
+					AsyncPlayEntry ent(*i);
+					AsyncPlayList.erase(i);
+					ent.eos_callback(ent.user_data, ent.source);
+					goto restart;
 				}
-				else i++;
 				continue;
 			}
 
@@ -223,16 +225,17 @@ ALuint AsyncPlayFunc(ALvoid*)
 			{
 				if(queued == 0)
 				{
-					alSourcei(i->source, AL_BUFFER, 0);
-					alDeleteBuffers(i->buffers.size(), &i->buffers[0]);
-					if(i->eos_callback)
-						i->eos_callback(i->user_data, i->source);
-					i = AsyncPlayList.erase(i);
-					continue;
+					AsyncPlayEntry ent(*i);
+					AsyncPlayList.erase(i);
+
+					alSourcei(ent.source, AL_BUFFER, 0);
+					alDeleteBuffers(ent.buffers.size(), &ent.buffers[0]);
+					if(ent.eos_callback)
+						ent.eos_callback(ent.user_data, ent.source);
+					goto restart;
 				}
 				alSourcePlay(i->source);
 			}
-			i++;
 		}
 		LeaveCriticalSection(&cs_StreamPlay);
 
@@ -553,16 +556,18 @@ ALURE_API ALboolean ALURE_APIENTRY alureStopSource(ALuint source, ALboolean run_
 	{
 		if(i->source == source)
 		{
+			AsyncPlayEntry ent(*i);
+			AsyncPlayList.erase(i);
+
 			if(i->buffers.size() > 0)
 			{
-				alSourcei(i->source, AL_BUFFER, 0);
-				alDeleteBuffers(i->buffers.size(), &i->buffers[0]);
+				alSourcei(ent.source, AL_BUFFER, 0);
+				alDeleteBuffers(ent.buffers.size(), &ent.buffers[0]);
 				alGetError();
 			}
 
-			if(run_callback && i->eos_callback)
-				i->eos_callback(i->user_data, i->source);
-			AsyncPlayList.erase(i);
+			if(run_callback && ent.eos_callback)
+				ent.eos_callback(ent.user_data, ent.source);
 			break;
 		}
 		i++;
