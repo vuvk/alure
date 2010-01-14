@@ -313,6 +313,10 @@ ALURE_API ALenum ALURE_APIENTRY alureGetSampleFormat(ALuint channels, ALuint bit
             if(channels == 7) CHECK_FMT_RET(AL_FORMAT_61CHN8);
             if(channels == 8) CHECK_FMT_RET(AL_FORMAT_71CHN8);
         }
+        if(alIsExtensionPresent("AL_LOKI_quadriphonic"))
+        {
+            if(channels == 4) CHECK_FMT_RET(AL_FORMAT_QUAD8_LOKI);
+        }
         SetError("Unsupported channel count\n");
         return AL_NONE;
     }
@@ -326,6 +330,10 @@ ALURE_API ALenum ALURE_APIENTRY alureGetSampleFormat(ALuint channels, ALuint bit
             if(channels == 6) CHECK_FMT_RET(AL_FORMAT_51CHN16);
             if(channels == 7) CHECK_FMT_RET(AL_FORMAT_61CHN16);
             if(channels == 8) CHECK_FMT_RET(AL_FORMAT_71CHN16);
+        }
+        if(alIsExtensionPresent("AL_LOKI_quadriphonic"))
+        {
+            if(channels == 4) CHECK_FMT_RET(AL_FORMAT_QUAD16_LOKI);
         }
         SetError("Unsupported channel count\n");
         return AL_NONE;
