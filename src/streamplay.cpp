@@ -301,7 +301,7 @@ extern "C" {
  *          will play for as long as the callback provides data).
  * numBufs - The number of buffers used to queue with the OpenAL source. Each
  *           buffer will be filled with the chunk length specified when the
- *           source was created. This value must be at least 2.
+ *           stream was created. This value must be at least 2.
  * loopcount - The number of times to loop the stream. When the stream reaches
  *             the end of processing, it will be rewound to continue buffering
  *             data. A value of -1 will cause the stream to loop indefinitely
