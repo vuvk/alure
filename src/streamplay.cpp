@@ -304,7 +304,7 @@ extern "C" {
  * loopcount - The number of times to loop the stream. When the stream reaches
  *             the end of processing, it will be rewound to continue buffering
  *             data. A value of -1 will cause the stream to loop indefinitely
- *             (or until <alureStopStream> is called).
+ *             (or until <alureStopSource> is called).
  * eos_callback - This callback will be called when the stream reaches the end,
  *                no more loops are pending, and the source reaches a stopped
  *                state. It will also be called if an error occured and
@@ -315,7 +315,7 @@ extern "C" {
  * AL_FALSE on error.
  *
  * See Also:
- * <alureStopSource>, <alureGetSourceOffset>
+ * <alureStopSource>, <alurePauseSource>, <alureGetSourceOffset>
  */
 ALURE_API ALboolean ALURE_APIENTRY alurePlaySourceStream(ALuint source,
     alureStream *stream, ALsizei numBufs, ALsizei loopcount,
@@ -643,7 +643,7 @@ ALURE_API ALboolean ALURE_APIENTRY alurePauseSource(ALuint source, ALboolean res
  * AL_SAMPLE_OFFSET source value.
  *
  * Returns:
- * (alureUInt)-1 on error.
+ * (alureUInt64)-1 on error.
  *
  * See Also:
  * <alurePlaySourceStream>
