@@ -121,18 +121,19 @@ struct AsyncPlayEntry {
 	void (*eos_callback)(void*,ALuint);
 	void *user_data;
 	bool finished;
+	bool paused;
 	alureUInt64 base_time;
 	alureUInt64 max_time;
 
 	AsyncPlayEntry() : source(0), stream(NULL), loopcount(0), maxloops(0),
 	                   eos_callback(NULL), user_data(NULL), finished(false),
-	                   base_time(0), max_time(0)
+	                   paused(false), base_time(0), max_time(0)
 	{ }
 	AsyncPlayEntry(const AsyncPlayEntry &rhs)
 	  : source(rhs.source), stream(rhs.stream), buffers(rhs.buffers),
 	    loopcount(rhs.loopcount), maxloops(rhs.maxloops),
 	    eos_callback(rhs.eos_callback), user_data(rhs.user_data),
-	    finished(rhs.finished), base_time(rhs.base_time),
+	    finished(rhs.finished), paused(rhs.paused), base_time(rhs.base_time),
 	    max_time(rhs.max_time)
 	{ }
 };
@@ -221,7 +222,7 @@ ALuint AsyncPlayFunc(ALvoid*)
 					i->finished = !alureRewindStream(i->stream);
 				}
 			}
-			if(state != AL_PLAYING && state != AL_PAUSED)
+			if(state != AL_PLAYING)
 			{
 				if(queued == 0)
 				{
@@ -234,7 +235,8 @@ ALuint AsyncPlayFunc(ALvoid*)
 						ent.eos_callback(ent.user_data, ent.source);
 					goto restart;
 				}
-				alSourcePlay(i->source);
+				if(!i->paused)
+					alSourcePlay(i->source);
 			}
 		}
 		LeaveCriticalSection(&cs_StreamPlay);
@@ -290,11 +292,8 @@ extern "C" {
  *          will be unqueued. It is valid to set source properties not related
  *          to the buffer queue or playback state (ie. you may change the
  *          source's position, pitch, gain, etc, but you must not stop the
- *          source or queue/unqueue buffers on it). The exception is that you
- *          may pause the source, and play the paused source. ALURE will not
- *          attempt to restart a paused source automatically, while a stopped
- *          source is indicative of an underrun and *will* be restarted
- *          automatically.
+ *          source or queue/unqueue buffers on it). To pause the source, call
+ *          <alurePauseSource>.
  * stream - The stream to play asynchronously. Any valid stream will work,
  *          although looping will only work if the stream can be rewound (eg.
  *          streams made with <alureCreateStreamFromCallback> cannot loop, but
@@ -568,6 +567,63 @@ ALURE_API ALboolean ALURE_APIENTRY alureStopSource(ALuint source, ALboolean run_
 
 			if(run_callback && ent.eos_callback)
 				ent.eos_callback(ent.user_data, ent.source);
+			break;
+		}
+		i++;
+	}
+
+	LeaveCriticalSection(&cs_StreamPlay);
+
+	return AL_TRUE;
+}
+
+/* Function: alurePauseSource
+ *
+ * Pauses the specified source ID, and any associated asynchronous stream. This
+ * is needed to avoid potential race conditions with sources that are playing
+ * an asynchronous stream. Pass AL_TRUE to 'resume' to resume a paused stream.
+ *
+ * Note that it is possible for the  specified source to become stopped, and
+ * any associated stream to finish,  before this function is called, and the
+ * callback to be delayed until after the function returns when the async
+ * thread detects the stopped source.
+ *
+ * Returns:
+ * AL_FALSE on error.
+ *
+ * See Also:
+ * <alurePlaySourceStream>, <alurePlaySource>
+ */
+ALURE_API ALboolean ALURE_APIENTRY alurePauseSource(ALuint source, ALboolean resume)
+{
+	if(alGetError() != AL_NO_ERROR)
+	{
+		SetError("Existing OpenAL error");
+		return AL_FALSE;
+	}
+
+	EnterCriticalSection(&cs_StreamPlay);
+
+	if(!resume && (alSourcePause(source),alGetError()) != AL_NO_ERROR)
+	{
+		SetError("Error pausing source");
+		LeaveCriticalSection(&cs_StreamPlay);
+		return AL_FALSE;
+	}
+	if(resume && (alSourcePlay(source),alGetError()) != AL_NO_ERROR)
+	{
+		SetError("Error playing source");
+		LeaveCriticalSection(&cs_StreamPlay);
+		return AL_FALSE;
+	}
+
+	std::list<AsyncPlayEntry>::iterator i = AsyncPlayList.begin(),
+	                                    end = AsyncPlayList.end();
+	while(i != end)
+	{
+		if(i->source == source)
+		{
+			i->paused = !resume;
 			break;
 		}
 		i++;
