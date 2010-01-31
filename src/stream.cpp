@@ -958,6 +958,7 @@ struct mp3Stream : public alureStream {
             do {
                 fstream->read((char*)data, sizeof(data));
                 amt = fstream->gcount();
+                if(amt == 0)  break;
                 total += amt;
                 ret = mpg123_decode(newFile, data, amt, NULL, 0, NULL);
             } while(ret == MPG123_NEED_MORE && total < 64*1024);
@@ -997,6 +998,7 @@ struct mp3Stream : public alureStream {
             do {
                 fstream->read((char*)data, sizeof(data));
                 amt = fstream->gcount();
+                if(amt == 0)  break;
                 total += amt;
                 ret = mpg123_decode(mp3File, data, amt, NULL, 0, NULL);
             } while(ret == MPG123_NEED_MORE && total < 64*1024);
