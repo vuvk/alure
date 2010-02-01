@@ -1033,6 +1033,157 @@ struct mp3Stream : public nullStream {
 #endif
 
 
+#ifdef HAS_DUMB
+struct dumbStream : public alureStream {
+    DUMBFILE_SYSTEM vfs;
+    DUMBFILE *dumbFile;
+    DUH *duh;
+    DUH_SIGRENDERER *renderer;
+
+    virtual bool IsValid()
+    { return renderer != NULL; }
+
+    virtual bool GetFormat(ALenum *format, ALuint *frequency, ALuint *blockalign)
+    {
+        *format = AL_FORMAT_STEREO16;
+        *frequency = 65536;
+        *blockalign = 4;
+        return true;
+    }
+
+    virtual ALuint GetData(ALubyte *data, ALuint bytes)
+    {
+        ALuint ret = 0;
+
+        if(dumb_it_sr_get_speed(duh_get_it_sigrenderer(renderer)) == 0)
+            return 0;
+
+        ALuint sample_count = bytes / sizeof(ALshort);
+        sample_t **samples = allocate_sample_buffer(2, sample_count/2);
+        if(samples)
+        {
+            dumb_silence(samples[0], sample_count);
+            ret = duh_sigrenderer_generate_samples(renderer, 1.0f, 1.0f, sample_count/2, samples);
+            ret *= 2;
+            for(ALuint i = 0;i < ret;i++)
+                ((ALushort*)data)[i] = clamp(samples[0][i]>>8, -32768, 32767);
+            ret *= sizeof(ALushort);
+            destroy_sample_buffer(samples);
+        }
+
+        return ret;
+    }
+
+    virtual bool Rewind()
+    {
+        SetError("Seek not supported for modules");
+        return false;
+    }
+
+    dumbStream(std::istream *_fstream)
+      : alureStream(_fstream), dumbFile(NULL), duh(NULL), renderer(NULL)
+    {
+        DUH* (*funcs[])(DUMBFILE*) = {
+            dumb_read_it_quick,
+            dumb_read_xm_quick,
+            dumb_read_s3m_quick,
+            dumb_read_mod_quick,
+            NULL
+        };
+
+        vfs.open = NULL;
+        vfs.skip = skip;
+        vfs.getc = read_char;
+        vfs.getnc = read;
+        vfs.close = NULL;
+
+        for(size_t i = 0;funcs[i];i++)
+        {
+            dumbFile = dumbfile_open_ex(this, &vfs);
+            if(dumbFile)
+            {
+                duh = funcs[i](dumbFile);
+                if(duh)
+                {
+                    renderer = duh_start_sigrenderer(duh, 0, 2, 0);
+                    if(renderer)
+                    {
+                        dumb_it_set_loop_callback(duh_get_it_sigrenderer(renderer), loop_cb, this);
+                        break;
+                    }
+
+                    unload_duh(duh);
+                    duh = NULL;
+                }
+
+                dumbfile_close(dumbFile);
+                dumbFile = NULL;
+            }
+            fstream->seekg(0);
+            fstream->clear();
+        }
+    }
+
+    virtual ~dumbStream()
+    {
+        if(renderer)
+            duh_end_sigrenderer(renderer);
+        renderer = NULL;
+        if(duh)
+            unload_duh(duh);
+        duh = NULL;
+        if(dumbFile)
+            dumbfile_close(dumbFile);
+        dumbFile = NULL;
+    }
+
+private:
+    // DUMBFILE iostream callbacks
+    static int skip(void *user_data, long offset)
+    {
+        dumbStream *This = static_cast<dumbStream*>(user_data);
+        This->fstream->clear();
+
+        if(This->fstream->seekg(offset, std::ios_base::cur))
+            return 0;
+        return -1;
+    }
+
+    static long read(char *ptr, long size, void *user_data)
+    {
+        dumbStream *This = static_cast<dumbStream*>(user_data);
+        This->fstream->clear();
+
+        This->fstream->read(static_cast<char*>(ptr), size);
+        return This->fstream->gcount();
+    }
+
+    static int read_char(void *user_data)
+    {
+        dumbStream *This = static_cast<dumbStream*>(user_data);
+        This->fstream->clear();
+
+        unsigned char ret;
+        This->fstream->read(reinterpret_cast<char*>(&ret), 1);
+        if(This->fstream->gcount() > 0)
+            return ret;
+        return -1;
+    }
+
+    static int loop_cb(void *user_data)
+    {
+        dumbStream *This = static_cast<dumbStream*>(user_data);
+        dumb_it_sr_set_speed(duh_get_it_sigrenderer(This->renderer), 0);
+        return 0;
+    }
+};
+#else
+struct dumbStream : public nullStream {
+    dumbStream(std::istream*){}
+};
+#endif
+
+
 #ifdef HAS_GSTREAMER
 struct gstStream : public alureStream {
     GstElement *gstPipeline;
@@ -1442,6 +1593,14 @@ alureStream *create_stream(const T &fdata)
         file->clear();
         file->seekg(0, std::ios_base::beg);
         stream = new aiffStream(file);
+        if(stream->IsValid())
+            return stream;
+        delete stream;
+
+        // Try DUMB
+        file->clear();
+        file->seekg(0, std::ios_base::beg);
+        stream = new dumbStream(file);
         if(stream->IsValid())
             return stream;
         delete stream;

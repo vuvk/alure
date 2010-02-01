@@ -16,6 +16,9 @@
 #ifdef HAS_MPG123
 #include <mpg123.h>
 #endif
+#ifdef HAS_DUMB
+#include <dumb.h>
+#endif
 #ifdef HAS_GSTREAMER
 #include <gst/gst.h>
 #include <gst/app/gstappsrc.h>
@@ -220,9 +223,13 @@ public:
 };
 
 
+extern CRITICAL_SECTION cs_StreamPlay;
+
 template <typename T>
 alureStream *create_stream(const T &fdata);
 
-extern CRITICAL_SECTION cs_StreamPlay;
+template <typename T>
+const T& clamp(const T& val, const T& min, const T& max)
+{ return std::max(std::min(val, max), min); }
 
 #endif // MAIN_H
