@@ -1138,8 +1138,8 @@ struct dumbStream : public alureStream {
                 dumbfile_close(dumbFile);
                 dumbFile = NULL;
             }
-            fstream->seekg(0);
             fstream->clear();
+            fstream->seekg(0);
         }
     }
 
