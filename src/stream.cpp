@@ -1145,12 +1145,12 @@ struct dumbStream : public alureStream {
 
     virtual ~dumbStream()
     {
-        if(renderer)
-            duh_end_sigrenderer(renderer);
+        duh_end_sigrenderer(renderer);
         renderer = NULL;
-        if(duh)
-            unload_duh(duh);
+
+        unload_duh(duh);
         duh = NULL;
+
         if(dumbFile)
             dumbfile_close(dumbFile);
         dumbFile = NULL;
