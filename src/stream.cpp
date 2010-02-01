@@ -1076,7 +1076,7 @@ struct dumbStream : public alureStream {
             if(format == AL_FORMAT_STEREO16)
             {
                 for(ALuint i = 0;i < ret;i++)
-                    ((ALushort*)data)[i] = clamp(samples[0][i]>>8, -32768, 32767);
+                    ((ALshort*)data)[i] = clamp(samples[0][i]>>8, -32768, 32767);
             }
             else
             {
