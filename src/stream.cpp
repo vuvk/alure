@@ -1039,13 +1039,20 @@ struct dumbStream : public alureStream {
     DUMBFILE *dumbFile;
     DUH *duh;
     DUH_SIGRENDERER *renderer;
+    ALenum format;
 
     virtual bool IsValid()
     { return renderer != NULL; }
 
-    virtual bool GetFormat(ALenum *format, ALuint *frequency, ALuint *blockalign)
+    virtual bool GetFormat(ALenum *fmt, ALuint *frequency, ALuint *blockalign)
     {
-        *format = AL_FORMAT_STEREO16;
+        if(format == AL_NONE)
+        {
+            format = alureGetSampleFormat(2, 0, 32);
+            if(format == AL_NONE)
+                format = AL_FORMAT_STEREO16;
+        }
+        *fmt = format;
         *frequency = 65536;
         *blockalign = 4;
         return true;
@@ -1058,16 +1065,27 @@ struct dumbStream : public alureStream {
         if(dumb_it_sr_get_speed(duh_get_it_sigrenderer(renderer)) == 0)
             return 0;
 
-        ALuint sample_count = bytes / sizeof(ALshort);
+        ALuint sample_count = bytes / ((format==AL_FORMAT_STEREO16) ?
+                                       sizeof(ALshort) : sizeof(ALfloat));
         sample_t **samples = allocate_sample_buffer(2, sample_count/2);
         if(samples)
         {
             dumb_silence(samples[0], sample_count);
             ret = duh_sigrenderer_generate_samples(renderer, 1.0f, 1.0f, sample_count/2, samples);
             ret *= 2;
-            for(ALuint i = 0;i < ret;i++)
-                ((ALushort*)data)[i] = clamp(samples[0][i]>>8, -32768, 32767);
-            ret *= sizeof(ALushort);
+            if(format == AL_FORMAT_STEREO16)
+            {
+                for(ALuint i = 0;i < ret;i++)
+                    ((ALushort*)data)[i] = clamp(samples[0][i]>>8, -32768, 32767);
+            }
+            else
+            {
+                for(ALuint i = 0;i < ret;i++)
+                    ((ALfloat*)data)[i] = ((samples[0][i]>=0) ?
+                                           samples[0][i]/(float)0x7FFFFF :
+                                           samples[0][i]/(float)0x800000);
+            }
+            ret *= ((format==AL_FORMAT_STEREO16) ? sizeof(ALshort) : sizeof(ALfloat));
             destroy_sample_buffer(samples);
         }
 
@@ -1081,7 +1099,8 @@ struct dumbStream : public alureStream {
     }
 
     dumbStream(std::istream *_fstream)
-      : alureStream(_fstream), dumbFile(NULL), duh(NULL), renderer(NULL)
+      : alureStream(_fstream), dumbFile(NULL), duh(NULL), renderer(NULL),
+        format(AL_NONE)
     {
         DUH* (*funcs[])(DUMBFILE*) = {
             dumb_read_it_quick,
