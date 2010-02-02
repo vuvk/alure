@@ -1616,14 +1616,6 @@ alureStream *create_stream(const T &fdata)
             return stream;
         delete stream;
 
-        // Try DUMB
-        file->clear();
-        file->seekg(0, std::ios_base::beg);
-        stream = new dumbStream(file);
-        if(stream->IsValid())
-            return stream;
-        delete stream;
-
         // Try libVorbisFile
         file->clear();
         file->seekg(0, std::ios_base::beg);
@@ -1640,10 +1632,10 @@ alureStream *create_stream(const T &fdata)
             return stream;
         delete stream;
 
-        // Try MPG123
+        // Try DUMB
         file->clear();
         file->seekg(0, std::ios_base::beg);
-        stream = new mp3Stream(file);
+        stream = new dumbStream(file);
         if(stream->IsValid())
             return stream;
         delete stream;
@@ -1652,6 +1644,14 @@ alureStream *create_stream(const T &fdata)
         file->clear();
         file->seekg(0, std::ios_base::beg);
         stream = new sndStream(file);
+        if(stream->IsValid())
+            return stream;
+        delete stream;
+
+        // Try MPG123
+        file->clear();
+        file->seekg(0, std::ios_base::beg);
+        stream = new mp3Stream(file);
         if(stream->IsValid())
             return stream;
         delete stream;
