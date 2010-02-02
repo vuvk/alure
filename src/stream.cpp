@@ -1039,6 +1039,7 @@ struct dumbStream : public alureStream {
     DUMBFILE *dumbFile;
     DUH *duh;
     DUH_SIGRENDERER *renderer;
+    int prev_speed;
     ALenum format;
 
     virtual bool IsValid()
@@ -1094,8 +1095,25 @@ struct dumbStream : public alureStream {
 
     virtual bool Rewind()
     {
-        SetError("Seek not supported for modules");
-        return false;
+        if(prev_speed)
+        {
+            // If a previous speed was recorded, the stream tried to loop. So
+            // let it loop on a rewind request.
+            dumb_it_sr_set_speed(duh_get_it_sigrenderer(renderer), prev_speed);
+            prev_speed = 0;
+            return true;
+        }
+
+        // Else, no loop point. Restart from scratch.
+        DUH_SIGRENDERER *newrenderer = duh_start_sigrenderer(duh, 0, 2, 0);
+        if(!newrenderer)
+        {
+            SetError("Could start renderer");
+            return false;
+        }
+        duh_end_sigrenderer(renderer);
+        renderer = newrenderer;
+        return true;
     }
 
     virtual bool SetOrder(ALuint order)
@@ -1114,7 +1132,7 @@ struct dumbStream : public alureStream {
 
     dumbStream(std::istream *_fstream)
       : alureStream(_fstream), dumbFile(NULL), duh(NULL), renderer(NULL),
-        format(AL_NONE)
+        prev_speed(0), format(AL_NONE)
     {
         DUH* (*funcs[])(DUMBFILE*) = {
             dumb_read_it_quick,
@@ -1206,6 +1224,7 @@ private:
     static int loop_cb(void *user_data)
     {
         dumbStream *This = static_cast<dumbStream*>(user_data);
+        This->prev_speed = dumb_it_sr_get_speed(duh_get_it_sigrenderer(This->renderer));
         dumb_it_sr_set_speed(duh_get_it_sigrenderer(This->renderer), 0);
         return 0;
     }
