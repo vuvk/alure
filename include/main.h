@@ -116,6 +116,12 @@ struct alureStream {
     virtual bool GetFormat(ALenum*,ALuint*,ALuint*) = 0;
     virtual ALuint GetData(ALubyte*,ALuint) = 0;
     virtual bool Rewind() = 0;
+    virtual bool SetOrder(ALuint order)
+    {
+        if(!order) return Rewind();
+        SetError("Invalid order for stream");
+        return false;
+    }
 
     alureStream(std::istream *_stream=NULL)
       : data(NULL), dataChunk(NULL), fstream(_stream)

@@ -77,6 +77,7 @@ ALURE_API ALboolean ALURE_APIENTRY alureGetStreamFormat(alureStream *stream,
     ALenum *format, ALuint *frequency, ALuint *blockAlign);
 ALURE_API ALsizei ALURE_APIENTRY alureBufferDataFromStream(alureStream *stream, ALsizei numBufs, ALuint *bufs);
 ALURE_API ALboolean ALURE_APIENTRY alureRewindStream(alureStream *stream);
+ALURE_API ALboolean ALURE_APIENTRY alureSetStreamOrder(alureStream *stream, ALuint order);
 ALURE_API ALboolean ALURE_APIENTRY alureDestroyStream(alureStream *stream, ALsizei numBufs, ALuint *bufs);
 
 ALURE_API ALboolean ALURE_APIENTRY alurePlaySourceStream(ALuint source,
@@ -123,6 +124,7 @@ typedef alureStream*    (ALURE_APIENTRY *LPALURECREATESTREAMFROMCALLBACK)(ALuint
 typedef ALboolean       (ALURE_APIENTRY *LPALUREGETSTREAMFORMAT)(alureStream*,ALenum*,ALuint*,ALuint*);
 typedef ALsizei         (ALURE_APIENTRY *LPALUREBUFFERDATAFROMSTREAM)(alureStream*,ALsizei,ALuint*);
 typedef ALboolean       (ALURE_APIENTRY *LPALUREREWINDSTREAM)(alureStream*);
+typedef ALboolean       (ALURE_APIENTRY *LPALURESETSTREAMORDER)(alureStream*,ALuint);
 typedef ALboolean       (ALURE_APIENTRY *LPALUREDESTROYSTREAM)(alureStream*,ALsizei,ALuint*);
 typedef ALboolean       (ALURE_APIENTRY *LPALUREPLAYSOURCESTREAM)(ALuint,alureStream*,ALsizei,ALsizei,void(*)(void*,ALuint),void*);
 typedef ALboolean       (ALURE_APIENTRY *LPALUREPLAYSOURCE)(ALuint,void(*)(void*,ALuint),void*);

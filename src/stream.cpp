@@ -1098,6 +1098,20 @@ struct dumbStream : public alureStream {
         return false;
     }
 
+    virtual bool SetOrder(ALuint order)
+    {
+        DUH_SIGRENDERER *newrenderer = dumb_it_start_at_order(duh, 2, order);
+        if(!newrenderer)
+        {
+            SetError("Could not set order");
+            return false;
+        }
+        duh_end_sigrenderer(renderer);
+        renderer = newrenderer;
+
+        return true;
+    }
+
     dumbStream(std::istream *_fstream)
       : alureStream(_fstream), dumbFile(NULL), duh(NULL), renderer(NULL),
         format(AL_NONE)
@@ -2093,7 +2107,7 @@ ALURE_API ALsizei ALURE_APIENTRY alureBufferDataFromStream(alureStream *stream, 
  * See Also:
  * <alureCreateStreamFromFile>, <alureCreateStreamFromMemory>,
  * <alureCreateStreamFromStaticMemory>, <alureCreateStreamFromCallback>,
- * <alureBufferDataFromStream>, <alureDestroyStream>
+ * <alureBufferDataFromStream>, <alureSetStreamOrder>, <alureDestroyStream>
  */
 ALURE_API ALboolean ALURE_APIENTRY alureRewindStream(alureStream *stream)
 {
@@ -2104,6 +2118,31 @@ ALURE_API ALboolean ALURE_APIENTRY alureRewindStream(alureStream *stream)
     }
 
     return stream->Rewind();
+}
+
+/* Function: alureSetStreamOrder
+ *
+ * Skips the module decoder to the specified order, so following buffering
+ * calls will decode from the specified order. For non-module formats, setting
+ * order 0 is identical to rewinding the stream (other orders will fail).
+ *
+ * Returns:
+ * AL_FALSE on error.
+ *
+ * See Also:
+ * <alureCreateStreamFromFile>, <alureCreateStreamFromMemory>,
+ * <alureCreateStreamFromStaticMemory>, <alureCreateStreamFromCallback>,
+ * <alureBufferDataFromStream>, <alureRewindStream>, <alureDestroyStream>
+ */
+ALURE_API ALboolean ALURE_APIENTRY alureSetStreamOrder(alureStream *stream, ALuint order)
+{
+    if(!alureStream::Verify(stream))
+    {
+        SetError("Invalid stream pointer");
+        return AL_FALSE;
+    }
+
+    return stream->SetOrder(order);
 }
 
 /* Function: alureDestroyStream
