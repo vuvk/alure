@@ -1040,7 +1040,7 @@ struct dumbStream : public alureStream {
     DUH *duh;
     DUH_SIGRENDERER *renderer;
     std::vector<sample_t> sampleBuf;
-    int prev_speed;
+    int prevSpeed;
     ALenum format;
 
     virtual bool IsValid()
@@ -1096,12 +1096,12 @@ struct dumbStream : public alureStream {
 
     virtual bool Rewind()
     {
-        if(prev_speed)
+        if(prevSpeed)
         {
             // If a previous speed was recorded, the stream tried to loop. So
             // let it loop on a rewind request.
-            dumb_it_sr_set_speed(duh_get_it_sigrenderer(renderer), prev_speed);
-            prev_speed = 0;
+            dumb_it_sr_set_speed(duh_get_it_sigrenderer(renderer), prevSpeed);
+            prevSpeed = 0;
             return true;
         }
 
@@ -1133,7 +1133,7 @@ struct dumbStream : public alureStream {
 
     dumbStream(std::istream *_fstream)
       : alureStream(_fstream), dumbFile(NULL), duh(NULL), renderer(NULL),
-        prev_speed(0), format(AL_NONE)
+        prevSpeed(0), format(AL_NONE)
     {
         DUH* (*funcs[])(DUMBFILE*) = {
             dumb_read_it_quick,
@@ -1225,7 +1225,7 @@ private:
     static int loop_cb(void *user_data)
     {
         dumbStream *This = static_cast<dumbStream*>(user_data);
-        This->prev_speed = dumb_it_sr_get_speed(duh_get_it_sigrenderer(This->renderer));
+        This->prevSpeed = dumb_it_sr_get_speed(duh_get_it_sigrenderer(This->renderer));
         dumb_it_sr_set_speed(duh_get_it_sigrenderer(This->renderer), 0);
         return 0;
     }
