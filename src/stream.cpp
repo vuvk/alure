@@ -1056,7 +1056,8 @@ struct dumbStream : public alureStream {
         }
         *fmt = format;
         *frequency = 65536;
-        *blockalign = 4;
+        *blockalign = 2 * ((format==AL_FORMAT_STEREO16) ? sizeof(ALshort) :
+                                                          sizeof(ALfloat));
         return true;
     }
 
