@@ -2103,6 +2103,7 @@ ALURE_API ALsizei ALURE_APIENTRY alureBufferDataFromStream(alureStream *stream, 
     for(filled = 0;filled < numBufs;filled++)
     {
         ALuint got = stream->GetData(stream->dataChunk, stream->chunkLen);
+        got -= got%blockAlign;
         if(got == 0) break;
 
         alBufferData(bufs[filled], format, stream->dataChunk, got, freq);
