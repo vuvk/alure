@@ -198,19 +198,28 @@ ALuint AsyncPlayFunc(ALvoid*)
 
 				while(!i->finished)
 				{
-					ALint filled = alureBufferDataFromStream(i->stream, 1, &buf);
-					if(filled > 0)
+					ALenum format;
+					ALuint freq, blockAlign;
+
+					if(i->stream->GetFormat(&format, &freq, &blockAlign))
 					{
-						queued++;
-						alSourceQueueBuffers(i->source, 1, &buf);
-						if(i->loopcount == 0)
+						ALuint got = i->stream->GetData(i->stream->dataChunk,
+						                                i->stream->chunkLen);
+						got -= got%blockAlign;
+						if(got > 0)
 						{
-							alGetBufferi(buf, AL_SIZE, &size);
-							alGetBufferi(buf, AL_CHANNELS, &channels);
-							alGetBufferi(buf, AL_BITS, &bits);
-							i->max_time += size / channels * 8 / bits;
+							alBufferData(buf, format, i->stream->dataChunk, got, freq);
+							alSourceQueueBuffers(i->source, 1, &buf);
+							queued++;
+							if(i->loopcount == 0)
+							{
+								alGetBufferi(buf, AL_SIZE, &size);
+								alGetBufferi(buf, AL_CHANNELS, &channels);
+								alGetBufferi(buf, AL_BITS, &bits);
+								i->max_time += size / channels * 8 / bits;
+							}
+							break;
 						}
-						break;
 					}
 					if(i->loopcount == i->maxloops)
 					{
@@ -219,7 +228,7 @@ ALuint AsyncPlayFunc(ALvoid*)
 					}
 					if(i->maxloops != -1 || i->loopcount < 1)
 						i->loopcount++;
-					i->finished = !alureRewindStream(i->stream);
+					i->finished = !i->stream->Rewind();
 				}
 			}
 			if(state != AL_PLAYING)
