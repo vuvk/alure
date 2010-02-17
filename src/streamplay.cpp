@@ -266,14 +266,16 @@ void StopStream(alureStream *stream)
 	{
 		if(i->stream == stream)
 		{
-			alSourceStop(i->source);
-			alSourcei(i->source, AL_BUFFER, 0);
-			alDeleteBuffers(i->buffers.size(), &i->buffers[0]);
+			AsyncPlayEntry ent(*i);
+			AsyncPlayList.erase(i);
+
+			alSourceStop(ent.source);
+			alSourcei(ent.source, AL_BUFFER, 0);
+			alDeleteBuffers(ent.buffers.size(), &ent.buffers[0]);
 			alGetError();
 
-			if(i->eos_callback)
-				i->eos_callback(i->user_data, i->source);
-			AsyncPlayList.erase(i);
+			if(ent.eos_callback)
+				ent.eos_callback(ent.user_data, ent.source);
 			break;
 		}
 		i++;
@@ -567,7 +569,7 @@ ALURE_API ALboolean ALURE_APIENTRY alureStopSource(ALuint source, ALboolean run_
 			AsyncPlayEntry ent(*i);
 			AsyncPlayList.erase(i);
 
-			if(i->buffers.size() > 0)
+			if(ent.buffers.size() > 0)
 			{
 				alSourcei(ent.source, AL_BUFFER, 0);
 				alDeleteBuffers(ent.buffers.size(), &ent.buffers[0]);
