@@ -402,8 +402,33 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlaySourceStream(ALuint source,
 		return AL_FALSE;
 	}
 
-	numBufs = alureBufferDataFromStream(stream, ent.buffers.size(), &ent.buffers[0]);
-	if(numBufs < 1)
+	ALenum format;
+	ALuint freq, blockAlign;
+
+	numBufs = 0;
+	if(ent.stream->GetFormat(&format, &freq, &blockAlign))
+	{
+		for(size_t i = 0;i < ent.buffers.size();i++)
+		{
+			ALuint got = ent.stream->GetData(ent.stream->dataChunk,
+			                                 ent.stream->chunkLen);
+			got -= got%blockAlign;
+			if(got <= 0)
+				break;
+
+			ALuint buf = ent.buffers[i];
+			alBufferData(buf, format, ent.stream->dataChunk, got, freq);
+			alSourceQueueBuffers(ent.source, 1, &buf);
+			numBufs++;
+
+			ALint size, channels, bits;
+			alGetBufferi(buf, AL_SIZE, &size);
+			alGetBufferi(buf, AL_CHANNELS, &channels);
+			alGetBufferi(buf, AL_BITS, &bits);
+			ent.max_time += size / channels * 8 / bits;
+		}
+	}
+	if(numBufs == 0)
 	{
 		alDeleteBuffers(ent.buffers.size(), &ent.buffers[0]);
 		alGetError();
@@ -420,17 +445,8 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlaySourceStream(ALuint source,
 		{
 			if(ent.maxloops != -1 || ent.loopcount < 1)
 				ent.loopcount++;
-			ent.finished = !alureRewindStream(ent.stream);
+			ent.finished = !ent.stream->Rewind();
 		}
-	}
-
-	for(ALsizei idx = 0;idx < numBufs;idx++)
-	{
-		ALint size, channels, bits;
-		alGetBufferi(ent.buffers[idx], AL_SIZE, &size);
-		alGetBufferi(ent.buffers[idx], AL_CHANNELS, &channels);
-		alGetBufferi(ent.buffers[idx], AL_BITS, &bits);
-		ent.max_time += size / channels * 8 / bits;
 	}
 
 	if((alSourcei(source, AL_BUFFER, 0),alGetError()) != AL_NO_ERROR ||
