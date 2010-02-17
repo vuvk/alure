@@ -1040,6 +1040,7 @@ struct dumbStream : public alureStream {
     DUH *duh;
     DUH_SIGRENDERER *renderer;
     std::vector<sample_t> sampleBuf;
+    ALuint lastOrder;
     int prevSpeed;
     ALenum format;
 
@@ -1106,7 +1107,9 @@ struct dumbStream : public alureStream {
         }
 
         // Else, no loop point. Restart from scratch.
-        DUH_SIGRENDERER *newrenderer = duh_start_sigrenderer(duh, 0, 2, 0);
+        DUH_SIGRENDERER *newrenderer;
+        newrenderer = (lastOrder ? dumb_it_start_at_order(duh, 2, lastOrder) :
+                                   duh_start_sigrenderer(duh, 0, 2, 0));
         if(!newrenderer)
         {
             SetError("Could start renderer");
@@ -1128,12 +1131,13 @@ struct dumbStream : public alureStream {
         duh_end_sigrenderer(renderer);
         renderer = newrenderer;
 
+        lastOrder = order;
         return true;
     }
 
     dumbStream(std::istream *_fstream)
       : alureStream(_fstream), dumbFile(NULL), duh(NULL), renderer(NULL),
-        prevSpeed(0), format(AL_NONE)
+        lastOrder(0), prevSpeed(0), format(AL_NONE)
     {
         DUH* (*funcs[])(DUMBFILE*) = {
             dumb_read_it_quick,
