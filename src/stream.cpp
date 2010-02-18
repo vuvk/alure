@@ -663,6 +663,7 @@ struct flacStream : public alureStream {
     ALenum format;
     ALuint samplerate;
     ALuint blockAlign;
+    ALboolean useFloat;
 
     std::vector<ALubyte> initialData;
 
@@ -721,7 +722,7 @@ struct flacStream : public alureStream {
 
     flacStream(std::istream *_fstream)
       : alureStream(_fstream), flacFile(NULL), format(AL_NONE), samplerate(0),
-        blockAlign(0)
+        blockAlign(0), useFloat(AL_FALSE)
     {
         flacFile = FLAC__stream_decoder_new();
         if(flacFile)
@@ -780,13 +781,24 @@ private:
 
         if(This->format == AL_NONE)
         {
-            This->blockAlign = frame->header.channels *
-                               frame->header.bits_per_sample/8;
+            ALuint bps = frame->header.bits_per_sample;
+            if(bps == 24 || bps == 32)
+            {
+                This->format = alureGetSampleFormat(frame->header.channels, 0, 32);
+                if(This->format != AL_NONE)
+                {
+                    This->useFloat = AL_TRUE;
+                    bps = 32;
+                }
+                else bps = 16;
+            }
+            if(This->format == AL_NONE)
+                This->format = alureGetSampleFormat(frame->header.channels, bps, 0);
+            This->blockAlign = frame->header.channels * bps/8;
             This->samplerate = frame->header.sample_rate;
-            This->format = alureGetSampleFormat(frame->header.channels,
-                                                frame->header.bits_per_sample, 0);
         }
 
+        const ALboolean useFloat = This->useFloat;
         while(This->outTotal < This->outLen && i < frame->header.blocksize)
         {
             for(ALuint c = 0;c < frame->header.channels;c++)
@@ -795,6 +807,24 @@ private:
                     ((ALubyte*)data)[c] = buffer[c][i]+128;
                 else if(frame->header.bits_per_sample == 16)
                     ((ALshort*)data)[c] = buffer[c][i];
+                else if(frame->header.bits_per_sample == 24)
+                {
+                    if(useFloat)
+                        ((ALfloat*)data)[c] = ((buffer[c][i]>=0) ?
+                                               buffer[c][i]/(float)0x7FFFFF :
+                                               buffer[c][i]/(float)0x800000);
+                    else
+                        ((ALshort*)data)[c] = buffer[c][i]>>8;
+                }
+                else if(frame->header.bits_per_sample == 32)
+                {
+                    if(useFloat)
+                        ((ALfloat*)data)[c] = ((buffer[c][i]>=0) ?
+                                               buffer[c][i]/(float)0x7FFFFFFF :
+                                               buffer[c][i]/(float)0x80000000u);
+                    else
+                        ((ALshort*)data)[c] = buffer[c][i]>>16;
+                }
             }
             This->outTotal += This->blockAlign;
             data += This->blockAlign;
@@ -810,18 +840,35 @@ private:
             This->initialData.resize(start+blocklen);
             data = &This->initialData[start];
 
-            while(i < frame->header.blocksize)
-            {
+            do {
                 for(ALuint c = 0;c < frame->header.channels;c++)
                 {
                     if(frame->header.bits_per_sample == 8)
                         ((ALubyte*)data)[c] = buffer[c][i]+128;
                     else if(frame->header.bits_per_sample == 16)
                         ((ALshort*)data)[c] = buffer[c][i];
+                    else if(frame->header.bits_per_sample == 24)
+                    {
+                        if(useFloat)
+                            ((ALfloat*)data)[c] = ((buffer[c][i]>=0) ?
+                                                   buffer[c][i]/(float)0x7FFFFF :
+                                                   buffer[c][i]/(float)0x800000);
+                        else
+                            ((ALshort*)data)[c] = buffer[c][i]>>8;
+                    }
+                    else if(frame->header.bits_per_sample == 32)
+                    {
+                        if(useFloat)
+                            ((ALfloat*)data)[c] = ((buffer[c][i]>=0) ?
+                                                   buffer[c][i]/(float)0x7FFFFFFF :
+                                                   buffer[c][i]/(float)0x80000000u);
+                        else
+                            ((ALshort*)data)[c] = buffer[c][i]>>16;
+                    }
                 }
                 data += This->blockAlign;
                 i++;
-            }
+            } while(i < frame->header.blocksize);
         }
 
         return FLAC__STREAM_DECODER_WRITE_STATUS_CONTINUE;
