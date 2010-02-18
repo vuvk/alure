@@ -1346,6 +1346,11 @@ private:
             while(fstream->get(ch))
                 midiData.push_back(ch);
         }
+        else if(memcmp(hdr, "MUS\x1a", sizeof(hdr)) == 0)
+        {
+            if(!ConvertMUS(midiData))
+                return false;
+        }
         else
             return false;
 
@@ -1416,6 +1421,257 @@ private:
         }
 
         pcmFile = pcmPipe[0];
+        return true;
+    }
+
+    alureUInt64 ReadVarLen()
+    {
+        alureUInt64 val = 0;
+        char ch;
+
+        do {
+            if(!fstream->get(ch))
+                break;
+            val = (val<<7) | (ch&0x7f);
+        } while((ch&0x80));
+
+        return val;
+    }
+
+    void WriteVarLen(std::vector<ALubyte> &out, alureUInt64 val)
+    {
+        alureUInt64 buffer = val&0x7f;
+        while((val>>=7) > 0)
+            buffer = (buffer<<8) | 0x80 | (val&0x7f);
+        while(1)
+        {
+            out.push_back(buffer&0xff);
+            if(!(buffer&0x80))
+                break;
+            buffer >>= 8;
+        }
+    }
+
+    static const ALubyte MIDI_SYSEX      = 0xF0;  // SysEx begin
+    static const ALubyte MIDI_SYSEXEND   = 0xF7;  // SysEx end
+    static const ALubyte MIDI_META       = 0xFF;  // Meta event begin
+    static const ALubyte MIDI_META_TEMPO = 0x51;
+    static const ALubyte MIDI_META_EOT   = 0x2F;  // End-of-track
+    static const ALubyte MIDI_META_SSPEC = 0x7F;  // System-specific event
+
+    static const ALubyte MIDI_NOTEOFF    = 0x80;  // + note + velocity
+    static const ALubyte MIDI_NOTEON     = 0x90;  // + note + velocity
+    static const ALubyte MIDI_POLYPRESS  = 0xA0;  // + pressure (2 bytes)
+    static const ALubyte MIDI_CTRLCHANGE = 0xB0;  // + ctrlr + value
+    static const ALubyte MIDI_PRGMCHANGE = 0xC0;  // + new patch
+    static const ALubyte MIDI_CHANPRESS  = 0xD0;  // + pressure (1 byte)
+    static const ALubyte MIDI_PITCHBEND  = 0xE0;  // + pitch bend (2 bytes)
+
+    static const ALubyte MUS_NOTEOFF    = 0x00;
+    static const ALubyte MUS_NOTEON     = 0x10;
+    static const ALubyte MUS_PITCHBEND  = 0x20;
+    static const ALubyte MUS_SYSEVENT   = 0x30;
+    static const ALubyte MUS_CTRLCHANGE = 0x40;
+    static const ALubyte MUS_SCOREEND   = 0x60;
+
+    bool ConvertMUS(std::vector<ALubyte> &midiData)
+    {
+        static const ALubyte CtrlTranslate[15] = {
+            0,   // program change
+            0,   // bank select
+            1,   // modulation pot
+            7,   // volume
+            10,  // pan pot
+            11,  // expression pot
+            91,  // reverb depth
+            93,  // chorus depth
+            64,  // sustain pedal
+            67,  // soft pedal
+            120, // all sounds off
+            123, // all notes off
+            126, // mono
+            127, // poly
+            121  // reset all controllers
+        };
+
+        static const ALubyte MIDIhead[22] = {
+            'M','T','h','d', 0, 0, 0, 6,
+            0, 0,  // format 0: only one track
+            0, 1,  // yes, there is really only one track
+            0, 70, // 70 divisions
+            'M','T','r','k', 0xFF, 0xFF, 0xFF, 0xFF
+        };
+
+        // The MUS\x1a ID was already read and verified
+        ALushort songLen = read_le16(fstream);
+        ALushort songStart = read_le16(fstream);
+        ALushort numChans = read_le16(fstream);
+
+        // Sanity check the MUS file's channel count
+        if(numChans > 15)
+            return false;
+
+        fstream->seekg(songStart);
+        ssize_t maxmus_p = songLen;
+
+        ALubyte chanVel[16];
+        for(size_t i = 0;i < 16;i++)
+            chanVel[i] = 100;
+
+        bool firstUse[16];
+        for(size_t i = 0;i < 16;i++)
+            firstUse[i] = true;
+
+        alureUInt64 deltaTime = 0;
+        ALubyte event = 0;
+        ALubyte status = 0;
+
+        // Setup header
+        for(size_t i = 0;i < sizeof(MIDIhead);i++)
+            midiData.push_back(MIDIhead[i]);
+
+        // The first event sets the tempo to 500,000 microsec/quarter note
+        midiData.push_back(0);
+        midiData.push_back(MIDI_META | 0);
+        midiData.push_back(MIDI_META_TEMPO | 0);
+        midiData.push_back(3);
+        midiData.push_back(0x07);
+        midiData.push_back(0xA1);
+        midiData.push_back(0x20);
+
+        while(maxmus_p > 0 && *fstream && (event&0x70) != MUS_SCOREEND)
+        {
+            int channel;
+            ALubyte t = 0;
+
+            event = fstream->get();
+            maxmus_p--;
+
+            if((event&0x70) != MUS_SCOREEND)
+            {
+                t = fstream->get();
+                maxmus_p--;
+            }
+            channel = event&0x0f;
+            if(channel == 15)
+                channel = 9;
+            else if(channel >= 9)
+                channel++;
+
+            if(firstUse[channel])
+            {
+                // This is the first time this channel has been used,
+                // so sets its volume to 127.
+                firstUse[channel] = false;
+                midiData.push_back(0);
+                midiData.push_back(MIDI_CTRLCHANGE | channel);
+                midiData.push_back(7);
+                midiData.push_back(127);
+            }
+
+            ALubyte midStatus = channel;
+            ALubyte midArgs = 2;
+            ALubyte mid1 = 0, mid2 = 0;
+            bool noop = false;
+
+            switch(event&0x70)
+            {
+            case MUS_NOTEOFF:
+                midStatus |= MIDI_NOTEOFF;
+                mid1 = t&0x7f;
+                mid2 = 64;
+                break;
+
+            case MUS_NOTEON:
+                midStatus |= MIDI_NOTEON;
+                mid1 = t&0x7f;
+                if((t&0x80))
+                {
+                    chanVel[channel] = fstream->get()&0x7f;
+                    maxmus_p--;
+                }
+                mid2 = chanVel[channel];
+                break;
+
+            case MUS_PITCHBEND:
+                midStatus |= MIDI_PITCHBEND;
+                mid1 = (t&1) << 6;
+                mid2 = (t>>1) & 0x7f;
+                break;
+
+            case MUS_SYSEVENT:
+                if(t < 10 || t > 14)
+                    noop = true;
+                else
+                {
+                    midStatus |= MIDI_CTRLCHANGE;
+                    mid1 = CtrlTranslate[t];
+                    mid2 = ((t==12) /* Mono */ ? numChans : 0);
+                }
+                break;
+
+            case MUS_CTRLCHANGE:
+                if(t == 0)
+                {
+                    // Program change, only one arg
+                    midArgs = 1;
+                    midStatus |= MIDI_PRGMCHANGE;
+                    mid1 = fstream->get()&0x7f;
+                    maxmus_p--;
+                }
+                else if(t < 10)
+                {
+                    midStatus |= MIDI_CTRLCHANGE;
+                    mid1 = CtrlTranslate[t];
+                    mid2 = fstream->get();
+                    maxmus_p--;
+                }
+                else
+                    noop = true;
+                break;
+
+            case MUS_SCOREEND:
+                midStatus = MIDI_META;
+                mid1 = MIDI_META_EOT;
+                mid2 = 0;
+                break;
+
+            default:
+                return false;
+            }
+
+            if(noop)
+            {
+                // A system-specific event with no data is a no-op.
+                midStatus = MIDI_META;
+                mid1 = MIDI_META_SSPEC;
+                mid2 = 0;
+            }
+
+            WriteVarLen(midiData, deltaTime);
+            if(midStatus != status)
+            {
+                status = midStatus;
+                midiData.push_back(status);
+            }
+            if(midArgs >= 1)
+                midiData.push_back(mid1);
+            if(midArgs >= 2)
+                midiData.push_back(mid2);
+
+            deltaTime = ((event&0x80) ? ReadVarLen() : 0);
+        }
+
+        // If we overran the song length, or reading failed, the song is bad
+        if(maxmus_p < 0 || !*fstream)
+            return false;
+
+        // Fill in track length
+        size_t trackLen = midiData.size() - 22;
+        midiData[18] = (trackLen>>24) & 0xff;
+        midiData[19] = (trackLen>>16) & 0xff;
+        midiData[20] = (trackLen>>8) & 0xff;
+        midiData[21] = trackLen&0xff;
         return true;
     }
 };

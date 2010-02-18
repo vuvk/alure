@@ -137,7 +137,7 @@ OPTION(VORBIS    "VorbisFile support (for Ogg Vorbis)"  ON)
 OPTION(FLAC      "FLAC support (for FLAC and Ogg FLAC)" ON)
 OPTION(MPG123    "MPG123 support (for MP1/MP2/MP3)" ON)
 OPTION(DUMB      "DUMB support (for IT/XM/S3M/MOD)" ON)
-OPTION(TIMIDITY  "Timidity support (for MIDI)" ON)
+OPTION(TIMIDITY  "Timidity support (for MIDI/MUS)" ON)
 OPTION(GSTREAMER "GStreamer support" OFF)
 
 IF(WIN32)
