@@ -1241,6 +1241,191 @@ struct dumbStream : public nullStream {
 #endif
 
 
+#ifdef HAS_TIMIDITY
+struct midiStream : public alureStream {
+    int pcmFile;
+    pid_t cpid;
+    int initialByte;
+
+    static const ALuint Freq = 48000;
+
+    virtual bool IsValid()
+    { return cpid > 0; }
+
+    virtual bool GetFormat(ALenum *fmt, ALuint *frequency, ALuint *blockalign)
+    {
+        *fmt = AL_FORMAT_STEREO16;
+        *frequency = Freq;
+        *blockalign = 4;
+        return true;
+    }
+
+    virtual ALuint GetData(ALubyte *data, ALuint bytes)
+    {
+        ALuint total = 0;
+        if(initialByte != -1 && bytes > 0)
+        {
+            *(data++) = initialByte&0xff;
+            bytes--;
+            initialByte = -1;
+        }
+        while(bytes > 0)
+        {
+            ssize_t got = read(pcmFile, data, bytes);
+            if(got == -1 && errno == EINTR)
+                continue;
+            if(got <= 0)
+                break;
+
+            data += got;
+            bytes -= got;
+            total += got;
+        }
+        return total;
+    }
+
+    virtual bool Rewind()
+    {
+        fstream->clear();
+        fstream->seekg(0);
+
+        int _pcmFile; pid_t _cpid;
+        if(!StartStream(_pcmFile, _cpid))
+        {
+            SetError("Failed to restart timidity");
+            return false;
+        }
+
+        kill(cpid, SIGTERM);
+        waitpid(cpid, NULL, 0);
+        cpid = _cpid;
+
+        close(pcmFile);
+        pcmFile = _pcmFile;
+
+        return true;
+    }
+
+    midiStream(std::istream *_fstream)
+      : alureStream(_fstream), pcmFile(-1), cpid(-1), initialByte(-1)
+    {
+        StartStream(pcmFile, cpid);
+    }
+
+    virtual ~midiStream()
+    {
+        if(cpid > 0)
+        {
+            kill(cpid, SIGTERM);
+            waitpid(cpid, NULL, 0);
+            cpid = -1;
+        }
+        if(pcmFile != -1)
+            close(pcmFile);
+        pcmFile = -1;
+    }
+
+private:
+    bool StartStream(int &pcmFile, pid_t &pid)
+    {
+        int midPipe[2] = { -1, -1 };
+        int pcmPipe[2] = { -1, -1 };
+
+        char hdr[4];
+        std::vector<ALubyte> midiData;
+
+        fstream->read(hdr, sizeof(hdr));
+        if(fstream->gcount() != sizeof(hdr))
+            return false;
+
+        if(memcmp(hdr, "MThd", 4) == 0)
+        {
+            char ch;
+            for(size_t i = 0;i < sizeof(hdr);i++)
+                midiData.push_back(hdr[i]);
+            while(fstream->get(ch))
+                midiData.push_back(ch);
+        }
+        else
+            return false;
+
+        if(pipe(midPipe) == -1)
+            return false;
+        if(pipe(pcmPipe) == -1)
+        {
+            close(midPipe[0]); midPipe[0] = -1;
+            close(midPipe[1]); midPipe[1] = -1;
+            return false;
+        }
+
+        pid = fork();
+        if(pid == 0)
+        {
+            dup2(midPipe[0], STDIN_FILENO);
+            dup2(pcmPipe[1], STDOUT_FILENO);
+
+            close(midPipe[0]); midPipe[0] = -1;
+            close(midPipe[1]); midPipe[1] = -1;
+            close(pcmPipe[0]); pcmPipe[0] = -1;
+            close(pcmPipe[1]); pcmPipe[1] = -1;
+
+            execlp("timidity","timidity", "-", "-idqq", "-Or1sl", "-s", "48000",
+                   "-o", "-", NULL);
+            _exit(1);
+        }
+        else if(pid > 0)
+        {
+            close(midPipe[0]); midPipe[0] = -1;
+            close(pcmPipe[1]); pcmPipe[1] = -1;
+
+            const ALubyte *cur = &midiData[0];
+            size_t rem = midiData.size();
+            do {
+                ssize_t wrote = write(midPipe[1], cur, rem);
+                if(wrote < 0)
+                {
+                    if(errno == EINTR)
+                        continue;
+                    break;
+                }
+                cur += wrote;
+                rem -= wrote;
+            } while(rem > 0);
+            close(midPipe[1]); midPipe[1] = -1;
+
+            ALubyte ch = 0;
+            ssize_t got;
+            while((got=read(pcmPipe[0], &ch, 1)) == -1 && errno == EINTR)
+                ;
+            if(got != 1)
+            {
+                kill(pid, SIGTERM);
+                waitpid(pid, NULL, 0); pid = -1;
+                close(pcmPipe[0]); pcmPipe[0] = -1;
+                return false;
+            }
+            initialByte = ch;
+        }
+        else
+        {
+            close(midPipe[0]); midPipe[0] = -1;
+            close(midPipe[1]); midPipe[1] = -1;
+            close(pcmPipe[0]); pcmPipe[0] = -1;
+            close(pcmPipe[1]); pcmPipe[1] = -1;
+            return false;
+        }
+
+        pcmFile = pcmPipe[0];
+        return true;
+    }
+};
+#else
+struct midiStream : public nullStream {
+    midiStream(std::istream*){}
+};
+#endif
+
+
 #ifdef HAS_GSTREAMER
 struct gstStream : public alureStream {
     GstElement *gstPipeline;
@@ -1690,6 +1875,14 @@ alureStream *create_stream(const T &fdata)
         file->clear();
         file->seekg(0, std::ios_base::beg);
         stream = new mp3Stream(file);
+        if(stream->IsValid())
+            return stream;
+        delete stream;
+
+        // Try Timidity
+        file->clear();
+        file->seekg(0, std::ios_base::beg);
+        stream = new midiStream(file);
         if(stream->IsValid())
             return stream;
         delete stream;

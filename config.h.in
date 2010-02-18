@@ -14,6 +14,15 @@
 /* Define if we have pthread_np.h */
 #cmakedefine HAVE_PTHREAD_NP_H
 
+/* Define if we have sys/types.h */
+#cmakedefine HAVE_SYS_TYPES_H
+
+/* Define if we have sys/wait.h */
+#cmakedefine HAVE_SYS_WAIT_H
+
+/* Define if we have signal.h */
+#cmakedefine HAVE_SIGNAL_H
+
 /* Define if we have nanosleep */
 #cmakedefine HAVE_NANOSLEEP
 
@@ -34,6 +43,9 @@
 
 /* Define if we have DUMB */
 #cmakedefine HAS_DUMB
+
+/* Define if we have external Timidity */
+#cmakedefine HAS_TIMIDITY
 
 /* Define if we have GStreamer */
 #cmakedefine HAS_GSTREAMER
