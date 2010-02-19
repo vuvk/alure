@@ -1515,6 +1515,9 @@ private:
     static const ALubyte MIDI_CHANPRESS  = 0xD0;  // + pressure (1 byte)
     static const ALubyte MIDI_PITCHBEND  = 0xE0;  // + pitch bend (2 bytes)
 
+    static const ALubyte MUS_EVENT_CHANNEL_MASK = 0x0F;
+    static const ALubyte MUS_EVENT_DELTA_MASK   = 0x80;
+
     static const ALubyte MUS_NOTEOFF    = 0x00;
     static const ALubyte MUS_NOTEON     = 0x10;
     static const ALubyte MUS_PITCHBEND  = 0x20;
@@ -1560,7 +1563,8 @@ private:
             return false;
 
         fstream->seekg(songStart);
-        ssize_t maxmus_p = songLen;
+        std::streamsize maxmus_p = songLen;
+        maxmus_p += fstream->tellg();
 
         ALubyte chanVel[16];
         for(size_t i = 0;i < 16;i++)
@@ -1587,20 +1591,17 @@ private:
         midiData.push_back(0xA1);
         midiData.push_back(0x20);
 
-        while(maxmus_p > 0 && *fstream && (event&0x70) != MUS_SCOREEND)
+        while(fstream->good() && fstream->tellg() < maxmus_p && event != MUS_SCOREEND)
         {
-            int channel;
-            ALubyte t = 0;
-
             event = fstream->get();
-            maxmus_p--;
 
-            if((event&0x70) != MUS_SCOREEND)
-            {
-                t = fstream->get();
-                maxmus_p--;
-            }
-            channel = event&0x0f;
+            bool hasDelta = event&MUS_EVENT_DELTA_MASK;
+            ALubyte channel = event&MUS_EVENT_CHANNEL_MASK;
+
+            event &= ~MUS_EVENT_DELTA_MASK;
+            event &= ~MUS_EVENT_CHANNEL_MASK;
+
+            // Convert percussion channel (MUS #15 -> MIDI #9)
             if(channel == 15)
                 channel = 9;
             else if(channel >= 9)
@@ -1617,12 +1618,16 @@ private:
                 midiData.push_back(127);
             }
 
-            ALubyte midStatus = channel;
+            ALubyte t = 0;
+            if(event != MUS_SCOREEND)
+                t = fstream->get();
+
             ALubyte midArgs = 2;
+            ALubyte midStatus = channel;
             ALubyte mid1 = 0, mid2 = 0;
             bool noop = false;
 
-            switch(event&0x70)
+            switch(event)
             {
             case MUS_NOTEOFF:
                 midStatus |= MIDI_NOTEOFF;
@@ -1634,10 +1639,7 @@ private:
                 midStatus |= MIDI_NOTEON;
                 mid1 = t&0x7f;
                 if((t&0x80))
-                {
                     chanVel[channel] = fstream->get()&0x7f;
-                    maxmus_p--;
-                }
                 mid2 = chanVel[channel];
                 break;
 
@@ -1665,14 +1667,12 @@ private:
                     midArgs = 1;
                     midStatus |= MIDI_PRGMCHANGE;
                     mid1 = fstream->get()&0x7f;
-                    maxmus_p--;
                 }
                 else if(t < 10)
                 {
                     midStatus |= MIDI_CTRLCHANGE;
                     mid1 = CtrlTranslate[t];
                     mid2 = fstream->get();
-                    maxmus_p--;
                 }
                 else
                     noop = true;
@@ -1707,11 +1707,11 @@ private:
             if(midArgs >= 2)
                 midiData.push_back(mid2);
 
-            deltaTime = ((event&0x80) ? ReadVarLen() : 0);
+            deltaTime = (hasDelta ? ReadVarLen() : 0);
         }
 
-        // If we overran the song length, or reading failed, the song is bad
-        if(maxmus_p < 0 || !*fstream)
+        // If reading failed or we overran the song length, the song is bad
+        if(!fstream->good() || fstream->tellg() > maxmus_p)
             return false;
 
         // Fill in track length
