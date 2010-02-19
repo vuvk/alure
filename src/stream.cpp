@@ -1316,13 +1316,14 @@ struct midiStream : public alureStream {
         {
             *(data++) = initialByte&0xff;
             bytes--;
+            total++;
             initialByte = -1;
         }
         while(bytes > 0)
         {
-            ssize_t got = read(pcmFile, data, bytes);
-            if(got == -1 && errno == EINTR)
-                continue;
+            ssize_t got;
+            while((got=read(pcmFile, data, bytes)) == -1 && errno == EINTR)
+                ;
             if(got <= 0)
                 break;
 
