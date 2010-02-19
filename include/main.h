@@ -102,6 +102,7 @@ static inline void DeleteCriticalSection(CRITICAL_SECTION *cs)
 #include <algorithm>
 
 void SetError(const char *err);
+ALuint DetectBlockAlignment(ALenum format);
 
 struct UserCallbacks {
     void*     (*open_file)(const ALchar*);
@@ -284,7 +285,8 @@ struct customStream : public alureStream {
     { if(cb.open_mem) usrFile = cb.open_mem(memInfo.Data, memInfo.Length); }
 
     customStream(void *userdata, ALenum fmt, ALuint srate, const UserCallbacks &callbacks)
-      : usrFile(userdata), format(fmt), samplerate(srate), blockAlign(1), cb(callbacks)
+      : usrFile(userdata), format(fmt), samplerate(srate),
+        blockAlign(DetectBlockAlignment(format)), cb(callbacks)
     { }
 
     virtual ~customStream()

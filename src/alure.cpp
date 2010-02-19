@@ -93,6 +93,47 @@ void SetError(const char *err)
     last_error = err;
 }
 
+ALuint DetectBlockAlignment(ALenum format)
+{
+    switch(format)
+    {
+#define CHECK_RET(f,s) case (f): return (s)
+        CHECK_RET(AL_FORMAT_MONO8, sizeof(ALubyte));
+        CHECK_RET(AL_FORMAT_MONO16, sizeof(ALshort));
+        CHECK_RET(AL_FORMAT_MONO_FLOAT32, sizeof(ALfloat));
+
+        CHECK_RET(AL_FORMAT_STEREO8, sizeof(ALubyte)*2);
+        CHECK_RET(AL_FORMAT_STEREO16, sizeof(ALshort)*2);
+        CHECK_RET(AL_FORMAT_STEREO_FLOAT32, sizeof(ALfloat)*2);
+
+        CHECK_RET(AL_FORMAT_QUAD8, sizeof(ALubyte)*4);
+        CHECK_RET(AL_FORMAT_QUAD16, sizeof(ALshort)*4);
+        CHECK_RET(AL_FORMAT_QUAD32, sizeof(ALfloat)*4);
+
+        CHECK_RET(AL_FORMAT_REAR8, sizeof(ALubyte)*2);
+        CHECK_RET(AL_FORMAT_REAR16, sizeof(ALshort)*2);
+        CHECK_RET(AL_FORMAT_REAR32, sizeof(ALfloat)*2);
+
+        CHECK_RET(AL_FORMAT_51CHN8, sizeof(ALubyte)*6);
+        CHECK_RET(AL_FORMAT_51CHN16, sizeof(ALshort)*6);
+        CHECK_RET(AL_FORMAT_51CHN32, sizeof(ALfloat)*6);
+
+        CHECK_RET(AL_FORMAT_61CHN8, sizeof(ALubyte)*7);
+        CHECK_RET(AL_FORMAT_61CHN16, sizeof(ALshort)*7);
+        CHECK_RET(AL_FORMAT_61CHN32, sizeof(ALfloat)*7);
+
+        CHECK_RET(AL_FORMAT_71CHN8, sizeof(ALubyte)*8);
+        CHECK_RET(AL_FORMAT_71CHN16, sizeof(ALshort)*8);
+        CHECK_RET(AL_FORMAT_71CHN32, sizeof(ALfloat)*8);
+
+        CHECK_RET(AL_FORMAT_MONO_IMA4, 65);
+        CHECK_RET(AL_FORMAT_STEREO_IMA4, 65*2);
+#undef CHECK_RET
+    }
+    fprintf(stderr, "Alure lib: Unhandled format: %#x\n", format);
+    return 1;
+}
+
 extern "C" {
 
 /* Function: alureGetVersion
