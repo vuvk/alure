@@ -1445,6 +1445,7 @@ private:
         close(midPipe[0]); midPipe[0] = -1;
         close(pcmPipe[1]); pcmPipe[1] = -1;
 
+        void (*oldhandler)(int) = signal(SIGPIPE, SIG_IGN);
         ALubyte *cur = &midiData[0];
         size_t rem = midiData.size();
         do {
@@ -1457,6 +1458,7 @@ private:
             rem -= wrote;
         } while(rem > 0);
         close(midPipe[1]); midPipe[1] = -1;
+        signal(SIGPIPE, oldhandler);
 
         ALubyte fmthdr[44];
         cur = fmthdr;
