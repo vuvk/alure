@@ -221,16 +221,12 @@ public:
 
 class InStream : public std::istream {
 public:
-    bool IsOpen()
-    {
-        FileStreamBuf *fbuf = dynamic_cast<FileStreamBuf*>(rdbuf());
-        if(fbuf) return fbuf->IsOpen();
-        return true;
-    }
-
     InStream(const char *filename)
       : std::istream(new FileStreamBuf(filename, 0))
-    { }
+    {
+        if(!(static_cast<FileStreamBuf*>(rdbuf())->IsOpen()))
+            clear(failbit);
+    }
     InStream(const MemDataInfo &memInfo)
       : std::istream(new MemStreamBuf(memInfo))
     { }

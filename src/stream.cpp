@@ -2145,8 +2145,8 @@ alureStream *create_stream(const T &fdata)
         i++;
     }
 
-    InStream *file = new InStream(fdata);
-    if(file->IsOpen())
+    std::istream *file = new InStream(fdata);
+    if(!file->fail())
     {
         stream = new wavStream(file);
         if(stream->IsValid())
