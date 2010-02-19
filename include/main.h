@@ -160,6 +160,7 @@ private:
 };
 void StopStream(alureStream *stream);
 
+
 struct MemDataInfo {
     const ALubyte *Data;
     size_t Length;
@@ -235,10 +236,70 @@ public:
 };
 
 
+struct customStream : public alureStream {
+    void *usrFile;
+    ALenum format;
+    ALuint samplerate;
+    ALuint blockAlign;
+    MemDataInfo memInfo;
+
+    UserCallbacks cb;
+
+    virtual bool IsValid()
+    { return usrFile != NULL; }
+
+    virtual bool GetFormat(ALenum *format, ALuint *frequency, ALuint *blockalign)
+    {
+        if(this->format == 0)
+        {
+            if(!cb.get_fmt ||
+               !cb.get_fmt(usrFile, &this->format, &samplerate, &blockAlign))
+                return false;
+        }
+
+        *format = this->format;
+        *frequency = samplerate;
+        *blockalign = blockAlign;
+        return true;
+    }
+
+    virtual ALuint GetData(ALubyte *data, ALuint bytes)
+    { return cb.decode(usrFile, data, bytes); }
+
+    virtual bool Rewind()
+    {
+        if(cb.rewind && cb.rewind(usrFile))
+            return true;
+        SetError("Rewind failed");
+        return false;
+    }
+
+    customStream(const char *fname, const UserCallbacks &callbacks)
+      : usrFile(NULL), format(0), samplerate(0), blockAlign(0), cb(callbacks)
+    { if(cb.open_file) usrFile = cb.open_file(fname); }
+
+    customStream(const MemDataInfo &memData, const UserCallbacks &callbacks)
+      : usrFile(NULL), format(0), samplerate(0), blockAlign(0),
+        memInfo(memData), cb(callbacks)
+    { if(cb.open_mem) usrFile = cb.open_mem(memInfo.Data, memInfo.Length); }
+
+    customStream(void *userdata, ALenum fmt, ALuint srate, const UserCallbacks &callbacks)
+      : usrFile(userdata), format(fmt), samplerate(srate), blockAlign(1), cb(callbacks)
+    { }
+
+    virtual ~customStream()
+    {
+        if(cb.close && usrFile)
+            cb.close(usrFile);
+        usrFile = NULL;
+    }
+};
+
+
 extern CRITICAL_SECTION cs_StreamPlay;
 
-template <typename T>
-alureStream *create_stream(const T &fdata);
+alureStream *create_stream(const char *fname);
+alureStream *create_stream(const MemDataInfo &memData);
 
 template <typename T>
 const T& clamp(const T& val, const T& min, const T& max)
