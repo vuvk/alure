@@ -33,6 +33,7 @@
 #include <istream>
 #include <fstream>
 #include <iostream>
+#include <sstream>
 
 
 static inline ALuint read_le32(std::istream *file)
@@ -1436,8 +1437,11 @@ private:
                 close(pcmPipe[0]);
                 close(pcmPipe[1]);
 
-                execlp("timidity","timidity","-","-idqq","-Ow1sl","-s","48000",
-                       "-o","-", NULL);
+                std::stringstream freqstr;
+                freqstr << Freq;
+
+                execlp("timidity","timidity","-","-idqq","-Ow1sl","-o","-",
+                       "-s", freqstr.str().c_str(), NULL);
             }
             _exit(1);
         }
