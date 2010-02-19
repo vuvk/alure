@@ -1294,7 +1294,6 @@ struct dumbStream : public nullStream {
 struct midiStream : public alureStream {
     int pcmFile;
     pid_t cpid;
-    int initialByte;
 
     static const ALuint Freq = 48000;
 
@@ -1312,25 +1311,31 @@ struct midiStream : public alureStream {
     virtual ALuint GetData(ALubyte *data, ALuint bytes)
     {
         ALuint total = 0;
-        if(initialByte != -1 && bytes > 0)
-        {
-            *(data++) = initialByte&0xff;
-            bytes--;
-            total++;
-            initialByte = -1;
-        }
         while(bytes > 0)
         {
             ssize_t got;
-            while((got=read(pcmFile, data, bytes)) == -1 && errno == EINTR)
+            while((got=read(pcmFile, &data[total], bytes)) == -1 && errno == EINTR)
                 ;
             if(got <= 0)
                 break;
-
-            data += got;
             bytes -= got;
             total += got;
         }
+
+        static const union {
+            int val;
+            char b[sizeof(int)];
+        } endian = { 1 };
+        if(endian.b[0] == 0)
+        {
+            for(ALuint i = 0;i < total;i+=2)
+            {
+                ALubyte tmp = data[i];
+                data[i] = data[i+1];
+                data[i+1] = tmp;
+            }
+        }
+
         return total;
     }
 
@@ -1357,7 +1362,7 @@ struct midiStream : public alureStream {
     }
 
     midiStream(std::istream *_fstream)
-      : alureStream(_fstream), pcmFile(-1), cpid(-1), initialByte(-1)
+      : alureStream(_fstream), pcmFile(-1), cpid(-1)
     {
         StartStream(pcmFile, cpid);
     }
@@ -1431,8 +1436,8 @@ private:
                 close(pcmPipe[0]);
                 close(pcmPipe[1]);
 
-                execlp("timidity","timidity","-","-idqq","-Or1sl","-s","48000",
-                       "-o", "-", NULL);
+                execlp("timidity","timidity","-","-idqq","-Ow1sl","-s","48000",
+                       "-o","-", NULL);
             }
             _exit(1);
         }
@@ -1440,26 +1445,32 @@ private:
         close(midPipe[0]); midPipe[0] = -1;
         close(pcmPipe[1]); pcmPipe[1] = -1;
 
-        const ALubyte *cur = &midiData[0];
+        ALubyte *cur = &midiData[0];
         size_t rem = midiData.size();
         do {
-            ssize_t wrote = write(midPipe[1], cur, rem);
-            if(wrote < 0)
-            {
-                if(errno == EINTR)
-                    continue;
+            ssize_t wrote;
+            while((wrote=write(midPipe[1], cur, rem)) == -1 && errno == EINTR)
+                ;
+            if(wrote <= 0)
                 break;
-            }
             cur += wrote;
             rem -= wrote;
         } while(rem > 0);
         close(midPipe[1]); midPipe[1] = -1;
 
-        ALubyte ch = 0;
-        ssize_t got;
-        while((got=read(pcmPipe[0], &ch, 1)) == -1 && errno == EINTR)
-            ;
-        if(got != 1)
+        ALubyte fmthdr[44];
+        cur = fmthdr;
+        rem = sizeof(fmthdr);
+        do {
+            ssize_t got;
+            while((got=read(pcmPipe[0], cur, rem)) == -1 && errno == EINTR)
+                ;
+            if(got <= 0)
+                break;
+            cur += got;
+            rem -= got;
+        } while(rem > 0);
+        if(rem > 0)
         {
             kill(pid, SIGTERM);
             waitpid(pid, NULL, 0);
@@ -1467,7 +1478,6 @@ private:
             return false;
         }
 
-        initialByte = ch;
         pcmFile = pcmPipe[0];
         cpid = pid;
         return true;
