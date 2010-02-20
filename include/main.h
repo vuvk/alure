@@ -101,6 +101,14 @@ static inline void DeleteCriticalSection(CRITICAL_SECTION *cs)
 #include <list>
 #include <algorithm>
 
+static const union {
+    int val;
+    char b[sizeof(int)];
+} endian_test = { 1 };
+static const bool LittleEndian = (endian_test.b[0] != 0);
+static const bool BigEndian = !LittleEndian;
+
+
 void SetError(const char *err);
 ALuint DetectBlockAlignment(ALenum format);
 

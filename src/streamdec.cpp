@@ -162,11 +162,6 @@ struct wavStream : public alureStream {
 
     virtual ALuint GetData(ALubyte *data, ALuint bytes)
     {
-        static const union {
-            int val;
-            char b[sizeof(int)];
-        } endian = { 1 };
-
         std::streamsize rem = ((remLen >= bytes) ? bytes : remLen) / blockAlign;
         fstream->read(reinterpret_cast<char*>(data), rem*blockAlign);
 
@@ -174,7 +169,7 @@ struct wavStream : public alureStream {
         got -= got%blockAlign;
         remLen -= got;
 
-        if(endian.b[0] == 0 && sampleSize > 1)
+        if(BigEndian && sampleSize > 1)
         {
             if(sampleSize == 2)
                 for(std::streamsize i = 0;i < got;i+=2)
@@ -301,11 +296,6 @@ struct aiffStream : public alureStream {
 
     virtual ALuint GetData(ALubyte *data, ALuint bytes)
     {
-        static const union {
-            int val;
-            char b[sizeof(int)];
-        } endian = { 1 };
-
         std::streamsize rem = ((remLen >= bytes) ? bytes : remLen) / blockAlign;
         fstream->read(reinterpret_cast<char*>(data), rem*blockAlign);
 
@@ -313,7 +303,7 @@ struct aiffStream : public alureStream {
         got -= got%blockAlign;
         remLen -= got;
 
-        if(endian.b[0] == 1 && sampleSize > 1)
+        if(LittleEndian && sampleSize > 1)
         {
             if(sampleSize == 2)
                 for(std::streamsize i = 0;i < got;i+=2)
@@ -542,11 +532,6 @@ struct oggStream : public alureStream {
 
     virtual ALuint GetData(ALubyte *data, ALuint bytes)
     {
-        static const union {
-            short s;
-            char b[sizeof(short)];
-        } endian = { 0x0100 };
-
         vorbis_info *info = ov_info(oggFile, -1);
         if(!info) return 0;
 
@@ -556,7 +541,7 @@ struct oggStream : public alureStream {
         int got = 0;
         while(bytes > 0)
         {
-            int res = ov_read(oggFile, (char*)&data[got], bytes, endian.b[0], 2, 1, &oggBitstream);
+            int res = ov_read(oggFile, (char*)&data[got], bytes, BigEndian?1:0, 2, 1, &oggBitstream);
             if(res <= 0)
                 break;
             bytes -= res;
@@ -1305,11 +1290,7 @@ struct midiStream : public alureStream {
             total += got;
         }
 
-        static const union {
-            int val;
-            char b[sizeof(int)];
-        } endian = { 1 };
-        if(endian.b[0] == 0)
+        if(BigEndian)
         {
             for(ALuint i = 0;i < total;i+=2)
             {
