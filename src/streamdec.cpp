@@ -935,7 +935,8 @@ struct mp3Stream : public alureStream {
         bytes -= bytes%blockAlign;
 
         ALuint amt = 0;
-        do {
+        while(bytes > 0)
+        {
             size_t got = 0;
             int ret = mpg123_read(mp3File, data, bytes, &got);
 
@@ -952,9 +953,10 @@ struct mp3Stream : public alureStream {
                    mpg123_decode(mp3File, data, insize, NULL, 0, NULL) == MPG123_OK)
                     continue;
             }
-
-            return amt;
-        } while(1);
+            if(got == 0)
+                break;
+        }
+        return amt;
     }
 
     virtual bool Rewind()
