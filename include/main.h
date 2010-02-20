@@ -246,55 +246,15 @@ struct customStream : public alureStream {
 
     UserCallbacks cb;
 
-    virtual bool IsValid()
-    { return usrFile != NULL; }
+    virtual bool IsValid();
+    virtual bool GetFormat(ALenum *format, ALuint *frequency, ALuint *blockalign);
+    virtual ALuint GetData(ALubyte *data, ALuint bytes);
+    virtual bool Rewind();
 
-    virtual bool GetFormat(ALenum *format, ALuint *frequency, ALuint *blockalign)
-    {
-        if(this->format == 0)
-        {
-            if(!cb.get_fmt ||
-               !cb.get_fmt(usrFile, &this->format, &samplerate, &blockAlign))
-                return false;
-        }
-
-        *format = this->format;
-        *frequency = samplerate;
-        *blockalign = blockAlign;
-        return true;
-    }
-
-    virtual ALuint GetData(ALubyte *data, ALuint bytes)
-    { return cb.decode(usrFile, data, bytes); }
-
-    virtual bool Rewind()
-    {
-        if(cb.rewind && cb.rewind(usrFile))
-            return true;
-        SetError("Rewind failed");
-        return false;
-    }
-
-    customStream(const char *fname, const UserCallbacks &callbacks)
-      : usrFile(NULL), format(0), samplerate(0), blockAlign(0), cb(callbacks)
-    { if(cb.open_file) usrFile = cb.open_file(fname); }
-
-    customStream(const MemDataInfo &memData, const UserCallbacks &callbacks)
-      : usrFile(NULL), format(0), samplerate(0), blockAlign(0),
-        memInfo(memData), cb(callbacks)
-    { if(cb.open_mem) usrFile = cb.open_mem(memInfo.Data, memInfo.Length); }
-
-    customStream(void *userdata, ALenum fmt, ALuint srate, const UserCallbacks &callbacks)
-      : usrFile(userdata), format(fmt), samplerate(srate),
-        blockAlign(DetectBlockAlignment(format)), cb(callbacks)
-    { }
-
-    virtual ~customStream()
-    {
-        if(cb.close && usrFile)
-            cb.close(usrFile);
-        usrFile = NULL;
-    }
+    customStream(const char *fname, const UserCallbacks &callbacks);
+    customStream(const MemDataInfo &memData, const UserCallbacks &callbacks);
+    customStream(void *userdata, ALenum fmt, ALuint srate, const UserCallbacks &callbacks);
+    virtual ~customStream();
 };
 
 

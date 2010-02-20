@@ -80,6 +80,57 @@ static inline ALuint read_be80extended(std::istream *file)
 }
 
 
+bool customStream::IsValid()
+{ return usrFile != NULL; }
+
+bool customStream::GetFormat(ALenum *fmt, ALuint *frequency, ALuint *blockalign)
+{
+    if(format == 0)
+    {
+        if(!cb.get_fmt ||
+           !cb.get_fmt(usrFile, &this->format, &samplerate, &blockAlign))
+            return false;
+    }
+
+    *fmt = format;
+    *frequency = samplerate;
+    *blockalign = blockAlign;
+    return true;
+}
+
+ALuint customStream::GetData(ALubyte *data, ALuint bytes)
+{ return cb.decode(usrFile, data, bytes); }
+
+bool customStream::Rewind()
+{
+    if(cb.rewind && cb.rewind(usrFile))
+        return true;
+    SetError("Rewind failed");
+    return false;
+}
+
+customStream::customStream(const char *fname, const UserCallbacks &callbacks)
+  : usrFile(NULL), format(0), samplerate(0), blockAlign(0), cb(callbacks)
+{ if(cb.open_file) usrFile = cb.open_file(fname); }
+
+customStream::customStream(const MemDataInfo &memData, const UserCallbacks &callbacks)
+  : usrFile(NULL), format(0), samplerate(0), blockAlign(0),
+    memInfo(memData), cb(callbacks)
+{ if(cb.open_mem) usrFile = cb.open_mem(memInfo.Data, memInfo.Length); }
+
+customStream::customStream(void *userdata, ALenum fmt, ALuint srate, const UserCallbacks &callbacks)
+  : usrFile(userdata), format(fmt), samplerate(srate),
+    blockAlign(DetectBlockAlignment(format)), cb(callbacks)
+{ }
+
+customStream::~customStream()
+{
+    if(cb.close && usrFile)
+        cb.close(usrFile);
+    usrFile = NULL;
+}
+
+
 struct nullStream : public alureStream {
     virtual bool IsValid() { return false; }
     virtual bool GetFormat(ALenum*,ALuint*,ALuint*) { return false; }
