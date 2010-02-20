@@ -985,10 +985,8 @@ struct mp3Stream : public alureStream {
             if(ret == MPG123_NEW_FORMAT &&
                mpg123_getformat(newFile, &newrate, &newchans, &enc) == MPG123_OK)
             {
-                if(newrate == samplerate && newchans == channels &&
-                   (enc == MPG123_ENC_SIGNED_16 ||
-                    (mpg123_format_none(newFile) == MPG123_OK &&
-                     mpg123_format(newFile, samplerate, channels, MPG123_ENC_SIGNED_16) == MPG123_OK)))
+                if(mpg123_format_none(newFile) == MPG123_OK &&
+                   mpg123_format(newFile, samplerate, channels, MPG123_ENC_SIGNED_16) == MPG123_OK)
                 {
                     // All OK
                     mpg123_delete(mp3File);
@@ -1025,9 +1023,8 @@ struct mp3Stream : public alureStream {
             if(ret == MPG123_NEW_FORMAT &&
                mpg123_getformat(mp3File, &samplerate, &channels, &enc) == MPG123_OK)
             {
-                if(enc == MPG123_ENC_SIGNED_16 ||
-                   (mpg123_format_none(mp3File) == MPG123_OK &&
-                    mpg123_format(mp3File, samplerate, channels, MPG123_ENC_SIGNED_16) == MPG123_OK))
+                if(mpg123_format_none(mp3File) == MPG123_OK &&
+                   mpg123_format(mp3File, samplerate, channels, MPG123_ENC_SIGNED_16) == MPG123_OK)
                 {
                     // All OK
                     return;
