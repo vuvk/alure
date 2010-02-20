@@ -443,7 +443,7 @@ struct sndStream : public alureStream {
             get_filelen, seek,
             read, write, tell
         };
-        sndFile = sf_open_virtual(&streamIO, SFM_READ, &sndInfo, fstream);
+        sndFile = sf_open_virtual(&streamIO, SFM_READ, &sndInfo, this);
     }
 
     virtual ~sndStream()
@@ -457,7 +457,7 @@ private:
     // libSndFile iostream callbacks
     static sf_count_t get_filelen(void *user_data)
     {
-        std::istream *stream = static_cast<std::istream*>(user_data);
+        std::istream *stream = static_cast<sndStream*>(user_data)->fstream;
         stream->clear();
 
         std::streampos len = -1;
@@ -473,7 +473,7 @@ private:
 
     static sf_count_t seek(sf_count_t offset, int whence, void *user_data)
     {
-        std::istream *stream = static_cast<std::istream*>(user_data);
+        std::istream *stream = static_cast<sndStream*>(user_data)->fstream;
         stream->clear();
 
         if(whence == SEEK_CUR)
@@ -490,7 +490,7 @@ private:
 
     static sf_count_t read(void *ptr, sf_count_t count, void *user_data)
     {
-        std::istream *stream = static_cast<std::istream*>(user_data);
+        std::istream *stream = static_cast<sndStream*>(user_data)->fstream;
         stream->clear();
         stream->read(static_cast<char*>(ptr), count);
         return stream->gcount();
@@ -501,7 +501,7 @@ private:
 
     static sf_count_t tell(void *user_data)
     {
-        std::istream *stream = static_cast<std::istream*>(user_data);
+        std::istream *stream = static_cast<sndStream*>(user_data)->fstream;
         stream->clear();
         return stream->tellg();
     }
@@ -588,36 +588,36 @@ private:
     // libVorbisFile iostream callbacks
     static int seek(void *user_data, ogg_int64_t offset, int whence)
     {
-        oggStream *This = static_cast<oggStream*>(user_data);
-        This->fstream->clear();
+        std::istream *stream = static_cast<oggStream*>(user_data)->fstream;
+        stream->clear();
 
         if(whence == SEEK_CUR)
-            This->fstream->seekg(offset, std::ios_base::cur);
+            stream->seekg(offset, std::ios_base::cur);
         else if(whence == SEEK_SET)
-            This->fstream->seekg(offset, std::ios_base::beg);
+            stream->seekg(offset, std::ios_base::beg);
         else if(whence == SEEK_END)
-            This->fstream->seekg(offset, std::ios_base::end);
+            stream->seekg(offset, std::ios_base::end);
         else
             return -1;
 
-        return This->fstream->tellg();
+        return stream->tellg();
     }
 
     static size_t read(void *ptr, size_t size, size_t nmemb, void *user_data)
     {
-        oggStream *This = static_cast<oggStream*>(user_data);
-        This->fstream->clear();
+        std::istream *stream = static_cast<oggStream*>(user_data)->fstream;
+        stream->clear();
 
-        This->fstream->read(static_cast<char*>(ptr), nmemb*size);
-        size_t ret = This->fstream->gcount();
+        stream->read(static_cast<char*>(ptr), nmemb*size);
+        size_t ret = stream->gcount();
         return ret/size;
     }
 
     static long tell(void *user_data)
     {
-        oggStream *This = static_cast<oggStream*>(user_data);
-        This->fstream->clear();
-        return This->fstream->tellg();
+        std::istream *stream = static_cast<oggStream*>(user_data)->fstream;
+        stream->clear();
+        return stream->tellg();
     }
 };
 #else
