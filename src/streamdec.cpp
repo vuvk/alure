@@ -944,13 +944,18 @@ struct mp3Stream : public alureStream {
             data += got;
             amt += got;
 
+            if(ret == MPG123_NEW_FORMAT)
+            {
+                long newrate;
+                int newchans, enc;
+                mpg123_getformat(mp3File, &newrate, &newchans, &enc);
+            }
             if(ret == MPG123_NEED_MORE)
             {
                 unsigned char data[4096];
                 fstream->read((char*)data, sizeof(data));
-                std::streamsize insize = fstream->gcount();;
-                if(insize > 0 &&
-                   mpg123_decode(mp3File, data, insize, NULL, 0, NULL) == MPG123_OK)
+                std::streamsize insize = fstream->gcount();
+                if(insize > 0 && mpg123_feed(mp3File, data, insize) == MPG123_OK)
                     continue;
             }
             if(got == 0)
