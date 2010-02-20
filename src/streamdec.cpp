@@ -1207,31 +1207,31 @@ private:
     // DUMBFILE iostream callbacks
     static int skip(void *user_data, long offset)
     {
-        dumbStream *This = static_cast<dumbStream*>(user_data);
-        This->fstream->clear();
+        std::istream *stream = static_cast<dumbStream*>(user_data)->fstream;
+        stream->clear();
 
-        if(This->fstream->seekg(offset, std::ios_base::cur))
+        if(stream->seekg(offset, std::ios_base::cur))
             return 0;
         return -1;
     }
 
     static long read(char *ptr, long size, void *user_data)
     {
-        dumbStream *This = static_cast<dumbStream*>(user_data);
-        This->fstream->clear();
+        std::istream *stream = static_cast<dumbStream*>(user_data)->fstream;
+        stream->clear();
 
-        This->fstream->read(static_cast<char*>(ptr), size);
-        return This->fstream->gcount();
+        stream->read(static_cast<char*>(ptr), size);
+        return stream->gcount();
     }
 
     static int read_char(void *user_data)
     {
-        dumbStream *This = static_cast<dumbStream*>(user_data);
-        This->fstream->clear();
+        std::istream *stream = static_cast<dumbStream*>(user_data)->fstream;
+        stream->clear();
 
         unsigned char ret;
-        This->fstream->read(reinterpret_cast<char*>(&ret), 1);
-        if(This->fstream->gcount() > 0)
+        stream->read(reinterpret_cast<char*>(&ret), 1);
+        if(stream->gcount() > 0)
             return ret;
         return -1;
     }
