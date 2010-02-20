@@ -610,8 +610,8 @@ ALURE_API ALboolean ALURE_APIENTRY alureStopSource(ALuint source, ALboolean run_
  * is needed to avoid potential race conditions with sources that are playing
  * an asynchronous stream. Pass AL_TRUE to 'resume' to resume a paused stream.
  *
- * Note that it is possible for the  specified source to become stopped, and
- * any associated stream to finish,  before this function is called, and the
+ * Note that it is possible for the specified source to become stopped, and any
+ * associated stream to finish, before this function is called, causing the
  * callback to be delayed until after the function returns when the async
  * thread detects the stopped source.
  *

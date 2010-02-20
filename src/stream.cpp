@@ -113,8 +113,7 @@ extern "C" {
  *
  * See Also:
  * <alureCreateStreamFromMemory>, <alureCreateStreamFromStaticMemory>,
- * <alureCreateStreamFromCallback>, <alureBufferDataFromStream>,
- * <alureRewindStream>, <alureDestroyStream>
+ * <alureCreateStreamFromCallback>
  */
 ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromFile(const ALchar *fname, ALsizei chunkLength, ALsizei numBufs, ALuint *bufs)
 {
@@ -157,8 +156,7 @@ ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromFile(const ALchar *fn
  *
  * See Also:
  * <alureCreateStreamFromFile>, <alureCreateStreamFromStaticMemory>,
- * <alureCreateStreamFromCallback>, <alureBufferDataFromStream>,
- * <alureRewindStream>, <alureDestroyStream>
+ * <alureCreateStreamFromCallback>
  */
 ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromMemory(const ALubyte *fdata, ALuint length, ALsizei chunkLength, ALsizei numBufs, ALuint *bufs)
 {
@@ -216,8 +214,7 @@ ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromMemory(const ALubyte 
  *
  * See Also:
  * <alureCreateStreamFromFile>, <alureCreateStreamFromMemory>,
- * <alureCreateStreamFromCallback>, <alureBufferDataFromStream>,
- * <alureRewindStream>, <alureDestroyStream>
+ * <alureCreateStreamFromCallback>
  */
 ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromStaticMemory(const ALubyte *fdata, ALuint length, ALsizei chunkLength, ALsizei numBufs, ALuint *bufs)
 {
@@ -282,8 +279,7 @@ ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromStaticMemory(const AL
  *
  * See Also:
  * <alureCreateStreamFromFile>, <alureCreateStreamFromMemory>,
- * <alureCreateStreamFromStaticMemory>, <alureBufferDataFromStream>,
- * <alureRewindStream>, <alureDestroyStream>
+ * <alureCreateStreamFromStaticMemory>
  */
 ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromCallback(
       ALuint (*callback)(void *userdata, ALubyte *data, ALuint bytes),
@@ -333,10 +329,6 @@ ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromCallback(
  *
  * Returns:
  * AL_FALSE on error.
- *
- * See Also:
- * <alureCreateStreamFromFile>, <alureCreateStreamFromMemory>,
- * <alureCreateStreamFromStaticMemory>, <alureCreateStreamFromCallback>,
  */
 ALURE_API ALboolean ALURE_APIENTRY alureGetStreamFormat(alureStream *stream,
     ALenum *format, ALuint *frequency, ALuint *blockAlign)
@@ -373,11 +365,6 @@ ALURE_API ALboolean ALURE_APIENTRY alureGetStreamFormat(alureStream *stream,
  * The number of buffers filled with new data, or -1 on error. If the value
  * returned is less than the number requested, the end of the stream has been
  * reached.
- *
- * See Also:
- * <alureCreateStreamFromFile>, <alureCreateStreamFromMemory>,
- * <alureCreateStreamFromStaticMemory>, <alureCreateStreamFromCallback>,
- * <alureRewindStream>, <alureDestroyStream>
  */
 ALURE_API ALsizei ALURE_APIENTRY alureBufferDataFromStream(alureStream *stream, ALsizei numBufs, ALuint *bufs)
 {
@@ -435,9 +422,7 @@ ALURE_API ALsizei ALURE_APIENTRY alureBufferDataFromStream(alureStream *stream, 
  * AL_FALSE on error.
  *
  * See Also:
- * <alureCreateStreamFromFile>, <alureCreateStreamFromMemory>,
- * <alureCreateStreamFromStaticMemory>, <alureCreateStreamFromCallback>,
- * <alureBufferDataFromStream>, <alureSetStreamOrder>, <alureDestroyStream>
+ * <alureSetStreamOrder>
  */
 ALURE_API ALboolean ALURE_APIENTRY alureRewindStream(alureStream *stream)
 {
@@ -460,9 +445,7 @@ ALURE_API ALboolean ALURE_APIENTRY alureRewindStream(alureStream *stream)
  * AL_FALSE on error.
  *
  * See Also:
- * <alureCreateStreamFromFile>, <alureCreateStreamFromMemory>,
- * <alureCreateStreamFromStaticMemory>, <alureCreateStreamFromCallback>,
- * <alureBufferDataFromStream>, <alureRewindStream>, <alureDestroyStream>
+ * <alureRewindStream>
  */
 ALURE_API ALboolean ALURE_APIENTRY alureSetStreamOrder(alureStream *stream, ALuint order)
 {
@@ -483,11 +466,6 @@ ALURE_API ALboolean ALURE_APIENTRY alureSetStreamOrder(alureStream *stream, ALui
  *
  * Returns:
  * AL_FALSE on error.
- *
- * See Also:
- * <alureCreateStreamFromFile>, <alureCreateStreamFromMemory>,
- * <alureCreateStreamFromStaticMemory>, <alureCreateStreamFromCallback>,
- * <alureBufferDataFromStream>, <alureRewindStream>
  */
 ALURE_API ALboolean ALURE_APIENTRY alureDestroyStream(alureStream *stream, ALsizei numBufs, ALuint *bufs)
 {

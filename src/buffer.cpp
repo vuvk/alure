@@ -94,7 +94,7 @@ extern "C" {
  * A new buffer ID with the loaded sound, or AL_NONE on error.
  *
  * See Also:
- * <alureCreateBufferFromMemory>, <alureBufferDataFromFile>
+ * <alureBufferDataFromFile>
  */
 ALURE_API ALuint ALURE_APIENTRY alureCreateBufferFromFile(const ALchar *fname)
 {
@@ -131,7 +131,7 @@ ALURE_API ALuint ALURE_APIENTRY alureCreateBufferFromFile(const ALchar *fname)
  * A new buffer ID with the loaded sound, or AL_NONE on error.
  *
  * See Also:
- * <alureCreateBufferFromFile>, <alureBufferDataFromMemory>
+ * <alureBufferDataFromMemory>
  */
 ALURE_API ALuint ALURE_APIENTRY alureCreateBufferFromMemory(const ALubyte *fdata, ALsizei length)
 {
@@ -168,7 +168,7 @@ ALURE_API ALuint ALURE_APIENTRY alureCreateBufferFromMemory(const ALubyte *fdata
  * AL_FALSE on error.
  *
  * See Also:
- * <alureCreateBufferFromFile>, <alureBufferDataFromMemory>
+ * <alureCreateBufferFromFile>
  */
 ALURE_API ALboolean ALURE_APIENTRY alureBufferDataFromFile(const ALchar *fname, ALuint buffer)
 {
@@ -192,7 +192,7 @@ ALURE_API ALboolean ALURE_APIENTRY alureBufferDataFromFile(const ALchar *fname, 
  * AL_FALSE on error.
  *
  * See Also:
- * <alureCreateBufferFromMemory>, <alureBufferDataFromFile>
+ * <alureCreateBufferFromMemory>
  */
 ALURE_API ALboolean ALURE_APIENTRY alureBufferDataFromMemory(const ALubyte *fdata, ALsizei length, ALuint buffer)
 {
