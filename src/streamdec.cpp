@@ -533,12 +533,6 @@ struct oggStream : public alureStream {
 
     virtual ALuint GetData(ALubyte *data, ALuint bytes)
     {
-        vorbis_info *info = ov_info(oggFile, -1);
-        if(!info) return 0;
-
-        ALuint blockAlign = info->channels*2;
-        bytes -= bytes%blockAlign;
-
         int got = 0;
         while(bytes > 0)
         {
@@ -653,8 +647,6 @@ struct flacStream : public alureStream {
 
     virtual ALuint GetData(ALubyte *data, ALuint bytes)
     {
-        bytes -= bytes%blockAlign;
-
         outBytes = data;
         outTotal = 0;
         outLen = bytes;
@@ -931,9 +923,6 @@ struct mp3Stream : public alureStream {
 
     virtual ALuint GetData(ALubyte *data, ALuint bytes)
     {
-        const ALuint blockAlign = channels*2;
-        bytes -= bytes%blockAlign;
-
         ALuint amt = 0;
         while(bytes > 0)
         {
@@ -1741,8 +1730,6 @@ struct gstStream : public alureStream {
 
     virtual ALuint GetData(ALubyte *data, ALuint bytes)
     {
-        bytes -= bytes%blockAlign;
-
         outTotal = 0;
         outLen = bytes;
         outBytes = data;
