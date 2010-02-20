@@ -142,7 +142,7 @@ struct alureStream {
         return false;
     }
 
-    alureStream(std::istream *_stream=NULL)
+    alureStream(std::istream *_stream)
       : data(NULL), dataChunk(NULL), fstream(_stream)
     { StreamList.push_front(this); }
     virtual ~alureStream()

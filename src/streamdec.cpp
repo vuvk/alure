@@ -110,16 +110,17 @@ bool customStream::Rewind()
 }
 
 customStream::customStream(const char *fname, const UserCallbacks &callbacks)
-  : usrFile(NULL), format(0), samplerate(0), blockAlign(0), cb(callbacks)
+  : alureStream(NULL), usrFile(NULL), format(0), samplerate(0), blockAlign(0),
+    cb(callbacks)
 { if(cb.open_file) usrFile = cb.open_file(fname); }
 
 customStream::customStream(const MemDataInfo &memData, const UserCallbacks &callbacks)
-  : usrFile(NULL), format(0), samplerate(0), blockAlign(0),
+  : alureStream(NULL), usrFile(NULL), format(0), samplerate(0), blockAlign(0),
     memInfo(memData), cb(callbacks)
 { if(cb.open_mem) usrFile = cb.open_mem(memInfo.Data, memInfo.Length); }
 
 customStream::customStream(void *userdata, ALenum fmt, ALuint srate, const UserCallbacks &callbacks)
-  : usrFile(userdata), format(fmt), samplerate(srate),
+  : alureStream(NULL), usrFile(userdata), format(fmt), samplerate(srate),
     blockAlign(DetectBlockAlignment(format)), cb(callbacks)
 { }
 
@@ -136,7 +137,7 @@ struct nullStream : public alureStream {
     virtual bool GetFormat(ALenum*,ALuint*,ALuint*) { return false; }
     virtual ALuint GetData(ALubyte*,ALuint) { return 0; }
     virtual bool Rewind() { return false; }
-    nullStream(){}
+    nullStream():alureStream(NULL) {}
 };
 
 
@@ -914,7 +915,6 @@ struct mp3Stream : public alureStream {
     mpg123_handle *mp3File;
     long samplerate;
     int channels;
-    std::istream *fstream;
 
     virtual bool IsValid()
     { return mp3File != NULL; }
@@ -1003,7 +1003,7 @@ struct mp3Stream : public alureStream {
     }
 
     mp3Stream(std::istream *_fstream)
-      : mp3File(NULL), fstream(_fstream)
+      : alureStream(_fstream), mp3File(NULL)
     {
         mp3File = mpg123_new(NULL, NULL);
         if(mpg123_open_feed(mp3File) == MPG123_OK)
