@@ -1255,8 +1255,7 @@ struct dumbStream : public nullStream {
 struct midiStream : public alureStream {
     int pcmFile;
     pid_t cpid;
-
-    static const ALuint Freq = 48000;
+    ALCint Freq;
 
     virtual bool IsValid()
     { return cpid > 0; }
@@ -1319,8 +1318,12 @@ struct midiStream : public alureStream {
     }
 
     midiStream(std::istream *_fstream)
-      : alureStream(_fstream), pcmFile(-1), cpid(-1)
+      : alureStream(_fstream), pcmFile(-1), cpid(-1), Freq(44100)
     {
+        ALCcontext *ctx = alcGetCurrentContext();
+        ALCdevice *dev = alcGetContextsDevice(ctx);
+        alcGetIntegerv(dev, ALC_FREQUENCY, 1, &Freq);
+
         StartStream(pcmFile, cpid);
     }
 
