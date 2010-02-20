@@ -62,13 +62,13 @@ bool load_stream(alureStream *_stream, ALuint buffer)
     }
 
     ALuint writePos = 0, got;
-    std::vector<ALubyte> data(freq*4);
+    std::vector<ALubyte> data(freq*blockAlign);
     while((got=stream->GetData(&data[writePos], data.size()-writePos)) > 0)
     {
         writePos += got;
-        data.resize(data.size() * 2);
+        data.resize(writePos + freq*blockAlign);
     }
-    data.resize(writePos);
+    data.resize(writePos - (writePos%blockAlign));
     stream.reset(NULL);
 
     alBufferData(buffer, format, &data[0], data.size(), freq);
