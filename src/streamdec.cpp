@@ -736,31 +736,31 @@ private:
 
     static FLAC__StreamDecoderWriteStatus WriteCallback(const FLAC__StreamDecoder*, const FLAC__Frame *frame, const FLAC__int32 *const buffer[], void *client_data)
     {
-        flacStream *This = static_cast<flacStream*>(client_data);
-        ALubyte *data = This->outBytes + This->outTotal;
+        flacStream *self = static_cast<flacStream*>(client_data);
+        ALubyte *data = self->outBytes + self->outTotal;
         ALuint i = 0;
 
-        if(This->format == AL_NONE)
+        if(self->format == AL_NONE)
         {
             ALuint bps = frame->header.bits_per_sample;
             if(bps == 24 || bps == 32)
             {
-                This->format = alureGetSampleFormat(frame->header.channels, 0, 32);
-                if(This->format != AL_NONE)
+                self->format = alureGetSampleFormat(frame->header.channels, 0, 32);
+                if(self->format != AL_NONE)
                 {
-                    This->useFloat = AL_TRUE;
+                    self->useFloat = AL_TRUE;
                     bps = 32;
                 }
                 else bps = 16;
             }
-            if(This->format == AL_NONE)
-                This->format = alureGetSampleFormat(frame->header.channels, bps, 0);
-            This->blockAlign = frame->header.channels * bps/8;
-            This->samplerate = frame->header.sample_rate;
+            if(self->format == AL_NONE)
+                self->format = alureGetSampleFormat(frame->header.channels, bps, 0);
+            self->blockAlign = frame->header.channels * bps/8;
+            self->samplerate = frame->header.sample_rate;
         }
 
-        const ALboolean useFloat = This->useFloat;
-        while(This->outTotal < This->outLen && i < frame->header.blocksize)
+        const ALboolean useFloat = self->useFloat;
+        while(self->outTotal < self->outLen && i < frame->header.blocksize)
         {
             for(ALuint c = 0;c < frame->header.channels;c++)
             {
@@ -787,19 +787,19 @@ private:
                         ((ALshort*)data)[c] = buffer[c][i]>>16;
                 }
             }
-            This->outTotal += This->blockAlign;
-            data += This->blockAlign;
+            self->outTotal += self->blockAlign;
+            data += self->blockAlign;
             i++;
         }
 
         if(i < frame->header.blocksize)
         {
             ALuint blocklen = (frame->header.blocksize-i) *
-                              This->blockAlign;
-            ALuint start = This->initialData.size();
+                              self->blockAlign;
+            ALuint start = self->initialData.size();
 
-            This->initialData.resize(start+blocklen);
-            data = &This->initialData[start];
+            self->initialData.resize(start+blocklen);
+            data = &self->initialData[start];
 
             do {
                 for(ALuint c = 0;c < frame->header.channels;c++)
@@ -827,7 +827,7 @@ private:
                             ((ALshort*)data)[c] = buffer[c][i]>>16;
                     }
                 }
-                data += This->blockAlign;
+                data += self->blockAlign;
                 i++;
             } while(i < frame->header.blocksize);
         }
@@ -1238,9 +1238,9 @@ private:
 
     static int loop_cb(void *user_data)
     {
-        dumbStream *This = static_cast<dumbStream*>(user_data);
-        This->prevSpeed = dumb_it_sr_get_speed(duh_get_it_sigrenderer(This->renderer));
-        dumb_it_sr_set_speed(duh_get_it_sigrenderer(This->renderer), 0);
+        dumbStream *self = static_cast<dumbStream*>(user_data);
+        self->prevSpeed = dumb_it_sr_get_speed(duh_get_it_sigrenderer(self->renderer));
+        dumb_it_sr_set_speed(duh_get_it_sigrenderer(self->renderer), 0);
         return 0;
     }
 };
