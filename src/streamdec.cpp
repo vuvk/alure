@@ -930,6 +930,7 @@ struct mp3Stream : public alureStream {
                 long newrate;
                 int newchans, enc;
                 mpg123_getformat(mp3File, &newrate, &newchans, &enc);
+                continue;
             }
             if(ret == MPG123_NEED_MORE)
             {
