@@ -209,13 +209,6 @@ struct wavStream : public alureStream {
 
     wavStream(std::istream *_fstream)
       : alureStream(_fstream), format(0), dataStart(0)
-    { Init(); }
-
-    virtual ~wavStream()
-    { }
-
-private:
-    void Init()
     {
         ALubyte buffer[25];
         int length;
@@ -273,6 +266,9 @@ private:
         if(dataStart > 0 && format != AL_NONE)
             fstream->seekg(dataStart);
     }
+
+    virtual ~wavStream()
+    { }
 };
 
 struct aiffStream : public alureStream {
@@ -343,13 +339,6 @@ struct aiffStream : public alureStream {
 
     aiffStream(std::istream *_fstream)
       : alureStream(_fstream), format(0), dataStart(0)
-    { Init(); }
-
-    virtual ~aiffStream()
-    { }
-
-private:
-    void Init()
     {
         ALubyte buffer[25];
         int length;
@@ -401,6 +390,9 @@ private:
         if(dataStart > 0 && format != AL_NONE)
             fstream->seekg(dataStart);
     }
+
+    virtual ~aiffStream()
+    { }
 };
 
 #ifdef HAS_SNDFILE
