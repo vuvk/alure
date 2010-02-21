@@ -1246,12 +1246,21 @@ struct dumbStream : public nullStream {
 
 #ifdef HAS_TIMIDITY
 struct midiStream : public alureStream {
+#ifdef _WIN32
+    HANDLE pcmFile;
+    HANDLE cpid;
+#else
     int pcmFile;
     pid_t cpid;
+#endif
     ALCint Freq;
 
     virtual bool IsValid()
+#ifdef _WIN32
+    { return cpid != INVALID_HANDLE_VALUE; }
+#else
     { return cpid > 0; }
+#endif
 
     virtual bool GetFormat(ALenum *fmt, ALuint *frequency, ALuint *blockalign)
     {
@@ -1266,9 +1275,15 @@ struct midiStream : public alureStream {
         ALuint total = 0;
         while(bytes > 0)
         {
+#ifdef _WIN32
+            DWORD got = 0;
+            if(ReadFile(pcmFile, data, bytes, &got, NULL) == FALSE)
+                got = 0;
+#else
             ssize_t got;
             while((got=read(pcmFile, &data[total], bytes)) == -1 && errno == EINTR)
                 ;
+#endif
             if(got <= 0)
                 break;
             bytes -= got;
@@ -1293,6 +1308,21 @@ struct midiStream : public alureStream {
         fstream->clear();
         fstream->seekg(0);
 
+#ifdef _WIN32
+        HANDLE _pcmFile, _cpid;
+        if(!StartStream(_pcmFile, _cpid))
+        {
+            SetError("Failed to restart timidity");
+            return false;
+        }
+
+        TerminateProcess(cpid, 0);
+        CloseHandle(cpid);
+        cpid = _cpid;
+
+        CloseHandle(pcmFile);
+        pcmFile = _pcmFile;
+#else
         int _pcmFile; pid_t _cpid;
         if(!StartStream(_pcmFile, _cpid))
         {
@@ -1306,12 +1336,18 @@ struct midiStream : public alureStream {
 
         close(pcmFile);
         pcmFile = _pcmFile;
+#endif
 
         return true;
     }
 
     midiStream(std::istream *_fstream)
+#ifdef _WIN32
+      : alureStream(_fstream), pcmFile(INVALID_HANDLE_VALUE),
+        cpid(INVALID_HANDLE_VALUE), Freq(44100)
+#else
       : alureStream(_fstream), pcmFile(-1), cpid(-1), Freq(44100)
+#endif
     {
         ALCcontext *ctx = alcGetCurrentContext();
         ALCdevice *dev = alcGetContextsDevice(ctx);
@@ -1322,6 +1358,18 @@ struct midiStream : public alureStream {
 
     virtual ~midiStream()
     {
+#ifdef _WIN32
+        if(cpid != INVALID_HANDLE_VALUE)
+        {
+            TerminateProcess(cpid, 0);
+            CloseHandle(cpid);
+            cpid = INVALID_HANDLE_VALUE;
+        }
+
+        if(pcmFile != INVALID_HANDLE_VALUE)
+            CloseHandle(pcmFile);
+        pcmFile = INVALID_HANDLE_VALUE;
+#else
         if(cpid > 0)
         {
             kill(cpid, SIGTERM);
@@ -1331,10 +1379,15 @@ struct midiStream : public alureStream {
         if(pcmFile != -1)
             close(pcmFile);
         pcmFile = -1;
+#endif
     }
 
 private:
+#ifdef _WIN32
+    bool StartStream(HANDLE &pcmFile, HANDLE &cpid)
+#else
     bool StartStream(int &pcmFile, pid_t &cpid)
+#endif
     {
         char hdr[4];
         std::vector<ALubyte> midiData;
@@ -1359,6 +1412,11 @@ private:
         else
             return false;
 
+#ifdef _WIN32
+        HANDLE pcmPipe[2] = {INVALID_HANDLE_VALUE,INVALID_HANDLE_VALUE};
+        HANDLE pid = INVALID_HANDLE_VALUE;
+        return false;
+#else
         int midPipe[2], pcmPipe[2];
         if(pipe(midPipe) == -1)
             return false;
@@ -1435,6 +1493,7 @@ private:
             close(pcmPipe[0]);
             return false;
         }
+#endif
 
         pcmFile = pcmPipe[0];
         cpid = pid;
