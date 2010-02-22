@@ -1250,17 +1250,14 @@ struct midiStream : public alureStream {
     HANDLE pcmFile;
     HANDLE cpid;
 #else
+#define INVALID_HANDLE_VALUE (-1)
     int pcmFile;
     pid_t cpid;
 #endif
     ALCint Freq;
 
     virtual bool IsValid()
-#ifdef _WIN32
     { return cpid != INVALID_HANDLE_VALUE; }
-#else
-    { return cpid > 0; }
-#endif
 
     virtual bool GetFormat(ALenum *fmt, ALuint *frequency, ALuint *blockalign)
     {
@@ -1277,7 +1274,7 @@ struct midiStream : public alureStream {
         {
 #ifdef _WIN32
             DWORD got = 0;
-            if(ReadFile(pcmFile, data, bytes, &got, NULL) == FALSE)
+            if(!ReadFile(pcmFile, data, bytes, &got, NULL))
                 got = 0;
 #else
             ssize_t got;
@@ -1342,12 +1339,8 @@ struct midiStream : public alureStream {
     }
 
     midiStream(std::istream *_fstream)
-#ifdef _WIN32
       : alureStream(_fstream), pcmFile(INVALID_HANDLE_VALUE),
         cpid(INVALID_HANDLE_VALUE), Freq(44100)
-#else
-      : alureStream(_fstream), pcmFile(-1), cpid(-1), Freq(44100)
-#endif
     {
         ALCcontext *ctx = alcGetCurrentContext();
         ALCdevice *dev = alcGetContextsDevice(ctx);
@@ -1358,28 +1351,27 @@ struct midiStream : public alureStream {
 
     virtual ~midiStream()
     {
-#ifdef _WIN32
         if(cpid != INVALID_HANDLE_VALUE)
         {
+#ifdef _WIN32
             TerminateProcess(cpid, 0);
             CloseHandle(cpid);
+#else
+            kill(cpid, SIGTERM);
+            waitpid(cpid, NULL, 0);
+#endif
             cpid = INVALID_HANDLE_VALUE;
         }
 
         if(pcmFile != INVALID_HANDLE_VALUE)
-            CloseHandle(pcmFile);
-        pcmFile = INVALID_HANDLE_VALUE;
-#else
-        if(cpid > 0)
         {
-            kill(cpid, SIGTERM);
-            waitpid(cpid, NULL, 0);
-            cpid = -1;
-        }
-        if(pcmFile != -1)
+#ifdef _WIN32
+            CloseHandle(pcmFile);
+#else
             close(pcmFile);
-        pcmFile = -1;
 #endif
+            pcmFile = INVALID_HANDLE_VALUE;
+        }
     }
 
 private:
@@ -1413,9 +1405,82 @@ private:
             return false;
 
 #ifdef _WIN32
-        HANDLE pcmPipe[2] = {INVALID_HANDLE_VALUE,INVALID_HANDLE_VALUE};
-        HANDLE pid = INVALID_HANDLE_VALUE;
-        return false;
+        SECURITY_ATTRIBUTES attr;
+        attr.nLength = sizeof(attr);
+        attr.bInheritHandle = TRUE;
+        attr.lpSecurityDescriptor = NULL;
+
+        HANDLE midPipe[2], pcmPipe[2];
+        if(!CreatePipe(&midPipe[0], &midPipe[1], &attr, 0))
+            return false;
+        if(!CreatePipe(&pcmPipe[0], &pcmPipe[1], &attr, 0))
+        {
+            CloseHandle(midPipe[0]);
+            CloseHandle(midPipe[1]);
+            return false;
+        }
+
+        PROCESS_INFORMATION procInfo;
+        memset(&procInfo, 0, sizeof(procInfo));
+
+        STARTUPINFO startInfo;
+        memset(&startInfo, 0, sizeof(startInfo));
+        startInfo.cb = sizeof(startInfo);
+        startInfo.hStdError = GetStdHandle(STD_ERROR_HANDLE);
+        startInfo.hStdOutput = pcmPipe[1];
+        startInfo.hStdInput = midPipe[0];
+        startInfo.dwFlags |= STARTF_USESTDHANDLES;
+
+        std::stringstream cmdstr;
+        cmdstr << "timidity - -idqq -Ow1sl -o - -s " << Freq;
+        std::string cmdline = cmdstr.str();
+
+        if(!CreateProcessA(NULL, const_cast<CHAR*>(cmdline.c_str()), NULL,
+                           NULL, TRUE, 0, NULL, NULL, &startInfo, &procInfo))
+        {
+            CloseHandle(midPipe[0]);
+            CloseHandle(midPipe[1]);
+            CloseHandle(pcmPipe[0]);
+            CloseHandle(pcmPipe[1]);
+            return false;
+        }
+
+        CloseHandle(midPipe[0]);
+        CloseHandle(pcmPipe[1]);
+
+        CloseHandle(procInfo.hThread);
+        HANDLE pid = procInfo.hProcess;
+
+        ALubyte *cur = &midiData[0];
+        size_t rem = midiData.size();
+        do {
+            DWORD wrote;
+            if(!WriteFile(midPipe[1], cur, rem, &wrote, NULL) ||
+               wrote <= 0)
+                break;
+            cur += wrote;
+            rem -= wrote;
+        } while(rem > 0);
+        CloseHandle(midPipe[1]); midPipe[1] = INVALID_HANDLE_VALUE;
+
+        ALubyte fmthdr[44];
+        cur = fmthdr;
+        rem = sizeof(fmthdr);
+        do {
+            DWORD got;
+            if(!ReadFile(pcmPipe[0], cur, rem, &got, NULL) ||
+               got <= 0)
+                break;
+            cur += got;
+            rem -= got;
+        } while(rem > 0);
+        if(rem > 0)
+        {
+            TerminateProcess(pid, 0);
+            CloseHandle(pid);
+            CloseHandle(pcmPipe[0]);
+            return false;
+        }
 #else
         int midPipe[2], pcmPipe[2];
         if(pipe(midPipe) == -1)
