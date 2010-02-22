@@ -399,13 +399,16 @@ struct aiffStream : public alureStream {
 struct sndStream : public alureStream {
     SNDFILE *sndFile;
     SF_INFO sndInfo;
+    ALenum format;
 
     virtual bool IsValid()
     { return sndFile != NULL; }
 
-    virtual bool GetFormat(ALenum *format, ALuint *frequency, ALuint *blockalign)
+    virtual bool GetFormat(ALenum *fmt, ALuint *frequency, ALuint *blockalign)
     {
-        *format = alureGetSampleFormat(sndInfo.channels, 16, 0);
+        if(format == AL_NONE)
+            format = alureGetSampleFormat(sndInfo.channels, 16, 0);
+        *fmt = format;
         *frequency = sndInfo.samplerate;
         *blockalign = sndInfo.channels*2;
         return true;
@@ -427,7 +430,7 @@ struct sndStream : public alureStream {
     }
 
     sndStream(std::istream *_fstream)
-      : alureStream(_fstream), sndFile(NULL)
+      : alureStream(_fstream), sndFile(NULL), format(AL_NONE)
     {
         memset(&sndInfo, 0, sizeof(sndInfo));
 
@@ -508,16 +511,20 @@ struct sndStream : public nullStream {
 struct oggStream : public alureStream {
     OggVorbis_File *oggFile;
     int oggBitstream;
+    ALenum format;
 
     virtual bool IsValid()
     { return oggFile != NULL; }
 
-    virtual bool GetFormat(ALenum *format, ALuint *frequency, ALuint *blockalign)
+    virtual bool GetFormat(ALenum *fmt, ALuint *frequency, ALuint *blockalign)
     {
         vorbis_info *info = ov_info(oggFile, -1);
         if(!info) return false;
 
-        *format = alureGetSampleFormat(info->channels, 16, 0);
+        if(format == AL_NONE)
+            format = alureGetSampleFormat(info->channels, 16, 0);
+
+        *fmt = format;
         *frequency = info->rate;
         *blockalign = info->channels*2;
         return true;
@@ -547,7 +554,7 @@ struct oggStream : public alureStream {
     }
 
     oggStream(std::istream *_fstream)
-      : alureStream(_fstream), oggFile(NULL), oggBitstream(0)
+      : alureStream(_fstream), oggFile(NULL), oggBitstream(0), format(AL_NONE)
     {
         const ov_callbacks streamIO = {
             read, seek, NULL, tell
@@ -629,9 +636,9 @@ struct flacStream : public alureStream {
     virtual bool IsValid()
     { return flacFile != NULL; }
 
-    virtual bool GetFormat(ALenum *format, ALuint *frequency, ALuint *blockalign)
+    virtual bool GetFormat(ALenum *fmt, ALuint *frequency, ALuint *blockalign)
     {
-        *format = this->format;
+        *fmt = format;
         *frequency = samplerate;
         *blockalign = blockAlign;
         return true;
@@ -899,15 +906,14 @@ struct mp3Stream : public alureStream {
     mpg123_handle *mp3File;
     long samplerate;
     int channels;
+    ALenum format;
 
     virtual bool IsValid()
     { return mp3File != NULL; }
 
-    virtual bool GetFormat(ALenum *format, ALuint *frequency, ALuint *blockalign)
+    virtual bool GetFormat(ALenum *fmt, ALuint *frequency, ALuint *blockalign)
     {
-        ALenum fmt = alureGetSampleFormat(channels, 16, 0);
-
-        *format = fmt;
+        *fmt = format;
         *frequency = samplerate;
         *blockalign = channels*2;
         return true;
@@ -990,7 +996,7 @@ struct mp3Stream : public alureStream {
     }
 
     mp3Stream(std::istream *_fstream)
-      : alureStream(_fstream), mp3File(NULL)
+      : alureStream(_fstream), mp3File(NULL), format(AL_NONE)
     {
         mp3File = mpg123_new(NULL, NULL);
         if(mpg123_open_feed(mp3File) == MPG123_OK)
@@ -1010,6 +1016,7 @@ struct mp3Stream : public alureStream {
             if(ret == MPG123_NEW_FORMAT &&
                mpg123_getformat(mp3File, &samplerate, &channels, &enc) == MPG123_OK)
             {
+                format = alureGetSampleFormat(channels, 16, 0);
                 if(mpg123_format_none(mp3File) == MPG123_OK &&
                    mpg123_format(mp3File, samplerate, channels, MPG123_ENC_SIGNED_16) == MPG123_OK)
                 {
