@@ -1117,9 +1117,7 @@ struct dumbStream : public alureStream {
         }
 
         // Else, no loop point. Restart from scratch.
-        DUH_SIGRENDERER *newrenderer;
-        newrenderer = (lastOrder ? dumb_it_start_at_order(duh, 2, lastOrder) :
-                                   duh_start_sigrenderer(duh, 0, 2, 0));
+        DUH_SIGRENDERER *newrenderer = dumb_it_start_at_order(duh, 2, lastOrder);
         if(!newrenderer)
         {
             SetError("Could start renderer");
@@ -1171,7 +1169,7 @@ struct dumbStream : public alureStream {
                 duh = funcs[i](dumbFile);
                 if(duh)
                 {
-                    renderer = duh_start_sigrenderer(duh, 0, 2, 0);
+                    renderer = dumb_it_start_at_order(duh, 2, lastOrder);
                     if(renderer)
                     {
                         dumb_it_set_loop_callback(duh_get_it_sigrenderer(renderer), loop_cb, this);
