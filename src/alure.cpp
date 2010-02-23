@@ -40,6 +40,66 @@ std::map<std::string,void*> FunctionList;
 CRITICAL_SECTION cs_StreamPlay;
 alureStream::ListType alureStream::StreamList;
 
+void *vorbisfile_handle = NULL;
+void *flac_handle = NULL;
+void *dumb_handle = NULL;
+void *mp123_handle = NULL;
+void *sndfile_handle = NULL;
+
+#define MAKE_FUNC(x) typeof(x)* p##x
+#ifdef HAS_VORBISFILE
+MAKE_FUNC(ov_clear);
+MAKE_FUNC(ov_info);
+MAKE_FUNC(ov_open_callbacks);
+MAKE_FUNC(ov_pcm_seek);
+MAKE_FUNC(ov_read);
+#endif
+#ifdef HAS_FLAC
+MAKE_FUNC(FLAC__stream_decoder_get_state);
+MAKE_FUNC(FLAC__stream_decoder_finish);
+MAKE_FUNC(FLAC__stream_decoder_new);
+MAKE_FUNC(FLAC__stream_decoder_seek_absolute);
+MAKE_FUNC(FLAC__stream_decoder_delete);
+MAKE_FUNC(FLAC__stream_decoder_process_single);
+MAKE_FUNC(FLAC__stream_decoder_init_stream);
+#endif
+#ifdef HAS_DUMB
+MAKE_FUNC(dumb_it_start_at_order);
+MAKE_FUNC(dumb_silence);
+MAKE_FUNC(dumbfile_close);
+MAKE_FUNC(duh_sigrenderer_generate_samples);
+MAKE_FUNC(dumb_it_set_loop_callback);
+MAKE_FUNC(dumb_read_mod_quick);
+MAKE_FUNC(duh_get_it_sigrenderer);
+MAKE_FUNC(dumb_read_s3m_quick);
+MAKE_FUNC(dumbfile_open_ex);
+MAKE_FUNC(dumb_read_xm_quick);
+MAKE_FUNC(dumb_read_it_quick);
+MAKE_FUNC(duh_end_sigrenderer);
+MAKE_FUNC(dumb_it_sr_get_speed);
+MAKE_FUNC(dumb_it_sr_set_speed);
+MAKE_FUNC(unload_duh);
+#endif
+#ifdef HAS_MPG123
+MAKE_FUNC(mpg123_read);
+MAKE_FUNC(mpg123_init);
+MAKE_FUNC(mpg123_open_feed);
+MAKE_FUNC(mpg123_new);
+MAKE_FUNC(mpg123_delete);
+MAKE_FUNC(mpg123_feed);
+MAKE_FUNC(mpg123_exit);
+MAKE_FUNC(mpg123_getformat);
+MAKE_FUNC(mpg123_format_none);
+MAKE_FUNC(mpg123_decode);
+MAKE_FUNC(mpg123_format);
+#endif
+#ifdef HAS_SNDFILE
+MAKE_FUNC(sf_close);
+MAKE_FUNC(sf_open_virtual);
+MAKE_FUNC(sf_readf_short);
+MAKE_FUNC(sf_seek);
+#endif
+#undef MAKE_FUNC
 
 #ifdef HAVE_GCC_CONSTRUCTOR
 static void init_alure(void) __attribute__((constructor));
@@ -61,25 +121,215 @@ static struct MyConstructorClass {
 } MyConstructor;
 #endif
 
+#ifndef _WIN32
+
+#ifdef DYNLOAD
+static inline void *LoadLibraryA(const char *libname)
+{
+    void *hdl = dlopen(libname, RTLD_NOW);
+    const char *err;
+    if((err=dlerror()) != NULL)
+    {
+        fprintf(stderr, "Error loading %s: %s\n", libname, err);
+        return NULL;
+    }
+    return hdl;
+}
+static inline void *GetProcAddress(void *hdl, const char *funcname)
+{
+    void *fn = dlsym(hdl, funcname);
+    const char *err;
+    if((err=dlerror()) != NULL)
+    {
+        fprintf(stderr, "Error loading %s: %s\n", funcname, err);
+        return NULL;
+    }
+    return fn;
+}
+static inline void FreeLibrary(void *hdl)
+{
+    dlclose(hdl);
+}
+#else // DYNLOAD
+static inline void *LoadLibraryA(const char*)
+{ return (void*)0xDEADBEEF; }
+static inline void FreeLibrary(void*)
+{ }
+#define LOAD_FUNC(h, x) p##x = x
+#endif
+
+#else // _WIN32
+
+#define GetProcAddress(x,y) GetProcAddress((HINSTANCE)(x),(y))
+#define FreeLibrary(x) FreeLibrary((HINSTANCE)(x))
+#ifndef DYNLOAD
+#define LOAD_FUNC(h, x) p##x = x
+#endif
+
+#endif
+
 static void init_alure(void)
 {
     InitializeCriticalSection(&cs_StreamPlay);
 
-#ifdef HAS_MPG123
-    mpg123_init();
+#ifndef LOAD_FUNC
+#define LOAD_FUNC(h, x) p##x = (typeof(p##x))GetProcAddress(h##_handle, #x); \
+if(!p##x)                                                                    \
+{                                                                            \
+    FreeLibrary(h##_handle);                                                 \
+    h##_handle = NULL;                                                       \
+    break;                                                                   \
+}
 #endif
+
+#ifdef _WIN32
+#define VORBISFILE_LIB "vorbisfile.dll"
+#define FLAC_LIB "libFLAC.dll"
+#define DUMB_LIB "libdumb.dll"
+#define MPG123_LIB "libmpg123.dll"
+#define SNDFILE_LIB "libsndfile-1.dll"
+#elif defined(__APPLE__)
+#define VORBISFILE_LIB "libvorbisfile.3.dylib"
+#define FLAC_LIB "libFLAC.8.dylib"
+#define DUMB_LIB "libdumb.dylib"
+#define MPG123_LIB "libmpg123.0.dylib"
+#define SNDFILE_LIB "libsndfile.1.dylib"
+#else
+#define VORBISFILE_LIB "libvorbisfile.so.3"
+#define FLAC_LIB "libFLAC.so.8"
+#define DUMB_LIB "libdumb.so"
+#define MPG123_LIB "libmpg123.so.0"
+#define SNDFILE_LIB "libsndfile.so.1"
+#endif
+
+#ifdef HAS_VORBISFILE
+    vorbisfile_handle = LoadLibraryA(VORBISFILE_LIB);
+    while(vorbisfile_handle)
+    {
+        LOAD_FUNC(vorbisfile, ov_clear);
+        LOAD_FUNC(vorbisfile, ov_info);
+        LOAD_FUNC(vorbisfile, ov_open_callbacks);
+        LOAD_FUNC(vorbisfile, ov_pcm_seek);
+        LOAD_FUNC(vorbisfile, ov_read);
+        break;
+    }
+#endif
+
+#ifdef HAS_FLAC
+    flac_handle = LoadLibraryA(FLAC_LIB);
+    while(flac_handle)
+    {
+        LOAD_FUNC(flac, FLAC__stream_decoder_get_state);
+        LOAD_FUNC(flac, FLAC__stream_decoder_finish);
+        LOAD_FUNC(flac, FLAC__stream_decoder_new);
+        LOAD_FUNC(flac, FLAC__stream_decoder_seek_absolute);
+        LOAD_FUNC(flac, FLAC__stream_decoder_delete);
+        LOAD_FUNC(flac, FLAC__stream_decoder_process_single);
+        LOAD_FUNC(flac, FLAC__stream_decoder_init_stream);
+        break;
+    }
+#endif
+
+#ifdef HAS_DUMB
+    dumb_handle = LoadLibraryA(DUMB_LIB);
+    while(dumb_handle)
+    {
+        LOAD_FUNC(dumb, dumb_it_start_at_order);
+        LOAD_FUNC(dumb, dumb_silence);
+        LOAD_FUNC(dumb, dumbfile_close);
+        LOAD_FUNC(dumb, duh_sigrenderer_generate_samples);
+        LOAD_FUNC(dumb, dumb_it_set_loop_callback);
+        LOAD_FUNC(dumb, dumb_read_mod_quick);
+        LOAD_FUNC(dumb, duh_get_it_sigrenderer);
+        LOAD_FUNC(dumb, dumb_read_s3m_quick);
+        LOAD_FUNC(dumb, dumbfile_open_ex);
+        LOAD_FUNC(dumb, dumb_read_xm_quick);
+        LOAD_FUNC(dumb, dumb_read_it_quick);
+        LOAD_FUNC(dumb, duh_end_sigrenderer);
+        LOAD_FUNC(dumb, dumb_it_sr_get_speed);
+        LOAD_FUNC(dumb, dumb_it_sr_set_speed);
+        LOAD_FUNC(dumb, unload_duh);
+        break;
+    }
+#endif
+
+#ifdef HAS_MPG123
+    mp123_handle = LoadLibraryA(MPG123_LIB);
+    while(mp123_handle)
+    {
+        LOAD_FUNC(mp123, mpg123_read);
+        LOAD_FUNC(mp123, mpg123_init);
+        LOAD_FUNC(mp123, mpg123_open_feed);
+        LOAD_FUNC(mp123, mpg123_new);
+        LOAD_FUNC(mp123, mpg123_delete);
+        LOAD_FUNC(mp123, mpg123_feed);
+        LOAD_FUNC(mp123, mpg123_exit);
+        LOAD_FUNC(mp123, mpg123_getformat);
+        LOAD_FUNC(mp123, mpg123_format_none);
+        LOAD_FUNC(mp123, mpg123_decode);
+        LOAD_FUNC(mp123, mpg123_format);
+        pmpg123_init();
+        break;
+    }
+#endif
+
+#ifdef HAS_SNDFILE
+    sndfile_handle = LoadLibraryA(SNDFILE_LIB);
+    while(sndfile_handle)
+    {
+        LOAD_FUNC(sndfile, sf_close);
+        LOAD_FUNC(sndfile, sf_open_virtual);
+        LOAD_FUNC(sndfile, sf_readf_short);
+        LOAD_FUNC(sndfile, sf_seek);
+        break;
+    }
+#endif
+
 #ifdef HAS_GSTREAMER
     gst_init(NULL, NULL);
 #endif
+
+#undef VORBISFILE_LIB
+#undef FLAC_LIB
+#undef DUMB_LIB
+#undef MPG123_LIB
+#undef SNDFILE_LIB
+#undef LOAD_FUNC
 }
 
 static void deinit_alure(void)
 {
-#ifdef HAS_MPG123
-    mpg123_exit();
-#endif
 #ifdef HAS_GSTREAMER
     gst_deinit();
+#endif
+
+#ifdef HAS_VORBISFILE
+    if(vorbisfile_handle)
+        FreeLibrary(vorbisfile_handle);
+    vorbisfile_handle = NULL;
+#endif
+#ifdef HAS_FLAC
+    if(flac_handle)
+        FreeLibrary(flac_handle);
+    flac_handle = NULL;
+#endif
+#ifdef HAS_DUMB
+    if(dumb_handle)
+        FreeLibrary(dumb_handle);
+    dumb_handle = NULL;
+#endif
+#ifdef HAS_MPG123
+    if(mp123_handle)
+    {
+        pmpg123_exit();
+        FreeLibrary(mp123_handle);
+    }
+    mp123_handle = NULL;
+#endif
+#ifdef HAS_SNDFILE
+    if(sndfile_handle)
+        FreeLibrary(sndfile_handle);
+    sndfile_handle = NULL;
 #endif
 
     DeleteCriticalSection(&cs_StreamPlay);

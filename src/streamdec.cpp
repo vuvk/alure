@@ -417,12 +417,12 @@ struct sndStream : public alureStream {
     virtual ALuint GetData(ALubyte *data, ALuint bytes)
     {
         const ALuint frameSize = 2*sndInfo.channels;
-        return sf_readf_short(sndFile, (short*)data, bytes/frameSize) * frameSize;
+        return psf_readf_short(sndFile, (short*)data, bytes/frameSize) * frameSize;
     }
 
     virtual bool Rewind()
     {
-        if(sf_seek(sndFile, 0, SEEK_SET) != -1)
+        if(psf_seek(sndFile, 0, SEEK_SET) != -1)
             return true;
 
         SetError("Seek failed");
@@ -434,17 +434,19 @@ struct sndStream : public alureStream {
     {
         memset(&sndInfo, 0, sizeof(sndInfo));
 
+        if(!sndfile_handle) return;
+
         static SF_VIRTUAL_IO streamIO = {
             get_filelen, seek,
             read, write, tell
         };
-        sndFile = sf_open_virtual(&streamIO, SFM_READ, &sndInfo, this);
+        sndFile = psf_open_virtual(&streamIO, SFM_READ, &sndInfo, this);
     }
 
     virtual ~sndStream()
     {
         if(sndFile)
-            sf_close(sndFile);
+            psf_close(sndFile);
         sndFile = NULL;
     }
 
@@ -518,7 +520,7 @@ struct oggStream : public alureStream {
 
     virtual bool GetFormat(ALenum *fmt, ALuint *frequency, ALuint *blockalign)
     {
-        vorbis_info *info = ov_info(oggFile, -1);
+        vorbis_info *info = pov_info(oggFile, -1);
         if(!info) return false;
 
         if(format == AL_NONE)
@@ -535,7 +537,7 @@ struct oggStream : public alureStream {
         int got = 0;
         while(bytes > 0)
         {
-            int res = ov_read(oggFile, (char*)&data[got], bytes, BigEndian?1:0, 2, 1, &oggBitstream);
+            int res = pov_read(oggFile, (char*)&data[got], bytes, BigEndian?1:0, 2, 1, &oggBitstream);
             if(res <= 0)
                 break;
             bytes -= res;
@@ -546,7 +548,7 @@ struct oggStream : public alureStream {
 
     virtual bool Rewind()
     {
-        if(ov_pcm_seek(oggFile, 0) == 0)
+        if(pov_pcm_seek(oggFile, 0) == 0)
             return true;
 
         SetError("Seek failed");
@@ -556,12 +558,14 @@ struct oggStream : public alureStream {
     oggStream(std::istream *_fstream)
       : alureStream(_fstream), oggFile(NULL), oggBitstream(0), format(AL_NONE)
     {
+        if(!vorbisfile_handle) return;
+
         const ov_callbacks streamIO = {
             read, seek, NULL, tell
         };
 
         oggFile = new OggVorbis_File;
-        if(ov_open_callbacks(this, oggFile, NULL, 0, streamIO) != 0)
+        if(pov_open_callbacks(this, oggFile, NULL, 0, streamIO) != 0)
         {
             delete oggFile;
             oggFile = NULL;
@@ -572,7 +576,7 @@ struct oggStream : public alureStream {
     {
         if(oggFile)
         {
-            ov_clear(oggFile);
+            pov_clear(oggFile);
             delete oggFile;
         }
     }
@@ -660,8 +664,8 @@ struct flacStream : public alureStream {
 
         while(outTotal < bytes)
         {
-            if(FLAC__stream_decoder_process_single(flacFile) == false ||
-               FLAC__stream_decoder_get_state(flacFile) == FLAC__STREAM_DECODER_END_OF_STREAM)
+            if(pFLAC__stream_decoder_process_single(flacFile) == false ||
+               pFLAC__stream_decoder_get_state(flacFile) == FLAC__STREAM_DECODER_END_OF_STREAM)
                 break;
         }
 
@@ -670,7 +674,7 @@ struct flacStream : public alureStream {
 
     virtual bool Rewind()
     {
-        if(FLAC__stream_decoder_seek_absolute(flacFile, 0) != false)
+        if(pFLAC__stream_decoder_seek_absolute(flacFile, 0) != false)
         {
             initialData.clear();
             return true;
@@ -684,10 +688,12 @@ struct flacStream : public alureStream {
       : alureStream(_fstream), flacFile(NULL), format(AL_NONE), samplerate(0),
         blockAlign(0), useFloat(AL_FALSE)
     {
-        flacFile = FLAC__stream_decoder_new();
+        if(!flac_handle) return;
+
+        flacFile = pFLAC__stream_decoder_new();
         if(flacFile)
         {
-            if(FLAC__stream_decoder_init_stream(flacFile, ReadCallback, SeekCallback, TellCallback, LengthCallback, EofCallback, WriteCallback, MetadataCallback, ErrorCallback, this) == FLAC__STREAM_DECODER_INIT_STATUS_OK)
+            if(pFLAC__stream_decoder_init_stream(flacFile, ReadCallback, SeekCallback, TellCallback, LengthCallback, EofCallback, WriteCallback, MetadataCallback, ErrorCallback, this) == FLAC__STREAM_DECODER_INIT_STATUS_OK)
             {
                 if(InitFlac())
                 {
@@ -695,9 +701,9 @@ struct flacStream : public alureStream {
                     return;
                 }
 
-                FLAC__stream_decoder_finish(flacFile);
+                pFLAC__stream_decoder_finish(flacFile);
             }
-            FLAC__stream_decoder_delete(flacFile);
+            pFLAC__stream_decoder_delete(flacFile);
             flacFile = NULL;
         }
     }
@@ -706,8 +712,8 @@ struct flacStream : public alureStream {
     {
         if(flacFile)
         {
-            FLAC__stream_decoder_finish(flacFile);
-            FLAC__stream_decoder_delete(flacFile);
+            pFLAC__stream_decoder_finish(flacFile);
+            pFLAC__stream_decoder_delete(flacFile);
             flacFile = NULL;
         }
     }
@@ -723,8 +729,8 @@ private:
         outTotal = 0;
         while(initialData.size() == 0)
         {
-            if(FLAC__stream_decoder_process_single(flacFile) == false ||
-               FLAC__stream_decoder_get_state(flacFile) == FLAC__STREAM_DECODER_END_OF_STREAM)
+            if(pFLAC__stream_decoder_process_single(flacFile) == false ||
+               pFLAC__stream_decoder_get_state(flacFile) == FLAC__STREAM_DECODER_END_OF_STREAM)
                 break;
         }
 
@@ -925,7 +931,7 @@ struct mp3Stream : public alureStream {
         while(bytes > 0)
         {
             size_t got = 0;
-            int ret = mpg123_read(mp3File, data, bytes, &got);
+            int ret = pmpg123_read(mp3File, data, bytes, &got);
 
             bytes -= got;
             data += got;
@@ -935,7 +941,7 @@ struct mp3Stream : public alureStream {
             {
                 long newrate;
                 int newchans, enc;
-                mpg123_getformat(mp3File, &newrate, &newchans, &enc);
+                pmpg123_getformat(mp3File, &newrate, &newchans, &enc);
                 continue;
             }
             if(ret == MPG123_NEED_MORE)
@@ -943,7 +949,7 @@ struct mp3Stream : public alureStream {
                 unsigned char data[4096];
                 fstream->read((char*)data, sizeof(data));
                 std::streamsize insize = fstream->gcount();
-                if(insize > 0 && mpg123_feed(mp3File, data, insize) == MPG123_OK)
+                if(insize > 0 && pmpg123_feed(mp3File, data, insize) == MPG123_OK)
                     continue;
             }
             if(got == 0)
@@ -958,8 +964,8 @@ struct mp3Stream : public alureStream {
         std::istream::pos_type oldpos = fstream->tellg();
         fstream->seekg(0);
 
-        mpg123_handle *newFile = mpg123_new(NULL, NULL);
-        if(mpg123_open_feed(newFile) == MPG123_OK)
+        mpg123_handle *newFile = pmpg123_new(NULL, NULL);
+        if(pmpg123_open_feed(newFile) == MPG123_OK)
         {
             unsigned char data[4096];
             long newrate;
@@ -972,22 +978,22 @@ struct mp3Stream : public alureStream {
                 amt = fstream->gcount();
                 if(amt == 0)  break;
                 total += amt;
-                ret = mpg123_decode(newFile, data, amt, NULL, 0, NULL);
+                ret = pmpg123_decode(newFile, data, amt, NULL, 0, NULL);
             } while(ret == MPG123_NEED_MORE && total < 64*1024);
 
             if(ret == MPG123_NEW_FORMAT &&
-               mpg123_getformat(newFile, &newrate, &newchans, &enc) == MPG123_OK)
+               pmpg123_getformat(newFile, &newrate, &newchans, &enc) == MPG123_OK)
             {
-                if(mpg123_format_none(newFile) == MPG123_OK &&
-                   mpg123_format(newFile, samplerate, channels, MPG123_ENC_SIGNED_16) == MPG123_OK)
+                if(pmpg123_format_none(newFile) == MPG123_OK &&
+                   pmpg123_format(newFile, samplerate, channels, MPG123_ENC_SIGNED_16) == MPG123_OK)
                 {
                     // All OK
-                    mpg123_delete(mp3File);
+                    pmpg123_delete(mp3File);
                     mp3File = newFile;
                     return true;
                 }
             }
-            mpg123_delete(newFile);
+            pmpg123_delete(newFile);
         }
 
         fstream->seekg(oldpos);
@@ -998,8 +1004,10 @@ struct mp3Stream : public alureStream {
     mp3Stream(std::istream *_fstream)
       : alureStream(_fstream), mp3File(NULL), format(AL_NONE)
     {
-        mp3File = mpg123_new(NULL, NULL);
-        if(mpg123_open_feed(mp3File) == MPG123_OK)
+        if(!mp123_handle) return;
+
+        mp3File = pmpg123_new(NULL, NULL);
+        if(pmpg123_open_feed(mp3File) == MPG123_OK)
         {
             unsigned char data[4096];
             int ret, enc;
@@ -1010,29 +1018,29 @@ struct mp3Stream : public alureStream {
                 amt = fstream->gcount();
                 if(amt == 0)  break;
                 total += amt;
-                ret = mpg123_decode(mp3File, data, amt, NULL, 0, NULL);
+                ret = pmpg123_decode(mp3File, data, amt, NULL, 0, NULL);
             } while(ret == MPG123_NEED_MORE && total < 64*1024);
 
             if(ret == MPG123_NEW_FORMAT &&
-               mpg123_getformat(mp3File, &samplerate, &channels, &enc) == MPG123_OK)
+               pmpg123_getformat(mp3File, &samplerate, &channels, &enc) == MPG123_OK)
             {
                 format = alureGetSampleFormat(channels, 16, 0);
-                if(mpg123_format_none(mp3File) == MPG123_OK &&
-                   mpg123_format(mp3File, samplerate, channels, MPG123_ENC_SIGNED_16) == MPG123_OK)
+                if(pmpg123_format_none(mp3File) == MPG123_OK &&
+                   pmpg123_format(mp3File, samplerate, channels, MPG123_ENC_SIGNED_16) == MPG123_OK)
                 {
                     // All OK
                     return;
                 }
             }
         }
-        mpg123_delete(mp3File);
+        pmpg123_delete(mp3File);
         mp3File = NULL;
     }
 
     virtual ~mp3Stream()
     {
         if(mp3File)
-            mpg123_delete(mp3File);
+            pmpg123_delete(mp3File);
         mp3File = NULL;
     }
 };
@@ -1076,7 +1084,7 @@ struct dumbStream : public alureStream {
     {
         ALuint ret = 0;
 
-        if(dumb_it_sr_get_speed(duh_get_it_sigrenderer(renderer)) == 0)
+        if(pdumb_it_sr_get_speed(pduh_get_it_sigrenderer(renderer)) == 0)
             return 0;
 
         ALuint sample_count = bytes / ((format==AL_FORMAT_STEREO16) ?
@@ -1088,8 +1096,8 @@ struct dumbStream : public alureStream {
             &sampleBuf[sample_count/2]
         };
 
-        dumb_silence(samples[0], sample_count);
-        ret = duh_sigrenderer_generate_samples(renderer, 1.0f, 1.0f, sample_count/2, samples);
+        pdumb_silence(samples[0], sample_count);
+        ret = pduh_sigrenderer_generate_samples(renderer, 1.0f, 1.0f, sample_count/2, samples);
         ret *= 2;
         if(format == AL_FORMAT_STEREO16)
         {
@@ -1114,32 +1122,32 @@ struct dumbStream : public alureStream {
         {
             // If a previous speed was recorded, the stream tried to loop. So
             // let it loop on a rewind request.
-            dumb_it_sr_set_speed(duh_get_it_sigrenderer(renderer), prevSpeed);
+            pdumb_it_sr_set_speed(pduh_get_it_sigrenderer(renderer), prevSpeed);
             prevSpeed = 0;
             return true;
         }
 
         // Else, no loop point. Restart from scratch.
-        DUH_SIGRENDERER *newrenderer = dumb_it_start_at_order(duh, 2, lastOrder);
+        DUH_SIGRENDERER *newrenderer = pdumb_it_start_at_order(duh, 2, lastOrder);
         if(!newrenderer)
         {
             SetError("Could start renderer");
             return false;
         }
-        duh_end_sigrenderer(renderer);
+        pduh_end_sigrenderer(renderer);
         renderer = newrenderer;
         return true;
     }
 
     virtual bool SetOrder(ALuint order)
     {
-        DUH_SIGRENDERER *newrenderer = dumb_it_start_at_order(duh, 2, order);
+        DUH_SIGRENDERER *newrenderer = pdumb_it_start_at_order(duh, 2, order);
         if(!newrenderer)
         {
             SetError("Could not set order");
             return false;
         }
-        duh_end_sigrenderer(renderer);
+        pduh_end_sigrenderer(renderer);
         renderer = newrenderer;
 
         lastOrder = order;
@@ -1150,11 +1158,13 @@ struct dumbStream : public alureStream {
       : alureStream(_fstream), dumbFile(NULL), duh(NULL), renderer(NULL),
         lastOrder(0), prevSpeed(0), format(AL_NONE)
     {
+        if(!dumb_handle) return;
+
         DUH* (*funcs[])(DUMBFILE*) = {
-            dumb_read_it_quick,
-            dumb_read_xm_quick,
-            dumb_read_s3m_quick,
-            dumb_read_mod_quick,
+            pdumb_read_it_quick,
+            pdumb_read_xm_quick,
+            pdumb_read_s3m_quick,
+            pdumb_read_mod_quick,
             NULL
         };
 
@@ -1166,24 +1176,24 @@ struct dumbStream : public alureStream {
 
         for(size_t i = 0;funcs[i];i++)
         {
-            dumbFile = dumbfile_open_ex(this, &vfs);
+            dumbFile = pdumbfile_open_ex(this, &vfs);
             if(dumbFile)
             {
                 duh = funcs[i](dumbFile);
                 if(duh)
                 {
-                    renderer = dumb_it_start_at_order(duh, 2, lastOrder);
+                    renderer = pdumb_it_start_at_order(duh, 2, lastOrder);
                     if(renderer)
                     {
-                        dumb_it_set_loop_callback(duh_get_it_sigrenderer(renderer), loop_cb, this);
+                        pdumb_it_set_loop_callback(pduh_get_it_sigrenderer(renderer), loop_cb, this);
                         break;
                     }
 
-                    unload_duh(duh);
+                    punload_duh(duh);
                     duh = NULL;
                 }
 
-                dumbfile_close(dumbFile);
+                pdumbfile_close(dumbFile);
                 dumbFile = NULL;
             }
             fstream->clear();
@@ -1193,14 +1203,16 @@ struct dumbStream : public alureStream {
 
     virtual ~dumbStream()
     {
-        duh_end_sigrenderer(renderer);
+        if(renderer)
+            pduh_end_sigrenderer(renderer);
         renderer = NULL;
 
-        unload_duh(duh);
+        if(duh)
+            punload_duh(duh);
         duh = NULL;
 
         if(dumbFile)
-            dumbfile_close(dumbFile);
+            pdumbfile_close(dumbFile);
         dumbFile = NULL;
     }
 
@@ -1240,8 +1252,8 @@ private:
     static int loop_cb(void *user_data)
     {
         dumbStream *self = static_cast<dumbStream*>(user_data);
-        self->prevSpeed = dumb_it_sr_get_speed(duh_get_it_sigrenderer(self->renderer));
-        dumb_it_sr_set_speed(duh_get_it_sigrenderer(self->renderer), 0);
+        self->prevSpeed = pdumb_it_sr_get_speed(pduh_get_it_sigrenderer(self->renderer));
+        pdumb_it_sr_set_speed(pduh_get_it_sigrenderer(self->renderer), 0);
         return 0;
     }
 };
