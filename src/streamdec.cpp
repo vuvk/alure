@@ -1083,22 +1083,25 @@ struct dumbStream : public alureStream {
                                        sizeof(ALshort) : sizeof(ALfloat));
 
         sampleBuf.resize(sample_count);
-        sample_t *samples = &sampleBuf[0];
+        sample_t *samples[2] = {
+            &sampleBuf[0],
+            &sampleBuf[sample_count/2]
+        };
 
-        dumb_silence(samples, sample_count);
-        ret = duh_sigrenderer_generate_samples(renderer, 1.0f, 1.0f, sample_count/2, &samples);
+        dumb_silence(samples[0], sample_count);
+        ret = duh_sigrenderer_generate_samples(renderer, 1.0f, 1.0f, sample_count/2, samples);
         ret *= 2;
         if(format == AL_FORMAT_STEREO16)
         {
             for(ALuint i = 0;i < ret;i++)
-                ((ALshort*)data)[i] = clamp(samples[i]>>8, -32768, 32767);
+                ((ALshort*)data)[i] = clamp(samples[0][i]>>8, -32768, 32767);
         }
         else
         {
             for(ALuint i = 0;i < ret;i++)
-                ((ALfloat*)data)[i] = ((samples[i]>=0) ?
-                                       samples[i]/(float)0x7FFFFF :
-                                       samples[i]/(float)0x800000);
+                ((ALfloat*)data)[i] = ((samples[0][i]>=0) ?
+                                       samples[0][i]/(float)0x7FFFFF :
+                                       samples[0][i]/(float)0x800000);
         }
         ret *= ((format==AL_FORMAT_STEREO16) ? sizeof(ALshort) : sizeof(ALfloat));
 
