@@ -1218,7 +1218,7 @@ private:
         std::istream *stream = static_cast<dumbStream*>(user_data)->fstream;
         stream->clear();
 
-        stream->read(static_cast<char*>(ptr), size);
+        stream->read(ptr, size);
         return stream->gcount();
     }
 
