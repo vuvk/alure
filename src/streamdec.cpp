@@ -250,7 +250,7 @@ struct wavStream : public alureStream {
                 /* bits per sample */
                 sampleSize = read_le16(fstream) / 8;
 
-                format = alureGetSampleFormat(channels, sampleSize*8, 0);
+                format = GetSampleFormat(channels, sampleSize*8, false);
 
                 length -= 16;
             }
@@ -373,7 +373,7 @@ struct aiffStream : public alureStream {
                 /* block alignment */
                 blockAlign = channels * sampleSize;
 
-                format = alureGetSampleFormat(channels, sampleSize*8, 0);
+                format = GetSampleFormat(channels, sampleSize*8, false);
 
                 length -= 18;
             }
@@ -407,7 +407,7 @@ struct sndStream : public alureStream {
     virtual bool GetFormat(ALenum *fmt, ALuint *frequency, ALuint *blockalign)
     {
         if(format == AL_NONE)
-            format = alureGetSampleFormat(sndInfo.channels, 16, 0);
+            format = GetSampleFormat(sndInfo.channels, 16, false);
         *fmt = format;
         *frequency = sndInfo.samplerate;
         *blockalign = sndInfo.channels*2;
@@ -524,7 +524,7 @@ struct oggStream : public alureStream {
         if(!info) return false;
 
         if(format == AL_NONE)
-            format = alureGetSampleFormat(info->channels, 16, 0);
+            format = GetSampleFormat(info->channels, 16, false);
 
         *fmt = format;
         *frequency = info->rate;
@@ -750,7 +750,7 @@ private:
             ALuint bps = frame->header.bits_per_sample;
             if(bps == 24 || bps == 32)
             {
-                self->format = alureGetSampleFormat(frame->header.channels, 0, 32);
+                self->format = GetSampleFormat(frame->header.channels, 32, true);
                 if(self->format != AL_NONE)
                 {
                     self->useFloat = AL_TRUE;
@@ -759,7 +759,7 @@ private:
                 else bps = 16;
             }
             if(self->format == AL_NONE)
-                self->format = alureGetSampleFormat(frame->header.channels, bps, 0);
+                self->format = GetSampleFormat(frame->header.channels, bps, false);
             self->blockAlign = frame->header.channels * bps/8;
             self->samplerate = frame->header.sample_rate;
         }
@@ -1024,7 +1024,7 @@ struct mp3Stream : public alureStream {
             if(ret == MPG123_NEW_FORMAT &&
                pmpg123_getformat(mp3File, &samplerate, &channels, &enc) == MPG123_OK)
             {
-                format = alureGetSampleFormat(channels, 16, 0);
+                format = GetSampleFormat(channels, 16, false);
                 if(pmpg123_format_none(mp3File) == MPG123_OK &&
                    pmpg123_format(mp3File, samplerate, channels, MPG123_ENC_SIGNED_16) == MPG123_OK)
                 {
@@ -1069,7 +1069,7 @@ struct dumbStream : public alureStream {
     {
         if(format == AL_NONE)
         {
-            format = alureGetSampleFormat(2, 0, 32);
+            format = GetSampleFormat(2, 32, true);
             if(format == AL_NONE)
                 format = AL_FORMAT_STEREO16;
         }
@@ -2148,9 +2148,9 @@ private:
 
             samplerate = rate;
             if(bits == 32)
-                format = alureGetSampleFormat(channels, 0, bits);
+                format = GetSampleFormat(channels, bits, true);
             else
-                format = alureGetSampleFormat(channels, bits, 0);
+                format = GetSampleFormat(channels, bits, false);
             blockAlign = channels * bits / 8;
         }
 

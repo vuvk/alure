@@ -384,6 +384,83 @@ ALuint DetectBlockAlignment(ALenum format)
     return 1;
 }
 
+ALenum GetSampleFormat(ALuint channels, ALuint bits, bool isFloat)
+{
+#define CHECK_FMT_RET(f) do {                                                 \
+    ALenum fmt = alGetEnumValue(#f);                                          \
+    if(alGetError() == AL_NO_ERROR && fmt != 0 && fmt != -1)                  \
+        return fmt;                                                           \
+} while(0)
+    if(!isFloat)
+    {
+        if(bits == 8)
+        {
+            if(channels == 1) CHECK_FMT_RET(AL_FORMAT_MONO8);
+            if(channels == 2) CHECK_FMT_RET(AL_FORMAT_STEREO8);
+            if(alIsExtensionPresent("AL_EXT_MCFORMATS"))
+            {
+                if(channels == 4) CHECK_FMT_RET(AL_FORMAT_QUAD8);
+                if(channels == 6) CHECK_FMT_RET(AL_FORMAT_51CHN8);
+                if(channels == 7) CHECK_FMT_RET(AL_FORMAT_61CHN8);
+                if(channels == 8) CHECK_FMT_RET(AL_FORMAT_71CHN8);
+            }
+            if(alIsExtensionPresent("AL_LOKI_quadriphonic"))
+            {
+                if(channels == 4) CHECK_FMT_RET(AL_FORMAT_QUAD8_LOKI);
+            }
+            SetError("Unsupported channel count\n");
+            return AL_NONE;
+        }
+        if(bits == 16)
+        {
+            if(channels == 1) CHECK_FMT_RET(AL_FORMAT_MONO16);
+            if(channels == 2) CHECK_FMT_RET(AL_FORMAT_STEREO16);
+            if(alIsExtensionPresent("AL_EXT_MCFORMATS"))
+            {
+                if(channels == 4) CHECK_FMT_RET(AL_FORMAT_QUAD16);
+                if(channels == 6) CHECK_FMT_RET(AL_FORMAT_51CHN16);
+                if(channels == 7) CHECK_FMT_RET(AL_FORMAT_61CHN16);
+                if(channels == 8) CHECK_FMT_RET(AL_FORMAT_71CHN16);
+            }
+            if(alIsExtensionPresent("AL_LOKI_quadriphonic"))
+            {
+                if(channels == 4) CHECK_FMT_RET(AL_FORMAT_QUAD16_LOKI);
+            }
+            SetError("Unsupported channel count\n");
+            return AL_NONE;
+        }
+    }
+    else
+    {
+        if(bits == 32)
+        {
+            if(alIsExtensionPresent("AL_EXT_FLOAT32"))
+            {
+                if(channels == 1) CHECK_FMT_RET(AL_FORMAT_MONO_FLOAT32);
+                if(channels == 2) CHECK_FMT_RET(AL_FORMAT_STEREO_FLOAT32);
+                if(alIsExtensionPresent("AL_EXT_MCFORMATS"))
+                {
+                    if(channels == 4) CHECK_FMT_RET(AL_FORMAT_QUAD32);
+                    if(channels == 6) CHECK_FMT_RET(AL_FORMAT_51CHN32);
+                    if(channels == 7) CHECK_FMT_RET(AL_FORMAT_61CHN32);
+                    if(channels == 8) CHECK_FMT_RET(AL_FORMAT_71CHN32);
+                }
+                SetError("Unsupported channel count\n");
+                return AL_NONE;
+            }
+        }
+    }
+#undef CHECK_FMT_RET
+
+    if(isFloat)
+    {
+        SetError("Unsupported float bit depth\n");
+        return AL_NONE;
+    }
+    SetError("Unsupported PCM bit depth\n");
+    return AL_NONE;
+}
+
 extern "C" {
 
 /* Function: alureGetVersion
@@ -588,73 +665,9 @@ ALURE_API ALenum ALURE_APIENTRY alureGetSampleFormat(ALuint channels, ALuint bit
         return AL_NONE;
     }
 
-#define CHECK_FMT_RET(f) do {                                                 \
-    ALenum fmt = alGetEnumValue(#f);                                          \
-    if(alGetError() == AL_NO_ERROR && fmt != 0 && fmt != -1)                  \
-        return fmt;                                                           \
-} while(0)
-    if(bits == 8)
-    {
-        if(channels == 1) CHECK_FMT_RET(AL_FORMAT_MONO8);
-        if(channels == 2) CHECK_FMT_RET(AL_FORMAT_STEREO8);
-        if(alIsExtensionPresent("AL_EXT_MCFORMATS"))
-        {
-            if(channels == 4) CHECK_FMT_RET(AL_FORMAT_QUAD8);
-            if(channels == 6) CHECK_FMT_RET(AL_FORMAT_51CHN8);
-            if(channels == 7) CHECK_FMT_RET(AL_FORMAT_61CHN8);
-            if(channels == 8) CHECK_FMT_RET(AL_FORMAT_71CHN8);
-        }
-        if(alIsExtensionPresent("AL_LOKI_quadriphonic"))
-        {
-            if(channels == 4) CHECK_FMT_RET(AL_FORMAT_QUAD8_LOKI);
-        }
-        SetError("Unsupported channel count\n");
-        return AL_NONE;
-    }
-    if(bits == 16)
-    {
-        if(channels == 1) CHECK_FMT_RET(AL_FORMAT_MONO16);
-        if(channels == 2) CHECK_FMT_RET(AL_FORMAT_STEREO16);
-        if(alIsExtensionPresent("AL_EXT_MCFORMATS"))
-        {
-            if(channels == 4) CHECK_FMT_RET(AL_FORMAT_QUAD16);
-            if(channels == 6) CHECK_FMT_RET(AL_FORMAT_51CHN16);
-            if(channels == 7) CHECK_FMT_RET(AL_FORMAT_61CHN16);
-            if(channels == 8) CHECK_FMT_RET(AL_FORMAT_71CHN16);
-        }
-        if(alIsExtensionPresent("AL_LOKI_quadriphonic"))
-        {
-            if(channels == 4) CHECK_FMT_RET(AL_FORMAT_QUAD16_LOKI);
-        }
-        SetError("Unsupported channel count\n");
-        return AL_NONE;
-    }
-    if(floatbits == 32)
-    {
-        if(alIsExtensionPresent("AL_EXT_FLOAT32"))
-        {
-            if(channels == 1) CHECK_FMT_RET(AL_FORMAT_MONO_FLOAT32);
-            if(channels == 2) CHECK_FMT_RET(AL_FORMAT_STEREO_FLOAT32);
-            if(alIsExtensionPresent("AL_EXT_MCFORMATS"))
-            {
-                if(channels == 4) CHECK_FMT_RET(AL_FORMAT_QUAD32);
-                if(channels == 6) CHECK_FMT_RET(AL_FORMAT_51CHN32);
-                if(channels == 7) CHECK_FMT_RET(AL_FORMAT_61CHN32);
-                if(channels == 8) CHECK_FMT_RET(AL_FORMAT_71CHN32);
-            }
-        }
-        SetError("Unsupported channel count\n");
-        return AL_NONE;
-    }
-#undef CHECK_FMT_RET
-
-    if(floatbits)
-    {
-        SetError("Unsupported float bit depth\n");
-        return AL_NONE;
-    }
-    SetError("Unsupported PCM bit depth\n");
-    return AL_NONE;
+    if(bits)
+        return GetSampleFormat(channels, bits, false);
+    return GetSampleFormat(channels, floatbits, true);
 }
 
 

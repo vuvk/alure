@@ -73,14 +73,22 @@ static alureStream *InitStream(alureStream *instream, ALsizei chunkLength, ALsiz
         return NULL;
     }
 
-    ALsizei filled = alureBufferDataFromStream(stream.get(), numBufs, bufs);
-    if(filled < 0)
+    ALsizei filled;
+    for(filled = 0;filled < numBufs;filled++)
     {
-        alDeleteBuffers(numBufs, bufs);
-        alGetError();
+        ALuint got = stream->GetData(stream->dataChunk, stream->chunkLen);
+        got -= got%blockAlign;
+        if(got == 0) break;
 
-        SetError("Buffering error");
-        return NULL;
+        alBufferData(bufs[filled], format, stream->dataChunk, got, freq);
+        if(alGetError() != AL_NO_ERROR)
+        {
+            alDeleteBuffers(numBufs, bufs);
+            alGetError();
+
+            SetError("Buffering error");
+            return NULL;
+        }
     }
 
     while(filled < numBufs)

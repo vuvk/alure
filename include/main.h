@@ -172,6 +172,7 @@ MAKE_FUNC(sf_seek);
 
 void SetError(const char *err);
 ALuint DetectBlockAlignment(ALenum format);
+ALenum GetSampleFormat(ALuint channels, ALuint bits, bool isFloat);
 
 struct UserCallbacks {
     void*     (*open_file)(const ALchar*);
