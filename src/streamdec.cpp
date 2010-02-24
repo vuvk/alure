@@ -1091,9 +1091,8 @@ struct dumbStream : public alureStream {
                                        sizeof(ALshort) : sizeof(ALfloat));
 
         sampleBuf.resize(sample_count);
-        sample_t *samples[2] = {
-            &sampleBuf[0],
-            &sampleBuf[sample_count/2]
+        sample_t *samples[] = {
+            &sampleBuf[0]
         };
 
         pdumb_silence(samples[0], sample_count);
