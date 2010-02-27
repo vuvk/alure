@@ -376,8 +376,8 @@ ALuint DetectBlockAlignment(ALenum format)
         CHECK_RET(AL_FORMAT_71CHN16, sizeof(ALshort)*8);
         CHECK_RET(AL_FORMAT_71CHN32, sizeof(ALfloat)*8);
 
-        CHECK_RET(AL_FORMAT_MONO_IMA4, 65);
-        CHECK_RET(AL_FORMAT_STEREO_IMA4, 65*2);
+        CHECK_RET(AL_FORMAT_MONO_IMA4, 36);
+        CHECK_RET(AL_FORMAT_STEREO_IMA4, 36*2);
 #undef CHECK_RET
     }
     fprintf(stderr, "Alure lib: Unhandled format: %#x\n", format);
