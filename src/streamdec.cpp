@@ -1160,10 +1160,10 @@ struct dumbStream : public alureStream {
         if(!dumb_handle) return;
 
         DUH* (*funcs[])(DUMBFILE*) = {
-            pdumb_read_it_quick,
-            pdumb_read_xm_quick,
-            pdumb_read_s3m_quick,
-            pdumb_read_mod_quick,
+            pdumb_read_it,
+            pdumb_read_xm,
+            pdumb_read_s3m,
+            pdumb_read_mod,
             NULL
         };
 

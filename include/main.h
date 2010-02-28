@@ -133,21 +133,21 @@ MAKE_FUNC(FLAC__stream_decoder_process_single);
 MAKE_FUNC(FLAC__stream_decoder_init_stream);
 #endif
 #ifdef HAS_DUMB
-MAKE_FUNC(dumb_it_start_at_order);
-MAKE_FUNC(dumb_silence);
-MAKE_FUNC(dumbfile_close);
-MAKE_FUNC(duh_sigrenderer_generate_samples);
-MAKE_FUNC(dumb_it_set_loop_callback);
-MAKE_FUNC(dumb_read_mod_quick);
-MAKE_FUNC(duh_get_it_sigrenderer);
-MAKE_FUNC(dumb_read_s3m_quick);
 MAKE_FUNC(dumbfile_open_ex);
-MAKE_FUNC(dumb_read_xm_quick);
-MAKE_FUNC(dumb_read_it_quick);
+MAKE_FUNC(dumbfile_close);
+MAKE_FUNC(dumb_read_mod);
+MAKE_FUNC(dumb_read_s3m);
+MAKE_FUNC(dumb_read_xm);
+MAKE_FUNC(dumb_read_it);
+MAKE_FUNC(dumb_silence);
+MAKE_FUNC(duh_sigrenderer_generate_samples);
+MAKE_FUNC(duh_get_it_sigrenderer);
 MAKE_FUNC(duh_end_sigrenderer);
+MAKE_FUNC(unload_duh);
+MAKE_FUNC(dumb_it_start_at_order);
+MAKE_FUNC(dumb_it_set_loop_callback);
 MAKE_FUNC(dumb_it_sr_get_speed);
 MAKE_FUNC(dumb_it_sr_set_speed);
-MAKE_FUNC(unload_duh);
 #endif
 #ifdef HAS_MPG123
 MAKE_FUNC(mpg123_read);
