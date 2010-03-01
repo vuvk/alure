@@ -511,24 +511,21 @@ struct sndStream : public nullStream {
 
 #ifdef HAS_VORBISFILE
 struct oggStream : public alureStream {
-    OggVorbis_File *oggFile;
+    OggVorbis_File oggFile;
+    vorbis_info *oggInfo;
     int oggBitstream;
     ALenum format;
 
     virtual bool IsValid()
-    { return oggFile != NULL; }
+    { return oggInfo != NULL; }
 
     virtual bool GetFormat(ALenum *fmt, ALuint *frequency, ALuint *blockalign)
     {
-        vorbis_info *info = pov_info(oggFile, -1);
-        if(!info) return false;
-
         if(format == AL_NONE)
-            format = GetSampleFormat(info->channels, 16, false);
-
+            format = GetSampleFormat(oggInfo->channels, 16, false);
         *fmt = format;
-        *frequency = info->rate;
-        *blockalign = info->channels*2;
+        *frequency = oggInfo->rate;
+        *blockalign = oggInfo->channels*2;
         return true;
     }
 
@@ -537,7 +534,7 @@ struct oggStream : public alureStream {
         int got = 0;
         while(bytes > 0)
         {
-            int res = pov_read(oggFile, (char*)&data[got], bytes, BigEndian?1:0, 2, 1, &oggBitstream);
+            int res = pov_read(&oggFile, (char*)&data[got], bytes, BigEndian?1:0, 2, 1, &oggBitstream);
             if(res <= 0)
                 break;
             bytes -= res;
@@ -548,7 +545,7 @@ struct oggStream : public alureStream {
 
     virtual bool Rewind()
     {
-        if(pov_pcm_seek(oggFile, 0) == 0)
+        if(pov_pcm_seek(&oggFile, 0) == 0)
             return true;
 
         SetError("Seek failed");
@@ -556,7 +553,7 @@ struct oggStream : public alureStream {
     }
 
     oggStream(std::istream *_fstream)
-      : alureStream(_fstream), oggFile(NULL), oggBitstream(0), format(AL_NONE)
+      : alureStream(_fstream), oggInfo(NULL), oggBitstream(0), format(AL_NONE)
     {
         if(!vorbisfile_handle) return;
 
@@ -564,21 +561,15 @@ struct oggStream : public alureStream {
             read, seek, NULL, tell
         };
 
-        oggFile = new OggVorbis_File;
-        if(pov_open_callbacks(this, oggFile, NULL, 0, streamIO) != 0)
-        {
-            delete oggFile;
-            oggFile = NULL;
-        }
+        if(pov_open_callbacks(this, &oggFile, NULL, 0, streamIO) == 0)
+            oggInfo = pov_info(&oggFile, -1);
     }
 
     virtual ~oggStream()
     {
-        if(oggFile)
-        {
-            pov_clear(oggFile);
-            delete oggFile;
-        }
+        if(oggInfo)
+            pov_clear(&oggFile);
+        oggInfo = NULL;
     }
 
 private:
