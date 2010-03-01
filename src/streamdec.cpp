@@ -531,7 +531,7 @@ struct oggStream : public alureStream {
 
     virtual ALuint GetData(ALubyte *data, ALuint bytes)
     {
-        int got = 0;
+        ALuint got = 0;
         while(bytes > 0)
         {
             int res = pov_read(&oggFile, (char*)&data[got], bytes, BigEndian?1:0, 2, 1, &oggBitstream);
@@ -539,6 +539,48 @@ struct oggStream : public alureStream {
                 break;
             bytes -= res;
             got += res;
+        }
+        // 1, 2, and 4 channel files decode into the same channel order as
+        // OpenAL, however 6(5.1), 7(6.1), and 8(7.1) channel files need to be
+        // re-ordered
+        if(oggInfo->channels == 6)
+        {
+            ALshort *samples = (ALshort*)data;
+            for(ALuint i = 0;i < got/sizeof(ALshort);i+=6)
+            {
+                // OpenAL : FL, FR, FC, LFE, RL, RR
+                // Vorbis : FL, FC, FR,  RL, RR, LFE
+                swap(samples[i+1], samples[i+2]);
+                swap(samples[i+3], samples[i+5]);
+                swap(samples[i+4], samples[i+5]);
+            }
+        }
+        else if(oggInfo->channels == 7)
+        {
+            ALshort *samples = (ALshort*)data;
+            for(ALuint i = 0;i < got/sizeof(ALshort);i+=7)
+            {
+                // OpenAL : FL, FR, FC, LFE, RC, SL, SR
+                // Vorbis : FL, FC, FR,  SL, SR, RC, LFE
+                swap(samples[i+1], samples[i+2]);
+                swap(samples[i+3], samples[i+6]);
+                swap(samples[i+4], samples[i+6]);
+                swap(samples[i+5], samples[i+6]);
+            }
+        }
+        else if(oggInfo->channels == 8)
+        {
+            ALshort *samples = (ALshort*)data;
+            for(ALuint i = 0;i < got/sizeof(ALshort);i+=8)
+            {
+                // OpenAL : FL, FR, FC, LFE, RL, RR, SL, SR
+                // Vorbis : FL, FC, FR,  SL, SR, RL, RR, LFE
+                swap(samples[i+1], samples[i+2]);
+                swap(samples[i+3], samples[i+7]);
+                swap(samples[i+4], samples[i+5]);
+                swap(samples[i+5], samples[i+6]);
+                swap(samples[i+6], samples[i+7]);
+            }
         }
         return got;
     }

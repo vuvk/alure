@@ -337,4 +337,12 @@ template <typename T>
 const T& clamp(const T& val, const T& min, const T& max)
 { return std::max(std::min(val, max), min); }
 
+template <typename T>
+void swap(T &val1, T &val2)
+{
+    val1 ^= val2;
+    val2 ^= val1;
+    val1 ^= val2;
+}
+
 #endif // MAIN_H
