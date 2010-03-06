@@ -604,7 +604,11 @@ struct oggStream : public alureStream {
         };
 
         if(pov_open_callbacks(this, &oggFile, NULL, 0, streamIO) == 0)
+        {
             oggInfo = pov_info(&oggFile, -1);
+            if(!oggInfo)
+                pov_clear(&oggFile);
+        }
     }
 
     virtual ~oggStream()
