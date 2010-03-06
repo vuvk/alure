@@ -326,7 +326,7 @@ ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromCallback(
     newcb.rewind    = NULL;
     newcb.close     = NULL;
 
-    customStream *stream = new customStream(userdata, format, samplerate, newcb);
+    alureStream *stream = create_stream(userdata, format, samplerate, newcb);
     return InitStream(stream, chunkLength, numBufs, bufs);
 }
 

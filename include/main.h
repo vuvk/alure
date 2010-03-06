@@ -307,31 +307,11 @@ public:
 };
 
 
-struct customStream : public alureStream {
-    void *usrFile;
-    ALenum format;
-    ALuint samplerate;
-    ALuint blockAlign;
-    MemDataInfo memInfo;
-
-    UserCallbacks cb;
-
-    virtual bool IsValid();
-    virtual bool GetFormat(ALenum *format, ALuint *frequency, ALuint *blockalign);
-    virtual ALuint GetData(ALubyte *data, ALuint bytes);
-    virtual bool Rewind();
-
-    customStream(const char *fname, const UserCallbacks &callbacks);
-    customStream(const MemDataInfo &memData, const UserCallbacks &callbacks);
-    customStream(void *userdata, ALenum fmt, ALuint srate, const UserCallbacks &callbacks);
-    virtual ~customStream();
-};
-
-
 extern CRITICAL_SECTION cs_StreamPlay;
 
 alureStream *create_stream(const char *fname);
 alureStream *create_stream(const MemDataInfo &memData);
+alureStream *create_stream(ALvoid *userdata, ALenum format, ALuint rate, const UserCallbacks &cb);
 
 template <typename T>
 const T& clamp(const T& val, const T& min, const T& max)

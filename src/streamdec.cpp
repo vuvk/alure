@@ -80,64 +80,74 @@ static inline ALuint read_be80extended(std::istream *file)
 }
 
 
-bool customStream::IsValid()
-{ return usrFile != NULL; }
-
-bool customStream::GetFormat(ALenum *fmt, ALuint *frequency, ALuint *blockalign)
-{
-    if(format == 0)
-    {
-        if(!cb.get_fmt ||
-           !cb.get_fmt(usrFile, &this->format, &samplerate, &blockAlign))
-            return false;
-    }
-
-    *fmt = format;
-    *frequency = samplerate;
-    *blockalign = blockAlign;
-    return true;
-}
-
-ALuint customStream::GetData(ALubyte *data, ALuint bytes)
-{ return cb.decode(usrFile, data, bytes); }
-
-bool customStream::Rewind()
-{
-    if(cb.rewind && cb.rewind(usrFile))
-        return true;
-    SetError("Rewind failed");
-    return false;
-}
-
-customStream::customStream(const char *fname, const UserCallbacks &callbacks)
-  : alureStream(NULL), usrFile(NULL), format(0), samplerate(0), blockAlign(0),
-    cb(callbacks)
-{ if(cb.open_file) usrFile = cb.open_file(fname); }
-
-customStream::customStream(const MemDataInfo &memData, const UserCallbacks &callbacks)
-  : alureStream(NULL), usrFile(NULL), format(0), samplerate(0), blockAlign(0),
-    memInfo(memData), cb(callbacks)
-{ if(cb.open_mem) usrFile = cb.open_mem(memInfo.Data, memInfo.Length); }
-
-customStream::customStream(void *userdata, ALenum fmt, ALuint srate, const UserCallbacks &callbacks)
-  : alureStream(NULL), usrFile(userdata), format(fmt), samplerate(srate),
-    blockAlign(DetectBlockAlignment(format)), cb(callbacks)
-{ }
-
-customStream::~customStream()
-{
-    if(cb.close && usrFile)
-        cb.close(usrFile);
-    usrFile = NULL;
-}
-
-
 struct nullStream : public alureStream {
     virtual bool IsValid() { return false; }
     virtual bool GetFormat(ALenum*,ALuint*,ALuint*) { return false; }
     virtual ALuint GetData(ALubyte*,ALuint) { return 0; }
     virtual bool Rewind() { return false; }
     nullStream():alureStream(NULL) {}
+};
+
+
+struct customStream : public alureStream {
+    void *usrFile;
+    ALenum format;
+    ALuint samplerate;
+    ALuint blockAlign;
+    MemDataInfo memInfo;
+
+    UserCallbacks cb;
+
+    virtual bool IsValid()
+    { return usrFile != NULL; }
+
+    virtual bool GetFormat(ALenum *fmt, ALuint *frequency, ALuint *blockalign)
+    {
+        if(format == AL_NONE)
+        {
+            if(!cb.get_fmt ||
+               !cb.get_fmt(usrFile, &this->format, &samplerate, &blockAlign))
+                return false;
+        }
+
+        *fmt = format;
+        *frequency = samplerate;
+        *blockalign = blockAlign;
+        return true;
+    }
+
+    virtual ALuint GetData(ALubyte *data, ALuint bytes)
+    { return cb.decode(usrFile, data, bytes); }
+
+    virtual bool Rewind()
+    {
+        if(cb.rewind && cb.rewind(usrFile))
+            return true;
+        SetError("Rewind failed");
+        return false;
+    }
+
+    customStream(const char *fname, const UserCallbacks &callbacks)
+      : alureStream(NULL), usrFile(NULL), format(0), samplerate(0),
+        blockAlign(0), cb(callbacks)
+    { if(cb.open_file) usrFile = cb.open_file(fname); }
+
+    customStream(const MemDataInfo &memData, const UserCallbacks &callbacks)
+      : alureStream(NULL), usrFile(NULL), format(0), samplerate(0),
+        blockAlign(0), memInfo(memData), cb(callbacks)
+    { if(cb.open_mem) usrFile = cb.open_mem(memInfo.Data, memInfo.Length); }
+
+    customStream(void *userdata, ALenum fmt, ALuint srate, const UserCallbacks &callbacks)
+      : alureStream(NULL), usrFile(userdata), format(fmt), samplerate(srate),
+        blockAlign(DetectBlockAlignment(format)), cb(callbacks)
+    { }
+
+    virtual ~customStream()
+    {
+        if(cb.close && usrFile)
+            cb.close(usrFile);
+        usrFile = NULL;
+    }
 };
 
 
@@ -2371,3 +2381,6 @@ alureStream *create_stream(const char *fname)
 { return get_stream_decoder(fname); }
 alureStream *create_stream(const MemDataInfo &memData)
 { return get_stream_decoder(memData); }
+
+alureStream *create_stream(ALvoid *userdata, ALenum format, ALuint rate, const UserCallbacks &cb)
+{ return new customStream(userdata, format, rate, cb); }
