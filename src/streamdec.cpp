@@ -163,9 +163,9 @@ struct wavStream : public alureStream {
     virtual bool IsValid()
     { return (dataStart > 0 && format != AL_NONE); }
 
-    virtual bool GetFormat(ALenum *format, ALuint *frequency, ALuint *blockalign)
+    virtual bool GetFormat(ALenum *fmt, ALuint *frequency, ALuint *blockalign)
     {
-        *format = this->format;
+        *fmt = format;
         *frequency = samplerate;
         *blockalign = blockAlign;
         return true;
@@ -183,22 +183,18 @@ struct wavStream : public alureStream {
         if(BigEndian && sampleSize > 1)
         {
             if(sampleSize == 2)
+            {
                 for(std::streamsize i = 0;i < got;i+=2)
-                {
-                    ALubyte tmp = data[i];
-                    data[i] = data[i+1];
-                    data[i+1] = tmp;
-                }
+                    swap(data[i], data[i+1]);
+            }
             else if(sampleSize == 4)
+            {
                 for(std::streamsize i = 0;i < got;i+=4)
                 {
-                    ALubyte tmp = data[i];
-                    data[i] = data[i+3];
-                    data[i+3] = tmp;
-                    tmp = data[i+1];
-                    data[i+1] = data[i+2];
-                    data[i+2] = tmp;
+                    swap(data[i+0], data[i+3]);
+                    swap(data[i+1], data[i+2]);
                 }
+            }
         }
 
         return got;
@@ -293,9 +289,9 @@ struct aiffStream : public alureStream {
     virtual bool IsValid()
     { return (dataStart > 0 && format != AL_NONE); }
 
-    virtual bool GetFormat(ALenum *format, ALuint *frequency, ALuint *blockalign)
+    virtual bool GetFormat(ALenum *fmt, ALuint *frequency, ALuint *blockalign)
     {
-        *format = this->format;
+        *fmt = format;
         *frequency = samplerate;
         *blockalign = blockAlign;
         return true;
@@ -310,25 +306,21 @@ struct aiffStream : public alureStream {
         got -= got%blockAlign;
         remLen -= got;
 
-        if(LittleEndian && sampleSize > 1)
+        if(LittleEndian)
         {
             if(sampleSize == 2)
+            {
                 for(std::streamsize i = 0;i < got;i+=2)
-                {
-                    ALubyte tmp = data[i];
-                    data[i] = data[i+1];
-                    data[i+1] = tmp;
-                }
+                    swap(data[i], data[i+1]);
+            }
             else if(sampleSize == 4)
+            {
                 for(std::streamsize i = 0;i < got;i+=4)
                 {
-                    ALubyte tmp = data[i];
-                    data[i] = data[i+3];
-                    data[i+3] = tmp;
-                    tmp = data[i+1];
-                    data[i+1] = data[i+2];
-                    data[i+2] = tmp;
+                    swap(data[i+0], data[i+3]);
+                    swap(data[i+1], data[i+2]);
                 }
+            }
         }
 
         return got;
