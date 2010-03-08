@@ -101,7 +101,33 @@ MAKE_FUNC(sf_seek);
 #endif
 #undef MAKE_FUNC
 
-#ifdef HAVE_GCC_CONSTRUCTOR
+#if defined(_WIN32)
+static void init_alure(void);
+static void deinit_alure(void);
+static struct MyConstructorClass {
+    ~MyConstructorClass()
+    { alureStream::Clear(); };
+} MyConstructor;
+
+extern "C" BOOL APIENTRY DllMain(HINSTANCE module, DWORD reason, LPVOID reserved)
+{
+    (void)reserved;
+
+    // Perform actions based on the reason for calling.
+    switch(reason)
+    {
+        case DLL_PROCESS_ATTACH:
+            DisableThreadLibraryCalls(module);
+            init_alure();
+            break;
+
+        case DLL_PROCESS_DETACH:
+            deinit_alure();
+            break;
+    }
+    return TRUE;
+}
+#elif defined(HAVE_GCC_CONSTRUCTOR)
 static void init_alure(void) __attribute__((constructor));
 static void deinit_alure(void) __attribute__((destructor));
 static struct MyConstructorClass {
