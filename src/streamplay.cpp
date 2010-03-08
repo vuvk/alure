@@ -76,15 +76,14 @@ static ALuint StopThread(ThreadInfo *inf)
 typedef struct {
     ALuint (*func)(ALvoid*);
     ALvoid *ptr;
-    ALuint ret;
     pthread_t thread;
 } ThreadInfo;
 
 static void *StarterFunc(void *ptr)
 {
     ThreadInfo *inf = (ThreadInfo*)ptr;
-    inf->ret = inf->func(inf->ptr);
-    return NULL;
+    void *ret = (void*)(inf->func(inf->ptr));
+    return ret;
 }
 
 static ThreadInfo *StartThread(ALuint (*func)(ALvoid*), ALvoid *ptr)
