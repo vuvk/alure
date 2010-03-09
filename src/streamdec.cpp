@@ -1348,11 +1348,7 @@ struct midiStream : public alureStream {
         if(BigEndian)
         {
             for(ALuint i = 0;i < total;i+=2)
-            {
-                ALubyte tmp = data[i];
-                data[i] = data[i+1];
-                data[i+1] = tmp;
-            }
+                swap(data[i], data[i+1]);
         }
 
         return total;
