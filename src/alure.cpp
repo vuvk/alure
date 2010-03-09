@@ -311,10 +311,6 @@ if(!p##x)                                                                    \
     }
 #endif
 
-#ifdef HAS_GSTREAMER
-    gst_init(NULL, NULL);
-#endif
-
 #undef VORBISFILE_LIB
 #undef FLAC_LIB
 #undef DUMB_LIB
@@ -325,10 +321,6 @@ if(!p##x)                                                                    \
 
 static void deinit_alure(void)
 {
-#ifdef HAS_GSTREAMER
-    gst_deinit();
-#endif
-
 #ifdef HAS_VORBISFILE
     if(vorbisfile_handle)
         FreeLibrary(vorbisfile_handle);

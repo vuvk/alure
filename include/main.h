@@ -19,12 +19,6 @@
 #ifdef HAS_DUMB
 #include <dumb.h>
 #endif
-#ifdef HAS_GSTREAMER
-#include <gst/gst.h>
-#include <gst/app/gstappsrc.h>
-#include <gst/app/gstappsink.h>
-#include <gst/app/gstappbuffer.h>
-#endif
 
 
 #ifdef HAVE_SYS_TYPES_H
