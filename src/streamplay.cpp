@@ -617,7 +617,7 @@ ALURE_API ALboolean ALURE_APIENTRY alureStopSource(ALuint source, ALboolean run_
  *
  * Pauses the specified source ID, and any associated asynchronous stream. This
  * is needed to avoid potential race conditions with sources that are playing
- * an asynchronous stream. Pass AL_TRUE to 'resume' to resume a paused stream.
+ * an asynchronous stream.
  *
  * Note that it is possible for the specified source to become stopped, and any
  * associated stream to finish, before this function is called, causing the
@@ -628,9 +628,9 @@ ALURE_API ALboolean ALURE_APIENTRY alureStopSource(ALuint source, ALboolean run_
  * AL_FALSE on error.
  *
  * See Also:
- * <alurePlaySourceStream>, <alurePlaySource>
+ * <alureResumeSource>, <alurePlaySourceStream>, <alurePlaySource>
  */
-ALURE_API ALboolean ALURE_APIENTRY alurePauseSource(ALuint source, ALboolean resume)
+ALURE_API ALboolean ALURE_APIENTRY alurePauseSource(ALuint source)
 {
 	if(alGetError() != AL_NO_ERROR)
 	{
@@ -640,13 +640,51 @@ ALURE_API ALboolean ALURE_APIENTRY alurePauseSource(ALuint source, ALboolean res
 
 	EnterCriticalSection(&cs_StreamPlay);
 
-	if(!resume && (alSourcePause(source),alGetError()) != AL_NO_ERROR)
+	if((alSourcePause(source),alGetError()) != AL_NO_ERROR)
 	{
 		SetError("Error pausing source");
 		LeaveCriticalSection(&cs_StreamPlay);
 		return AL_FALSE;
 	}
-	if(resume && (alSourcePlay(source),alGetError()) != AL_NO_ERROR)
+
+	std::list<AsyncPlayEntry>::iterator i = AsyncPlayList.begin(),
+	                                    end = AsyncPlayList.end();
+	while(i != end)
+	{
+		if(i->source == source)
+		{
+			i->paused = true;
+			break;
+		}
+		i++;
+	}
+
+	LeaveCriticalSection(&cs_StreamPlay);
+
+	return AL_TRUE;
+}
+
+/* Function: alureResumeSource
+ *
+ * Resumes the specified source ID after being paused.
+ *
+ * Returns:
+ * AL_FALSE on error.
+ *
+ * See Also:
+ * <alurePauseSource>
+ */
+ALURE_API ALboolean ALURE_APIENTRY alureResumeSource(ALuint source)
+{
+	if(alGetError() != AL_NO_ERROR)
+	{
+		SetError("Existing OpenAL error");
+		return AL_FALSE;
+	}
+
+	EnterCriticalSection(&cs_StreamPlay);
+
+	if((alSourcePlay(source),alGetError()) != AL_NO_ERROR)
 	{
 		SetError("Error playing source");
 		LeaveCriticalSection(&cs_StreamPlay);
@@ -659,7 +697,7 @@ ALURE_API ALboolean ALURE_APIENTRY alurePauseSource(ALuint source, ALboolean res
 	{
 		if(i->source == source)
 		{
-			i->paused = !resume;
+			i->paused = false;
 			break;
 		}
 		i++;
