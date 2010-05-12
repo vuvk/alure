@@ -101,7 +101,7 @@ MAKE_FUNC(sf_seek);
 #endif
 #undef MAKE_FUNC
 
-#if defined(_WIN32)
+#if defined(_WIN32) && !defined(ALURE_STATIC_LIBRARY)
 static void init_alure(void);
 static void deinit_alure(void);
 static struct MyConstructorClass {
