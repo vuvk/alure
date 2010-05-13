@@ -65,6 +65,7 @@ static ThreadInfo *StartThread(ALuint (*func)(ALvoid*), ALvoid *ptr)
 
 static ALuint StopThread(ThreadInfo *inf)
 {
+    WaitForSingleObject(inf->thread, INFINITE);
     CloseHandle(inf->thread);
     delete inf;
 
@@ -103,7 +104,7 @@ static ThreadInfo *StartThread(ALuint (*func)(ALvoid*), ALvoid *ptr)
 
 static ALuint StopThread(ThreadInfo *inf)
 {
-    pthread_detach(inf->thread);
+    pthread_join(inf->thread, NULL);
     delete inf;
 
     return 0;
@@ -142,6 +143,24 @@ struct AsyncPlayEntry {
 };
 static std::list<AsyncPlayEntry> AsyncPlayList;
 static ThreadInfo *PlayThreadHandle;
+
+ALfloat CurrentInterval = 0.0f;
+
+ALuint AsyncPlayFunc(ALvoid*)
+{
+	EnterCriticalSection(&cs_StreamPlay);
+	while(CurrentInterval > 0.0f)
+	{
+		alureUpdate();
+
+		ALfloat interval = CurrentInterval;
+		LeaveCriticalSection(&cs_StreamPlay);
+		alureSleep(interval);
+		EnterCriticalSection(&cs_StreamPlay);
+	}
+	LeaveCriticalSection(&cs_StreamPlay);
+	return 0;
+}
 
 
 void StopStream(alureStream *stream)
@@ -741,6 +760,50 @@ restart:
 		}
 	}
 	LeaveCriticalSection(&cs_StreamPlay);
+}
+
+/* Function: alureUpdateInterval
+ *
+ * Sets up a timer or thread to automatically call <alureUpdate> at the given
+ * interval, in seconds. If the timer or thread is already running, the update
+ * interval will be modified. A 0 or negative interval will stop <alureUpdate>
+ * from being called.
+ *
+ * Returns:
+ * AL_FALSE on error.
+ *
+ * See Also:
+ * <alureUpdate>
+ */
+ALURE_API ALboolean ALURE_APIENTRY alureUpdateInterval(ALfloat interval)
+{
+	EnterCriticalSection(&cs_StreamPlay);
+	if(interval <= 0.0f)
+	{
+		CurrentInterval = 0.0f;
+		if(PlayThreadHandle)
+		{
+			LeaveCriticalSection(&cs_StreamPlay);
+			StopThread(PlayThreadHandle);
+			PlayThreadHandle = NULL;
+			EnterCriticalSection(&cs_StreamPlay);
+		}
+	}
+	else
+	{
+		if(!PlayThreadHandle)
+			PlayThreadHandle = StartThread(AsyncPlayFunc, NULL);
+		if(!PlayThreadHandle)
+		{
+			SetError("Error starting async thread");
+			LeaveCriticalSection(&cs_StreamPlay);
+			return AL_FALSE;
+		}
+		CurrentInterval = interval;
+	}
+	LeaveCriticalSection(&cs_StreamPlay);
+
+	return AL_TRUE;
 }
 
 } // extern "C"
