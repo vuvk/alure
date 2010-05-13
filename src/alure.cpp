@@ -186,10 +186,13 @@ static inline void FreeLibrary(void*)
 
 #else // _WIN32
 
+#ifndef DYNLOAD
+#define LoadLibraryA(x) ((void*)0xDEADBEEF)
+#define FreeLibrary(x)
+#define LOAD_FUNC(h, x) p##x = x
+#else
 #define GetProcAddress(x,y) GetProcAddress((HINSTANCE)(x),(y))
 #define FreeLibrary(x) FreeLibrary((HINSTANCE)(x))
-#ifndef DYNLOAD
-#define LOAD_FUNC(h, x) p##x = x
 #endif
 
 #endif
