@@ -54,7 +54,10 @@ int main(int argc, char **argv)
     }
 
     while(!isdone)
+    {
         alureSleep(0.125);
+        alureUpdate();
+    }
     alureStopSource(src, AL_FALSE);
 
     alDeleteSources(1, &src);

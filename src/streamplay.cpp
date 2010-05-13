@@ -18,7 +18,7 @@
  * Or go to http://www.gnu.org/copyleft/lgpl.html
  */
 
-/* Title: Asynchronous Playback */
+/* Title: Automatic Playback */
 
 #include "config.h"
 
@@ -143,121 +143,6 @@ struct AsyncPlayEntry {
 static std::list<AsyncPlayEntry> AsyncPlayList;
 static ThreadInfo *PlayThreadHandle;
 
-ALuint AsyncPlayFunc(ALvoid*)
-{
-	while(1)
-	{
-		EnterCriticalSection(&cs_StreamPlay);
-	restart:
-		if(AsyncPlayList.size() == 0)
-		{
-			StopThread(PlayThreadHandle);
-			PlayThreadHandle = NULL;
-			LeaveCriticalSection(&cs_StreamPlay);
-			break;
-		}
-
-		std::list<AsyncPlayEntry>::iterator i = AsyncPlayList.begin(),
-		                                    end = AsyncPlayList.end();
-		for(;i != end;i++)
-		{
-			ALuint buf;
-			ALint processed;
-			ALint queued;
-			ALint state;
-
-			if(i->stream == NULL)
-			{
-				alGetSourcei(i->source, AL_SOURCE_STATE, &state);
-				if(state != AL_PLAYING && state != AL_PAUSED)
-				{
-					AsyncPlayEntry ent(*i);
-					AsyncPlayList.erase(i);
-					ent.eos_callback(ent.user_data, ent.source);
-					goto restart;
-				}
-				continue;
-			}
-
-			alGetSourcei(i->source, AL_SOURCE_STATE, &state);
-			alGetSourcei(i->source, AL_BUFFERS_QUEUED, &queued);
-			alGetSourcei(i->source, AL_BUFFERS_PROCESSED, &processed);
-			while(((ALuint)queued < i->buffers.size() && !i->finished) ||
-			      processed > 0)
-			{
-				ALint size, channels, bits;
-				if(processed > 0)
-				{
-					queued--;
-					processed--;
-					alSourceUnqueueBuffers(i->source, 1, &buf);
-
-					alGetBufferi(buf, AL_SIZE, &size);
-					alGetBufferi(buf, AL_CHANNELS, &channels);
-					alGetBufferi(buf, AL_BITS, &bits);
-					i->base_time += size / channels * 8 / bits;
-					i->base_time %= i->max_time;
-				}
-
-				while(!i->finished)
-				{
-					ALenum format;
-					ALuint freq, blockAlign;
-
-					if(i->stream->GetFormat(&format, &freq, &blockAlign))
-					{
-						ALuint got = i->stream->GetData(i->stream->dataChunk,
-						                                i->stream->chunkLen);
-						got -= got%blockAlign;
-						if(got > 0)
-						{
-							alBufferData(buf, format, i->stream->dataChunk, got, freq);
-							alSourceQueueBuffers(i->source, 1, &buf);
-							queued++;
-							if(i->loopcount == 0)
-							{
-								alGetBufferi(buf, AL_SIZE, &size);
-								alGetBufferi(buf, AL_CHANNELS, &channels);
-								alGetBufferi(buf, AL_BITS, &bits);
-								i->max_time += size / channels * 8 / bits;
-							}
-							break;
-						}
-					}
-					if(i->loopcount == i->maxloops)
-					{
-						i->finished = true;
-						break;
-					}
-					if(i->maxloops != -1 || i->loopcount < 1)
-						i->loopcount++;
-					i->finished = !i->stream->Rewind();
-				}
-			}
-			if(state != AL_PLAYING)
-			{
-				if(queued == 0)
-				{
-					AsyncPlayEntry ent(*i);
-					AsyncPlayList.erase(i);
-
-					alSourcei(ent.source, AL_BUFFER, 0);
-					alDeleteBuffers(ent.buffers.size(), &ent.buffers[0]);
-					if(ent.eos_callback)
-						ent.eos_callback(ent.user_data, ent.source);
-					goto restart;
-				}
-				if(!i->paused)
-					alSourcePlay(i->source);
-			}
-		}
-		LeaveCriticalSection(&cs_StreamPlay);
-
-		alureSleep(0.015625f);
-	}
-
-	return 0;
-}
 
 void StopStream(alureStream *stream)
 {
@@ -292,14 +177,16 @@ extern "C" {
 
 /* Function: alurePlaySourceStream
  *
- * Plays a stream asynchronously, using the specified source ID. A stream can
- * only be played asynchronously if it is not already playing. It is important
- * that the current context is NOT changed while a stream is playing, otherwise
- * the asynchronous method used to play may start calling OpenAL with invalid
- * IDs. Also note that checking the state of the specified source is not a good
- * method to determine if a stream is playing. If an underrun occurs, the
- * source will enter a stopped state until it is automatically restarted.
- * Instead, set a flag using the callback to indicate the stream being stopped.
+ * Starts playing a stream, using the specified source ID. A stream can only be
+ * played if it is not already playing. You must call <alureUpdate> at regular
+ * intervals to keep the stream playing. If you fail to do so, the stream will
+ * underrun and cause a break in the playback until am update call can restart
+ * it. It also is important that the current context is kept for <alureUpdate>
+ * calls, otherwise the method may start calling OpenAL with invalid IDs. Note
+ * that checking the state of the specified source is not a good method to
+ * determine if a stream is playing. If an underrun occurs, the source will
+ * enter a stopped state until it is automatically restarted. Instead, set a
+ * flag using the callback to indicate the stream being stopped.
  *
  * Parameters:
  * source - The source ID to play the stream with. Any buffers on the source
@@ -308,13 +195,15 @@ extern "C" {
  *          source's position, pitch, gain, etc, but you must not stop the
  *          source or queue/unqueue buffers on it). To pause the source, call
  *          <alurePauseSource>.
- * stream - The stream to play asynchronously. Any valid stream will work,
- *          although looping will only work if the stream can be rewound (eg.
- *          streams made with <alureCreateStreamFromCallback> cannot loop, but
- *          will play for as long as the callback provides data).
+ * stream - The stream to play. Any valid stream will work, although looping
+ *          will only work if the stream can be rewound (eg. streams made with
+ *          <alureCreateStreamFromCallback> cannot loop, but will play for as
+ *          long as the callback provides data).
  * numBufs - The number of buffers used to queue with the OpenAL source. Each
  *           buffer will be filled with the chunk length specified when the
- *           stream was created. This value must be at least 2.
+ *           stream was created. This value must be at least 2. More buffers at
+ *           a larger size will decrease the time needed between updates, but
+ *           at the cost of more memory usage.
  * loopcount - The number of times to loop the stream. When the stream reaches
  *             the end of processing, it will be rewound to continue buffering
  *             data. A value of -1 will cause the stream to loop indefinitely
@@ -329,7 +218,7 @@ extern "C" {
  * AL_FALSE on error.
  *
  * See Also:
- * <alureStopSource>, <alurePauseSource>, <alureGetSourceOffset>
+ * <alureStopSource>, <alurePauseSource>, <alureGetSourceOffset>, <alureUpdate>
  */
 ALURE_API ALboolean ALURE_APIENTRY alurePlaySourceStream(ALuint source,
     alureStream *stream, ALsizei numBufs, ALsizei loopcount,
@@ -360,15 +249,6 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlaySourceStream(ALuint source,
 	}
 
 	EnterCriticalSection(&cs_StreamPlay);
-
-	if(!PlayThreadHandle)
-		PlayThreadHandle = StartThread(AsyncPlayFunc, NULL);
-	if(!PlayThreadHandle)
-	{
-		SetError("Error starting async thread");
-		LeaveCriticalSection(&cs_StreamPlay);
-		return AL_FALSE;
-	}
 
 	std::list<AsyncPlayEntry>::iterator i = AsyncPlayList.begin(),
 	                                    end = AsyncPlayList.end();
@@ -478,11 +358,11 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlaySourceStream(ALuint source,
 /* Function: alurePlaySource
  *
  * Plays the specified source ID and watches for it to stop. When a source
- * enters the AL_STOPPED state, the specified callback is called to alert the
- * application. As with <alurePlaySourceStream>, the current context must not
- * be changed while the source is being watched (before the callback is called
- * or <alureStopSource> is called). It also must not be deleted while being
- * watched.
+ * enters an AL_STOPPED state, the specified callback will be called by
+ * <alureUpdate> to alert the application. As with <alurePlaySourceStream>, the
+ * current context must not be changed while the source is being watched
+ * (before the callback is called or <alureStopSource> is called). It also must
+ * not be deleted while being watched.
  *
  * Parameters:
  * source - The source ID to play. As with <alurePlaySourceStream>, it is valid
@@ -498,7 +378,7 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlaySourceStream(ALuint source,
  * AL_FALSE on error.
  *
  * See Also:
- * <alureStopSource>
+ * <alureStopSource>, <alureUpdate>
  */
 ALURE_API ALboolean ALURE_APIENTRY alurePlaySource(ALuint source,
     void (*callback)(void *userdata, ALuint source), void *userdata)
@@ -510,15 +390,6 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlaySource(ALuint source,
 	}
 
 	EnterCriticalSection(&cs_StreamPlay);
-
-	if(!PlayThreadHandle)
-		PlayThreadHandle = StartThread(AsyncPlayFunc, NULL);
-	if(!PlayThreadHandle)
-	{
-		LeaveCriticalSection(&cs_StreamPlay);
-		SetError("Error starting async thread");
-		return AL_FALSE;
-	}
 
 	std::list<AsyncPlayEntry>::iterator i = AsyncPlayList.begin(),
 	                                    end = AsyncPlayList.end();
@@ -556,9 +427,9 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlaySource(ALuint source,
 
 /* Function: alureStopSource
  *
- * Stops the specified source ID, and any associated asynchronous stream. The
- * previously specified callback will be invoked if 'run_callback' is not
- * AL_FALSE. Sources that were not started with <alurePlaySourceStream> or
+ * Stops the specified source ID, and any associated stream. The previously
+ * specified callback will be invoked if 'run_callback' is not AL_FALSE.
+ * Sources that were not started with <alurePlaySourceStream> or
  * <alurePlaySource> will still be stopped, but will not have any callback
  * called for them.
  *
@@ -615,14 +486,13 @@ ALURE_API ALboolean ALURE_APIENTRY alureStopSource(ALuint source, ALboolean run_
 
 /* Function: alurePauseSource
  *
- * Pauses the specified source ID, and any associated asynchronous stream. This
- * is needed to avoid potential race conditions with sources that are playing
- * an asynchronous stream.
+ * Pauses the specified source ID, and any associated stream. This is needed to
+ * avoid potential race conditions with sources that are playing a stream.
  *
  * Note that it is possible for the specified source to become stopped, and any
  * associated stream to finish, before this function is called, causing the
- * callback to be delayed until after the function returns when the async
- * thread detects the stopped source.
+ * callback to be delayed until after the function returns and <alureUpdate>
+ * detects the stopped source.
  *
  * Returns:
  * AL_FALSE on error.
@@ -760,6 +630,117 @@ ALURE_API alureUInt64 ALURE_APIENTRY alureGetSourceOffset(ALuint source)
 	LeaveCriticalSection(&cs_StreamPlay);
 
 	return retval;
+}
+
+/* Function: alureUpdate
+ *
+ * Updates the running list of streams, and checks for stopped sources. This
+ * makes sure that sources played with <alurePlaySourceStream> are kept fed
+ * from their associated stream, and sources played with <alurePlaySource> are
+ * still playing. It will call their callbacks as needed.
+ *
+ * See Also:
+ * <alurePlaySourceStream>, <alurePlaySource>
+ */
+ALURE_API void ALURE_APIENTRY alureUpdate(void)
+{
+	EnterCriticalSection(&cs_StreamPlay);
+restart:
+	std::list<AsyncPlayEntry>::iterator i = AsyncPlayList.begin(),
+	                                    end = AsyncPlayList.end();
+	for(;i != end;i++)
+	{
+		ALuint buf;
+		ALint processed;
+		ALint queued;
+		ALint state;
+
+		if(i->stream == NULL)
+		{
+			alGetSourcei(i->source, AL_SOURCE_STATE, &state);
+			if(state != AL_PLAYING && state != AL_PAUSED)
+			{
+				AsyncPlayEntry ent(*i);
+				AsyncPlayList.erase(i);
+				ent.eos_callback(ent.user_data, ent.source);
+				goto restart;
+			}
+			continue;
+		}
+
+		alGetSourcei(i->source, AL_SOURCE_STATE, &state);
+		alGetSourcei(i->source, AL_BUFFERS_QUEUED, &queued);
+		alGetSourcei(i->source, AL_BUFFERS_PROCESSED, &processed);
+		while(((ALuint)queued < i->buffers.size() && !i->finished) ||
+		      processed > 0)
+		{
+			ALint size, channels, bits;
+			if(processed > 0)
+			{
+				queued--;
+				processed--;
+				alSourceUnqueueBuffers(i->source, 1, &buf);
+
+				alGetBufferi(buf, AL_SIZE, &size);
+				alGetBufferi(buf, AL_CHANNELS, &channels);
+				alGetBufferi(buf, AL_BITS, &bits);
+				i->base_time += size / channels * 8 / bits;
+				i->base_time %= i->max_time;
+			}
+
+			while(!i->finished)
+			{
+				ALenum format;
+				ALuint freq, blockAlign;
+
+				if(i->stream->GetFormat(&format, &freq, &blockAlign))
+				{
+					ALuint got = i->stream->GetData(i->stream->dataChunk,
+					                                i->stream->chunkLen);
+					got -= got%blockAlign;
+					if(got > 0)
+					{
+						alBufferData(buf, format, i->stream->dataChunk, got, freq);
+						alSourceQueueBuffers(i->source, 1, &buf);
+						queued++;
+						if(i->loopcount == 0)
+						{
+							alGetBufferi(buf, AL_SIZE, &size);
+							alGetBufferi(buf, AL_CHANNELS, &channels);
+							alGetBufferi(buf, AL_BITS, &bits);
+							i->max_time += size / channels * 8 / bits;
+						}
+						break;
+					}
+				}
+				if(i->loopcount == i->maxloops)
+				{
+					i->finished = true;
+					break;
+				}
+				if(i->maxloops != -1 || i->loopcount < 1)
+					i->loopcount++;
+				i->finished = !i->stream->Rewind();
+			}
+		}
+		if(state != AL_PLAYING)
+		{
+			if(queued == 0)
+			{
+				AsyncPlayEntry ent(*i);
+				AsyncPlayList.erase(i);
+
+				alSourcei(ent.source, AL_BUFFER, 0);
+				alDeleteBuffers(ent.buffers.size(), &ent.buffers[0]);
+				if(ent.eos_callback)
+					ent.eos_callback(ent.user_data, ent.source);
+				goto restart;
+			}
+			if(!i->paused)
+				alSourcePlay(i->source);
+		}
+	}
+	LeaveCriticalSection(&cs_StreamPlay);
 }
 
 } // extern "C"
