@@ -1104,6 +1104,7 @@ struct dumbStream : public alureStream {
     std::vector<sample_t> sampleBuf;
     ALuint lastOrder;
     ALenum format;
+    ALCint samplerate;
 
     virtual bool IsValid()
     { return renderer != NULL; }
@@ -1117,7 +1118,7 @@ struct dumbStream : public alureStream {
                 format = AL_FORMAT_STEREO16;
         }
         *fmt = format;
-        *frequency = 65536;
+        *frequency = samplerate;
         *blockalign = 2 * ((format==AL_FORMAT_STEREO16) ? sizeof(ALshort) :
                                                           sizeof(ALfloat));
         return true;
@@ -1139,7 +1140,7 @@ struct dumbStream : public alureStream {
         };
 
         pdumb_silence(samples[0], sample_count);
-        ret = pduh_sigrenderer_generate_samples(renderer, 1.0f, 1.0f, sample_count/2, samples);
+        ret = pduh_sigrenderer_generate_samples(renderer, 1.0f, 65536.0f/samplerate, sample_count/2, samples);
         ret *= 2;
         if(format == AL_FORMAT_STEREO16)
         {
@@ -1188,9 +1189,13 @@ struct dumbStream : public alureStream {
 
     dumbStream(std::istream *_fstream)
       : alureStream(_fstream), dumbFile(NULL), duh(NULL), renderer(NULL),
-        lastOrder(0), format(AL_NONE)
+        lastOrder(0), format(AL_NONE), samplerate(48000)
     {
         if(!dumb_handle) return;
+
+        ALCdevice *device = alcGetContextsDevice(alcGetCurrentContext());
+        if(device)
+            alcGetIntegerv(device, ALC_FREQUENCY, 1, &samplerate);
 
         DUH* (*funcs[])(DUMBFILE*) = {
             pdumb_read_it,
