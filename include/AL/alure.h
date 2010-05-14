@@ -27,7 +27,7 @@ extern "C" {
   #endif
  #else
   #if defined(ALURE_BUILD_LIBRARY) && defined(HAVE_GCC_VISIBILITY)
-   #define ALURE_API __attribute__((visibility("default")))
+   #define ALURE_API __attribute__((visibility("protected")))
   #else
    #define ALURE_API extern
   #endif
