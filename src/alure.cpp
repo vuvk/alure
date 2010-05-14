@@ -36,7 +36,6 @@
 #include <map>
 
 std::map<ALint,UserCallbacks> InstalledCallbacks;
-std::map<std::string,void*> FunctionList;
 CRITICAL_SECTION cs_StreamPlay;
 alureStream::ListType alureStream::StreamList;
 
@@ -828,43 +827,50 @@ ALURE_API ALboolean ALURE_APIENTRY alureSleep(ALfloat duration)
  */
 ALURE_API void* ALURE_APIENTRY alureGetProcAddress(const ALchar *funcname)
 {
-    if(FunctionList.size() == 0)
-    {
-#define ADD_FUNCTION(x) FunctionList[#x] = (void*)(x)
-        ADD_FUNCTION(alureGetVersion);
-        ADD_FUNCTION(alureGetErrorString);
-        ADD_FUNCTION(alureGetDeviceNames);
-        ADD_FUNCTION(alureFreeDeviceNames);
-        ADD_FUNCTION(alureInitDevice);
-        ADD_FUNCTION(alureShutdownDevice);
-        ADD_FUNCTION(alureGetSampleFormat);
-        ADD_FUNCTION(alureSleep);
-        ADD_FUNCTION(alureCreateBufferFromFile);
-        ADD_FUNCTION(alureCreateBufferFromMemory);
-        ADD_FUNCTION(alureBufferDataFromFile);
-        ADD_FUNCTION(alureBufferDataFromMemory);
-        ADD_FUNCTION(alureCreateStreamFromFile);
-        ADD_FUNCTION(alureCreateStreamFromMemory);
-        ADD_FUNCTION(alureCreateStreamFromStaticMemory);
-        ADD_FUNCTION(alureCreateStreamFromCallback);
-        ADD_FUNCTION(alureRewindStream);
-        ADD_FUNCTION(alureDestroyStream);
-        ADD_FUNCTION(alureInstallDecodeCallbacks);
-        ADD_FUNCTION(alureSetIOCallbacks);
-        ADD_FUNCTION(alureGetProcAddress);
-        ADD_FUNCTION(alurePlaySourceStream);
-        ADD_FUNCTION(alurePlaySource);
-        ADD_FUNCTION(alureStopSource);
-        ADD_FUNCTION(alureGetSourceOffset);
+    static const struct {
+        const char *name;
+        void *func;
+    } FunctionList[] = {
+#define ADD_FUNCTION(x) { #x, (void*)x },
+        ADD_FUNCTION(alureGetVersion)
+        ADD_FUNCTION(alureGetErrorString)
+        ADD_FUNCTION(alureGetDeviceNames)
+        ADD_FUNCTION(alureFreeDeviceNames)
+        ADD_FUNCTION(alureInitDevice)
+        ADD_FUNCTION(alureShutdownDevice)
+        ADD_FUNCTION(alureGetSampleFormat)
+        ADD_FUNCTION(alureSleep)
+        ADD_FUNCTION(alureCreateBufferFromFile)
+        ADD_FUNCTION(alureCreateBufferFromMemory)
+        ADD_FUNCTION(alureBufferDataFromFile)
+        ADD_FUNCTION(alureBufferDataFromMemory)
+        ADD_FUNCTION(alureCreateStreamFromFile)
+        ADD_FUNCTION(alureCreateStreamFromMemory)
+        ADD_FUNCTION(alureCreateStreamFromStaticMemory)
+        ADD_FUNCTION(alureCreateStreamFromCallback)
+        ADD_FUNCTION(alureRewindStream)
+        ADD_FUNCTION(alureDestroyStream)
+        ADD_FUNCTION(alureInstallDecodeCallbacks)
+        ADD_FUNCTION(alureSetIOCallbacks)
+        ADD_FUNCTION(alureGetProcAddress)
+        ADD_FUNCTION(alurePlaySourceStream)
+        ADD_FUNCTION(alurePlaySource)
+        ADD_FUNCTION(alureStopSource)
+        ADD_FUNCTION(alureGetSourceOffset)
 #undef ADD_FUNCTION
+        { NULL, NULL }
+    };
+
+    size_t i;
+    for(i = 0;FunctionList[i].name;i++)
+    {
+        if(strcmp(FunctionList[i].name, funcname) == 0)
+            break;
     }
 
-    std::map<std::string,void*>::iterator i = FunctionList.find(funcname);
-    if(i != FunctionList.end())
-        return i->second;
-
-    SetError("Function not found");
-    return NULL;
+    if(!FunctionList[i].name)
+        SetError("Function not found");
+    return FunctionList[i].func;
 }
 
 } // extern "C"
