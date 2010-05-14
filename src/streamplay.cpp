@@ -783,9 +783,10 @@ ALURE_API ALboolean ALURE_APIENTRY alureUpdateInterval(ALfloat interval)
 		CurrentInterval = 0.0f;
 		if(PlayThreadHandle)
 		{
-			LeaveCriticalSection(&cs_StreamPlay);
-			StopThread(PlayThreadHandle);
+			ThreadInfo *threadinf = PlayThreadHandle;
 			PlayThreadHandle = NULL;
+			LeaveCriticalSection(&cs_StreamPlay);
+			StopThread(threadinf);
 			EnterCriticalSection(&cs_StreamPlay);
 		}
 	}
