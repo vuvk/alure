@@ -37,7 +37,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    stream = alureCreateStreamFromFile(argv[1], 19200, 0, NULL);
+    stream = alureCreateStreamFromFile(argv[1], 32768, 0, NULL);
     if(!stream)
     {
         fprintf(stderr, "Could not load %s: %s\n", argv[1], alureGetErrorString());
