@@ -602,7 +602,7 @@ struct oggStream : public alureStream {
         if(!vorbisfile_handle) return;
 
         const ov_callbacks streamIO = {
-            read, seek, NULL, tell
+            read, seek, close, tell
         };
 
         if(pov_open_callbacks(this, &oggFile, NULL, 0, streamIO) == 0)
@@ -654,6 +654,11 @@ private:
         std::istream *stream = static_cast<oggStream*>(user_data)->fstream;
         stream->clear();
         return stream->tellg();
+    }
+
+    static int close(void*)
+    {
+        return 0;
     }
 };
 #else
