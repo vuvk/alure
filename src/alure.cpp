@@ -371,30 +371,37 @@ ALuint DetectBlockAlignment(ALenum format)
         CHECK_RET(AL_FORMAT_MONO8, sizeof(ALubyte));
         CHECK_RET(AL_FORMAT_MONO16, sizeof(ALshort));
         CHECK_RET(AL_FORMAT_MONO_FLOAT32, sizeof(ALfloat));
+        CHECK_RET(AL_FORMAT_MONO_MULAW, sizeof(ALubyte)*1);
 
         CHECK_RET(AL_FORMAT_STEREO8, sizeof(ALubyte)*2);
         CHECK_RET(AL_FORMAT_STEREO16, sizeof(ALshort)*2);
         CHECK_RET(AL_FORMAT_STEREO_FLOAT32, sizeof(ALfloat)*2);
+        CHECK_RET(AL_FORMAT_STEREO_MULAW, sizeof(ALubyte)*2);
 
         CHECK_RET(AL_FORMAT_QUAD8, sizeof(ALubyte)*4);
         CHECK_RET(AL_FORMAT_QUAD16, sizeof(ALshort)*4);
         CHECK_RET(AL_FORMAT_QUAD32, sizeof(ALfloat)*4);
+        CHECK_RET(AL_FORMAT_QUAD_MULAW, sizeof(ALubyte)*4);
 
         CHECK_RET(AL_FORMAT_REAR8, sizeof(ALubyte)*2);
         CHECK_RET(AL_FORMAT_REAR16, sizeof(ALshort)*2);
         CHECK_RET(AL_FORMAT_REAR32, sizeof(ALfloat)*2);
+        CHECK_RET(AL_FORMAT_REAR_MULAW, sizeof(ALubyte)*2);
 
         CHECK_RET(AL_FORMAT_51CHN8, sizeof(ALubyte)*6);
         CHECK_RET(AL_FORMAT_51CHN16, sizeof(ALshort)*6);
         CHECK_RET(AL_FORMAT_51CHN32, sizeof(ALfloat)*6);
+        CHECK_RET(AL_FORMAT_51CHN_MULAW, sizeof(ALubyte)*6);
 
         CHECK_RET(AL_FORMAT_61CHN8, sizeof(ALubyte)*7);
         CHECK_RET(AL_FORMAT_61CHN16, sizeof(ALshort)*7);
         CHECK_RET(AL_FORMAT_61CHN32, sizeof(ALfloat)*7);
+        CHECK_RET(AL_FORMAT_61CHN_MULAW, sizeof(ALubyte)*7);
 
         CHECK_RET(AL_FORMAT_71CHN8, sizeof(ALubyte)*8);
         CHECK_RET(AL_FORMAT_71CHN16, sizeof(ALshort)*8);
         CHECK_RET(AL_FORMAT_71CHN32, sizeof(ALfloat)*8);
+        CHECK_RET(AL_FORMAT_71CHN_MULAW, sizeof(ALubyte)*8);
 
         CHECK_RET(AL_FORMAT_MONO_IMA4, 36);
         CHECK_RET(AL_FORMAT_STEREO_IMA4, 36*2);
@@ -430,6 +437,16 @@ void DetectCompressionRate(ALenum format, ALuint *framesperblock)
     case AL_FORMAT_71CHN8:
     case AL_FORMAT_71CHN16:
     case AL_FORMAT_71CHN32:
+        *framesperblock = 1;
+        return;
+
+    case AL_FORMAT_MONO_MULAW:
+    case AL_FORMAT_STEREO_MULAW:
+    case AL_FORMAT_QUAD_MULAW:
+    case AL_FORMAT_REAR_MULAW:
+    case AL_FORMAT_51CHN_MULAW:
+    case AL_FORMAT_61CHN_MULAW:
+    case AL_FORMAT_71CHN_MULAW:
         *framesperblock = 1;
         return;
 
