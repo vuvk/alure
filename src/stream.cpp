@@ -28,6 +28,8 @@
 
 #include <memory>
 
+static bool SizeIsUS = false;
+
 static alureStream *InitStream(alureStream *instream, ALsizei chunkLength, ALsizei numBufs, ALuint *bufs)
 {
     std::auto_ptr<alureStream> stream(instream);
@@ -56,7 +58,17 @@ static alureStream *InitStream(alureStream *instream, ALsizei chunkLength, ALsiz
         return NULL;
     }
 
-    chunkLength -= chunkLength%blockAlign;
+    ALuint framesPerBlock;
+    DetectCompressionRate(format, &framesPerBlock);
+    alureUInt64 len64 = (SizeIsUS ? (alureUInt64)chunkLength * freq / 1000000 / framesPerBlock * blockAlign :
+                                    (alureUInt64)chunkLength);
+    if(len64 > 0xFFFFFFFF)
+    {
+        SetError("Chunk length too large");
+        return NULL;
+    }
+
+    chunkLength = len64 - (len64%blockAlign);
     if(chunkLength <= 0)
     {
         SetError("Chunk length too small");
@@ -108,20 +120,43 @@ static alureStream *InitStream(alureStream *instream, ALsizei chunkLength, ALsiz
 
 extern "C" {
 
+/* Function: alureStreamSizeIsMicroSec
+ *
+ * Specifies whether the chunk size given to alureCreateStreamFrom* functions
+ * are bytes (AL_FALSE, default) or microseconds (AL_TRUE). Specifying the size
+ * in microseconds can help manage the time needed in between needed updates
+ * (since the format and sample rate of the stream may not be known ahead of
+ * time), while specifying the size can help control memory usage.
+ *
+ * Returns:
+ * Previously set value.
+ *
+ * See Also:
+ * <alureCreateStreamFromFile>, <alureCreateStreamFromMemory>,
+ * <alureCreateStreamFromStaticMemory>, <alureCreateStreamFromCallback>
+ */
+ALURE_API ALboolean ALURE_APIENTRY alureStreamSizeIsMicroSec(ALboolean useUS)
+{
+    ALboolean old = (SizeIsUS ? AL_TRUE : AL_FALSE);
+    SizeIsUS = !!useUS;
+    return old;
+}
+
 /* Function: alureCreateStreamFromFile
  *
  * Opens a file and sets it up for streaming. The given chunkLength is the
- * number of bytes each buffer will fill with. ALURE will optionally generate
- * the specified number of buffer objects, fill them with the beginning of the
- * data, then place the new IDs into the provided storage, before returning.
- * Requires an active context.
+ * number of bytes, or microseconds worth of bytes if
+ * <alureStreamSizeIsMicroSec> was last called with AL_TRUE, each buffer will
+ * fill with. ALURE will optionally generate the specified number of buffer
+ * objects, fill them with the beginning of the data, then place the new IDs
+ * into the provided storage, before returning. Requires an active context.
  *
  * Returns:
  * An opaque handle used to control the opened stream, or NULL on error.
  *
  * See Also:
- * <alureCreateStreamFromMemory>, <alureCreateStreamFromStaticMemory>,
- * <alureCreateStreamFromCallback>
+ * <alureStreamSizeIsMicroSec>, <alureCreateStreamFromMemory>,
+ * <alureCreateStreamFromStaticMemory>, <alureCreateStreamFromCallback>
  */
 ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromFile(const ALchar *fname, ALsizei chunkLength, ALsizei numBufs, ALuint *bufs)
 {
@@ -156,15 +191,15 @@ ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromFile(const ALchar *fn
 /* Function: alureCreateStreamFromMemory
  *
  * Opens a file image from memory and sets it up for streaming, similar to
- * alureCreateStreamFromFile. The given data buffer can be safely deleted after
- * calling this function. Requires an active context.
+ * <alureCreateStreamFromFile>. The given data buffer can be safely deleted
+ * after calling this function. Requires an active context.
  *
  * Returns:
  * An opaque handle used to control the opened stream, or NULL on error.
  *
  * See Also:
- * <alureCreateStreamFromFile>, <alureCreateStreamFromStaticMemory>,
- * <alureCreateStreamFromCallback>
+ * <alureStreamSizeIsMicroSec>, <alureCreateStreamFromFile>,
+ * <alureCreateStreamFromStaticMemory>, <alureCreateStreamFromCallback>
  */
 ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromMemory(const ALubyte *fdata, ALuint length, ALsizei chunkLength, ALsizei numBufs, ALuint *bufs)
 {
@@ -213,7 +248,7 @@ ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromMemory(const ALubyte 
 
 /* Function: alureCreateStreamFromStaticMemory
  *
- * Identical to alureCreateStreamFromMemory, except the given memory is used
+ * Identical to <alureCreateStreamFromMemory>, except the given memory is used
  * directly and not duplicated. As a consequence, the data buffer must remain
  * valid while the stream is alive. Requires an active context.
  *
@@ -221,8 +256,8 @@ ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromMemory(const ALubyte 
  * An opaque handle used to control the opened stream, or NULL on error.
  *
  * See Also:
- * <alureCreateStreamFromFile>, <alureCreateStreamFromMemory>,
- * <alureCreateStreamFromCallback>
+ * <alureStreamSizeIsMicroSec>, <alureCreateStreamFromFile>,
+ * <alureCreateStreamFromMemory>, <alureCreateStreamFromCallback>
  */
 ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromStaticMemory(const ALubyte *fdata, ALuint length, ALsizei chunkLength, ALsizei numBufs, ALuint *bufs)
 {
@@ -286,8 +321,8 @@ ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromStaticMemory(const AL
  * An opaque handle used to control the opened stream, or NULL on error.
  *
  * See Also:
- * <alureCreateStreamFromFile>, <alureCreateStreamFromMemory>,
- * <alureCreateStreamFromStaticMemory>
+ * <alureStreamSizeIsMicroSec>, <alureCreateStreamFromFile>,
+ * <alureCreateStreamFromMemory>, <alureCreateStreamFromStaticMemory>
  */
 ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromCallback(
       ALuint (*callback)(void *userdata, ALubyte *data, ALuint bytes),

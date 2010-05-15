@@ -65,6 +65,8 @@ ALURE_API ALenum ALURE_APIENTRY alureGetSampleFormat(ALuint channels, ALuint bit
 
 ALURE_API ALboolean ALURE_APIENTRY alureSleep(ALfloat duration);
 
+ALURE_API ALboolean ALURE_APIENTRY alureStreamSizeIsMicroSec(ALboolean useus);
+
 ALURE_API ALuint ALURE_APIENTRY alureCreateBufferFromFile(const ALchar *fname);
 ALURE_API ALuint ALURE_APIENTRY alureCreateBufferFromMemory(const ALubyte *data, ALsizei length);
 ALURE_API ALboolean ALURE_APIENTRY alureBufferDataFromFile(const ALchar *fname, ALuint buffer);
@@ -125,6 +127,7 @@ typedef ALuint          (ALURE_APIENTRY *LPALURECREATEBUFFERFROMFILE)(const ALch
 typedef ALuint          (ALURE_APIENTRY *LPALURECREATEBUFFERFROMMEMORY)(const ALubyte*,ALsizei);
 typedef ALboolean       (ALURE_APIENTRY *LPALUREBUFFERDATAFROMFILE)(const ALchar *fname, ALuint buffer);
 typedef ALboolean       (ALURE_APIENTRY *LPALUREBUFFERDATAFROMMEMORY)(const ALubyte *fdata, ALsizei length, ALuint buffer);
+typedef ALboolean       (ALURE_APIENTRY *LPALURESTREAMSIZEISMICROSEC)(ALboolean);
 typedef alureStream*    (ALURE_APIENTRY *LPALURECREATESTREAMFROMFILE)(const ALchar*,ALsizei,ALsizei,ALuint*);
 typedef alureStream*    (ALURE_APIENTRY *LPALURECREATESTREAMFROMMEMORY)(const ALubyte*,ALuint,ALsizei,ALsizei,ALuint*);
 typedef alureStream*    (ALURE_APIENTRY *LPALURECREATESTREAMFROMSTATICMEMORY)(const ALubyte*,ALuint,ALsizei,ALsizei,ALuint*);
