@@ -126,11 +126,13 @@ struct AsyncPlayEntry {
 	alureUInt64 max_time;
 	ALuint src_freq;
 	ALuint stream_freq;
+	ALenum stream_format;
+	ALuint stream_align;
 
 	AsyncPlayEntry() : source(0), stream(NULL), loopcount(0), maxloops(0),
 	                   eos_callback(NULL), user_data(NULL), finished(false),
 	                   paused(false), base_time(0), max_time(0), src_freq(0),
-	                   stream_freq(0)
+	                   stream_freq(0), stream_format(AL_NONE), stream_align(0)
 	{ }
 	AsyncPlayEntry(const AsyncPlayEntry &rhs)
 	  : source(rhs.source), stream(rhs.stream), buffers(rhs.buffers),
@@ -138,7 +140,8 @@ struct AsyncPlayEntry {
 	    eos_callback(rhs.eos_callback), user_data(rhs.user_data),
 	    finished(rhs.finished), paused(rhs.paused), base_time(rhs.base_time),
 	    max_time(rhs.max_time), src_freq(rhs.src_freq),
-	    stream_freq(rhs.stream_freq)
+	    stream_freq(rhs.stream_freq), stream_format(rhs.stream_format),
+	    stream_align(rhs.stream_align)
 	{ }
 };
 static std::list<AsyncPlayEntry> AsyncPlayList;
@@ -304,23 +307,19 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlaySourceStream(ALuint source,
 		return AL_FALSE;
 	}
 
-	ALenum format;
-	ALuint freq, blockAlign;
-
 	numBufs = 0;
-	if(ent.stream->GetFormat(&format, &freq, &blockAlign))
+	if(ent.stream->GetFormat(&ent.stream_format, &ent.stream_freq, &ent.stream_align))
 	{
-		ent.stream_freq = freq;
 		for(size_t i = 0;i < ent.buffers.size();i++)
 		{
 			ALuint got = ent.stream->GetData(ent.stream->dataChunk,
 			                                 ent.stream->chunkLen);
-			got -= got%blockAlign;
+			got -= got%ent.stream_align;
 			if(got <= 0)
 				break;
 
 			ALuint buf = ent.buffers[i];
-			alBufferData(buf, format, ent.stream->dataChunk, got, freq);
+			alBufferData(buf, ent.stream_format, ent.stream->dataChunk, got, ent.stream_freq);
 			alSourceQueueBuffers(ent.source, 1, &buf);
 			numBufs++;
 
@@ -709,28 +708,22 @@ restart:
 
 			while(!i->finished)
 			{
-				ALenum format;
-				ALuint freq, blockAlign;
-
-				if(i->stream->GetFormat(&format, &freq, &blockAlign))
+				ALuint got = i->stream->GetData(i->stream->dataChunk,
+				                                i->stream->chunkLen);
+				got -= got%i->stream_align;
+				if(got > 0)
 				{
-					ALuint got = i->stream->GetData(i->stream->dataChunk,
-					                                i->stream->chunkLen);
-					got -= got%blockAlign;
-					if(got > 0)
+					alBufferData(buf, i->stream_format, i->stream->dataChunk, got, i->stream_freq);
+					alSourceQueueBuffers(i->source, 1, &buf);
+					queued++;
+					if(i->loopcount == 0)
 					{
-						alBufferData(buf, format, i->stream->dataChunk, got, freq);
-						alSourceQueueBuffers(i->source, 1, &buf);
-						queued++;
-						if(i->loopcount == 0)
-						{
-							alGetBufferi(buf, AL_SIZE, &size);
-							alGetBufferi(buf, AL_CHANNELS, &channels);
-							alGetBufferi(buf, AL_BITS, &bits);
-							i->max_time += size / channels * 8 / bits;
-						}
-						break;
+						alGetBufferi(buf, AL_SIZE, &size);
+						alGetBufferi(buf, AL_CHANNELS, &channels);
+						alGetBufferi(buf, AL_BITS, &bits);
+						i->max_time += size / channels * 8 / bits;
 					}
+					break;
 				}
 				if(i->loopcount == i->maxloops)
 				{
