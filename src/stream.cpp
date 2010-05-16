@@ -93,25 +93,20 @@ static alureStream *InitStream(alureStream *instream, ALsizei chunkLength, ALsiz
         if(got == 0) break;
 
         alBufferData(bufs[filled], format, stream->dataChunk, got, freq);
-        if(alGetError() != AL_NO_ERROR)
-        {
-            alDeleteBuffers(numBufs, bufs);
-            alGetError();
-
-            SetError("Buffering error");
-            return NULL;
-        }
     }
 
     while(filled < numBufs)
     {
         alBufferData(bufs[filled], format, stream->dataChunk, 0, freq);
-        if(alGetError() != AL_NO_ERROR)
-        {
-            SetError("Buffer load failed");
-            return NULL;
-        }
         filled++;
+    }
+    if(alGetError() != AL_NO_ERROR)
+    {
+        alDeleteBuffers(numBufs, bufs);
+        alGetError();
+
+        SetError("Buffering error");
+        return NULL;
     }
 
     return stream.release();
