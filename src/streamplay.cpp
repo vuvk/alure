@@ -124,14 +124,13 @@ struct AsyncPlayEntry {
 	bool paused;
 	alureUInt64 base_time;
 	alureUInt64 max_time;
-	ALuint src_freq;
 	ALuint stream_freq;
 	ALenum stream_format;
 	ALuint stream_align;
 
 	AsyncPlayEntry() : source(0), stream(NULL), loopcount(0), maxloops(0),
 	                   eos_callback(NULL), user_data(NULL), finished(false),
-	                   paused(false), base_time(0), max_time(0), src_freq(0),
+	                   paused(false), base_time(0), max_time(0),
 	                   stream_freq(0), stream_format(AL_NONE), stream_align(0)
 	{ }
 	AsyncPlayEntry(const AsyncPlayEntry &rhs)
@@ -139,9 +138,8 @@ struct AsyncPlayEntry {
 	    loopcount(rhs.loopcount), maxloops(rhs.maxloops),
 	    eos_callback(rhs.eos_callback), user_data(rhs.user_data),
 	    finished(rhs.finished), paused(rhs.paused), base_time(rhs.base_time),
-	    max_time(rhs.max_time), src_freq(rhs.src_freq),
-	    stream_freq(rhs.stream_freq), stream_format(rhs.stream_format),
-	    stream_align(rhs.stream_align)
+	    max_time(rhs.max_time), stream_freq(rhs.stream_freq),
+	    stream_format(rhs.stream_format), stream_align(rhs.stream_align)
 	{ }
 };
 static std::list<AsyncPlayEntry> AsyncPlayList;
@@ -323,12 +321,7 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlaySourceStream(ALuint source,
 			alSourceQueueBuffers(ent.source, 1, &buf);
 			numBufs++;
 
-			ALint size, channels, bits, rate;
-			if(ent.src_freq == 0)
-			{
-				alGetBufferi(buf, AL_FREQUENCY, &rate);
-				ent.src_freq = rate;
-			}
+			ALint size, channels, bits;
 			alGetBufferi(buf, AL_SIZE, &size);
 			alGetBufferi(buf, AL_CHANNELS, &channels);
 			alGetBufferi(buf, AL_BITS, &bits);
@@ -638,8 +631,6 @@ ALURE_API alureUInt64 ALURE_APIENTRY alureGetSourceOffset(ALuint source)
 			retval += i->base_time;
 			if(i->max_time)
 				retval %= i->max_time;
-			if(i->stream_freq)
-				retval = retval * i->stream_freq / i->src_freq;
 			break;
 		}
 		i++;
