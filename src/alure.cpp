@@ -371,11 +371,13 @@ ALuint DetectBlockAlignment(ALenum format)
         CHECK_RET(AL_FORMAT_MONO8, sizeof(ALubyte));
         CHECK_RET(AL_FORMAT_MONO16, sizeof(ALshort));
         CHECK_RET(AL_FORMAT_MONO_FLOAT32, sizeof(ALfloat));
+        CHECK_RET(AL_FORMAT_MONO_DOUBLE_EXT, sizeof(ALdouble));
         CHECK_RET(AL_FORMAT_MONO_MULAW, sizeof(ALubyte)*1);
 
         CHECK_RET(AL_FORMAT_STEREO8, sizeof(ALubyte)*2);
         CHECK_RET(AL_FORMAT_STEREO16, sizeof(ALshort)*2);
         CHECK_RET(AL_FORMAT_STEREO_FLOAT32, sizeof(ALfloat)*2);
+        CHECK_RET(AL_FORMAT_STEREO_DOUBLE_EXT, sizeof(ALdouble)*2);
         CHECK_RET(AL_FORMAT_STEREO_MULAW, sizeof(ALubyte)*2);
 
         CHECK_RET(AL_FORMAT_QUAD8, sizeof(ALubyte)*4);
@@ -419,9 +421,11 @@ void DetectCompressionRate(ALenum format, ALuint *framesperblock)
     case AL_FORMAT_MONO8:
     case AL_FORMAT_MONO16:
     case AL_FORMAT_MONO_FLOAT32:
+    case AL_FORMAT_MONO_DOUBLE_EXT:
     case AL_FORMAT_STEREO8:
     case AL_FORMAT_STEREO16:
     case AL_FORMAT_STEREO_FLOAT32:
+    case AL_FORMAT_STEREO_DOUBLE_EXT:
     case AL_FORMAT_QUAD8:
     case AL_FORMAT_QUAD16:
     case AL_FORMAT_QUAD32:
