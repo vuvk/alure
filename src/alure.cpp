@@ -154,6 +154,7 @@ static struct MyConstructorClass {
 #ifdef DYNLOAD
 static inline void *LoadLibraryA(const char *libname)
 {
+    dlerror();
     void *hdl = dlopen(libname, RTLD_NOW);
     const char *err;
     if((err=dlerror()) != NULL)
@@ -165,6 +166,7 @@ static inline void *LoadLibraryA(const char *libname)
 }
 static inline void *GetProcAddress(void *hdl, const char *funcname)
 {
+    dlerror();
     void *fn = dlsym(hdl, funcname);
     const char *err;
     if((err=dlerror()) != NULL)
