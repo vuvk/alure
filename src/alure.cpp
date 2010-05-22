@@ -883,6 +883,8 @@ ALURE_API ALboolean ALURE_APIENTRY alureSleep(ALfloat duration)
  *
  * Returns:
  * NULL on error.
+ *
+ * *Version Added*: 1.1
  */
 ALURE_API void* ALURE_APIENTRY alureGetProcAddress(const ALchar *funcname)
 {

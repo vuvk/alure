@@ -126,6 +126,8 @@ extern "C" {
  * Returns:
  * Previously set value.
  *
+ * *Version Added*: 1.1
+ *
  * See Also:
  * <alureCreateStreamFromFile>, <alureCreateStreamFromMemory>,
  * <alureCreateStreamFromStaticMemory>, <alureCreateStreamFromCallback>
@@ -367,6 +369,8 @@ ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromCallback(
  *
  * Returns:
  * AL_FALSE on error.
+ *
+ * *Version Added*: 1.1
  */
 ALURE_API ALboolean ALURE_APIENTRY alureGetStreamFormat(alureStream *stream,
     ALenum *format, ALuint *frequency, ALuint *blockAlign)
@@ -481,6 +485,8 @@ ALURE_API ALboolean ALURE_APIENTRY alureRewindStream(alureStream *stream)
  *
  * Returns:
  * AL_FALSE on error.
+ *
+ * *Version Added*: 1.1
  *
  * See Also:
  * <alureRewindStream>

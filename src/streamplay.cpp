@@ -237,6 +237,8 @@ extern "C" {
  * Returns:
  * AL_FALSE on error.
  *
+ * *Version Added*: 1.1
+ *
  * See Also:
  * <alureStopSource>, <alurePauseSource>, <alureGetSourceOffset>, <alureUpdate>
  */
@@ -390,6 +392,8 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlaySourceStream(ALuint source,
  * Returns:
  * AL_FALSE on error.
  *
+ * *Version Added*: 1.1
+ *
  * See Also:
  * <alureStopSource>, <alureUpdate>
  */
@@ -448,6 +452,8 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlaySource(ALuint source,
  *
  * Returns:
  * AL_FALSE on error.
+ *
+ * *Version Added*: 1.1
  *
  * See Also:
  * <alurePlaySourceStream>, <alurePlaySource>
@@ -510,6 +516,8 @@ ALURE_API ALboolean ALURE_APIENTRY alureStopSource(ALuint source, ALboolean run_
  * Returns:
  * AL_FALSE on error.
  *
+ * *Version Added*: 1.1
+ *
  * See Also:
  * <alureResumeSource>, <alurePlaySourceStream>, <alurePlaySource>
  */
@@ -553,6 +561,8 @@ ALURE_API ALboolean ALURE_APIENTRY alurePauseSource(ALuint source)
  *
  * Returns:
  * AL_FALSE on error.
+ *
+ * *Version Added*: 1.1
  *
  * See Also:
  * <alurePauseSource>
@@ -602,6 +612,8 @@ ALURE_API ALboolean ALURE_APIENTRY alureResumeSource(ALuint source)
  * Returns:
  * (alureUInt64)-1 on error.
  *
+ * *Version Added*: 1.1
+ *
  * See Also:
  * <alurePlaySourceStream>
  */
@@ -649,6 +661,8 @@ ALURE_API alureUInt64 ALURE_APIENTRY alureGetSourceOffset(ALuint source)
  * makes sure that sources played with <alurePlaySourceStream> are kept fed
  * from their associated stream, and sources played with <alurePlaySource> are
  * still playing. It will call their callbacks as needed.
+ *
+ * *Version Added*: 1.1
  *
  * See Also:
  * <alurePlaySourceStream>, <alurePlaySource>
@@ -754,6 +768,8 @@ restart:
  *
  * Returns:
  * AL_FALSE on error.
+ *
+ * *Version Added*: 1.1
  *
  * See Also:
  * <alureUpdate>

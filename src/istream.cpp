@@ -226,6 +226,8 @@ extern "C" {
  *
  * Returns:
  * AL_FALSE on error.
+ *
+ * *Version Added*: 1.1
  */
 ALURE_API ALboolean ALURE_APIENTRY alureSetIOCallbacks(
       void* (*open)(const char *filename, ALuint mode),
