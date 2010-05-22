@@ -314,18 +314,32 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlaySourceStream(ALuint source,
 			                                 ent.stream->chunkLen);
 			got -= got%ent.stream_align;
 			if(got <= 0)
-				break;
-
+			{
+				if(ent.loopcount == ent.maxloops)
+					ent.finished = true;
+				else
+				{
+					if(ent.maxloops != -1 || ent.loopcount < 1)
+						ent.loopcount++;
+					ent.finished = !ent.stream->Rewind();
+				}
+				if(ent.finished)
+					break;
+				i--;
+				continue;
+			}
 			ALuint buf = ent.buffers[i];
 			alBufferData(buf, ent.stream_format, ent.stream->dataChunk, got, ent.stream_freq);
-			alSourceQueueBuffers(ent.source, 1, &buf);
 			numBufs++;
 
-			ALint size, channels, bits;
-			alGetBufferi(buf, AL_SIZE, &size);
-			alGetBufferi(buf, AL_CHANNELS, &channels);
-			alGetBufferi(buf, AL_BITS, &bits);
-			ent.max_time += size / channels * 8 / bits;
+			if(ent.loopcount == 0)
+			{
+				ALint size, channels, bits;
+				alGetBufferi(buf, AL_SIZE, &size);
+				alGetBufferi(buf, AL_CHANNELS, &channels);
+				alGetBufferi(buf, AL_BITS, &bits);
+				ent.max_time += size / channels * 8 / bits;
+			}
 		}
 	}
 	if(numBufs == 0)
@@ -335,18 +349,6 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlaySourceStream(ALuint source,
 		LeaveCriticalSection(&cs_StreamPlay);
 		SetError("Error buffering from stream");
 		return AL_FALSE;
-	}
-
-	if((ALuint)numBufs < ent.buffers.size())
-	{
-		if(ent.loopcount == ent.maxloops)
-			ent.finished = true;
-		else
-		{
-			if(ent.maxloops != -1 || ent.loopcount < 1)
-				ent.loopcount++;
-			ent.finished = !ent.stream->Rewind();
-		}
 	}
 
 	if((alSourcei(source, AL_BUFFER, 0),alGetError()) != AL_NO_ERROR ||
@@ -680,22 +682,19 @@ restart:
 		alGetSourcei(i->source, AL_SOURCE_STATE, &state);
 		alGetSourcei(i->source, AL_BUFFERS_QUEUED, &queued);
 		alGetSourcei(i->source, AL_BUFFERS_PROCESSED, &processed);
-		while(((ALuint)queued < i->buffers.size() && !i->finished) ||
-		      processed > 0)
+		while(processed > 0)
 		{
 			ALint size, channels, bits;
-			if(processed > 0)
-			{
-				queued--;
-				processed--;
-				alSourceUnqueueBuffers(i->source, 1, &buf);
 
-				alGetBufferi(buf, AL_SIZE, &size);
-				alGetBufferi(buf, AL_CHANNELS, &channels);
-				alGetBufferi(buf, AL_BITS, &bits);
-				i->base_time += size / channels * 8 / bits;
-				i->base_time %= i->max_time;
-			}
+			alSourceUnqueueBuffers(i->source, 1, &buf);
+			processed--;
+			queued--;
+
+			alGetBufferi(buf, AL_SIZE, &size);
+			alGetBufferi(buf, AL_CHANNELS, &channels);
+			alGetBufferi(buf, AL_BITS, &bits);
+			i->base_time += size / channels * 8 / bits;
+			i->base_time %= i->max_time;
 
 			while(!i->finished)
 			{
