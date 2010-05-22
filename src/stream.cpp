@@ -117,11 +117,11 @@ extern "C" {
 
 /* Function: alureStreamSizeIsMicroSec
  *
- * Specifies whether the chunk size given to alureCreateStreamFrom* functions
- * are bytes (AL_FALSE, default) or microseconds (AL_TRUE). Specifying the size
- * in microseconds can help manage the time needed in between needed updates
- * (since the format and sample rate of the stream may not be known ahead of
- * time), while specifying the size can help control memory usage.
+ * Specifies if the chunk size value given to the alureCreateStream functions
+ * is in bytes (default) or microseconds. Specifying the size in microseconds
+ * can help manage the time needed in between needed updates (since the format
+ * and sample rate of the stream may not be known), while specifying the size
+ * in bytes can help control memory usage.
  *
  * Returns:
  * Previously set value.

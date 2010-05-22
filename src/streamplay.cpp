@@ -199,14 +199,14 @@ extern "C" {
  *
  * Starts playing a stream, using the specified source ID. A stream can only be
  * played if it is not already playing. You must call <alureUpdate> at regular
- * intervals to keep the stream playing. If you fail to do so, the stream will
- * underrun and cause a break in the playback until am update call can restart
- * it. It also is important that the current context is kept for <alureUpdate>
- * calls, otherwise the method may start calling OpenAL with invalid IDs. Note
- * that checking the state of the specified source is not a good method to
- * determine if a stream is playing. If an underrun occurs, the source will
- * enter a stopped state until it is automatically restarted. Instead, set a
- * flag using the callback to indicate the stream being stopped.
+ * intervals to keep the stream playing, or else the stream will underrun and
+ * cause a break in the playback until an update call can restart it. It also
+ * is important that the current context is kept for <alureUpdate> calls,
+ * otherwise the method may start calling OpenAL with invalid IDs. Note that
+ * checking the state of the specified source is not a good method to determine
+ * if a stream is playing. If an underrun occurs, the source will enter a
+ * stopped state until it is automatically restarted. Instead, set a flag using
+ * the callback to indicate the stream being stopped.
  *
  * Parameters:
  * source - The source ID to play the stream with. Any buffers on the source
