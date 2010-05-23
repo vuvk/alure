@@ -533,6 +533,16 @@ ALenum GetSampleFormat(ALuint channels, ALuint bits, bool isFloat)
                 return AL_NONE;
             }
         }
+        if(bits == 64)
+        {
+            if(alIsExtensionPresent("AL_EXT_DOUBLE"))
+            {
+                if(channels == 1) CHECK_FMT_RET(AL_FORMAT_MONO_DOUBLE_EXT);
+                if(channels == 2) CHECK_FMT_RET(AL_FORMAT_STEREO_DOUBLE_EXT);
+                SetError("Unsupported channel count\n");
+                return AL_NONE;
+            }
+        }
     }
 #undef CHECK_FMT_RET
 
