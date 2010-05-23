@@ -492,7 +492,7 @@ ALenum GetSampleFormat(ALuint channels, ALuint bits, bool isFloat)
             {
                 if(channels == 4) CHECK_FMT_RET(AL_FORMAT_QUAD8_LOKI);
             }
-            SetError("Unsupported channel count\n");
+            SetError("Unsupported 8-bit channel count\n");
             return AL_NONE;
         }
         if(bits == 16)
@@ -510,7 +510,7 @@ ALenum GetSampleFormat(ALuint channels, ALuint bits, bool isFloat)
             {
                 if(channels == 4) CHECK_FMT_RET(AL_FORMAT_QUAD16_LOKI);
             }
-            SetError("Unsupported channel count\n");
+            SetError("Unsupported 16-bit channel count\n");
             return AL_NONE;
         }
     }
@@ -529,7 +529,7 @@ ALenum GetSampleFormat(ALuint channels, ALuint bits, bool isFloat)
                     if(channels == 7) CHECK_FMT_RET(AL_FORMAT_61CHN32);
                     if(channels == 8) CHECK_FMT_RET(AL_FORMAT_71CHN32);
                 }
-                SetError("Unsupported channel count\n");
+                SetError("Unsupported float32 channel count\n");
                 return AL_NONE;
             }
         }
@@ -539,7 +539,7 @@ ALenum GetSampleFormat(ALuint channels, ALuint bits, bool isFloat)
             {
                 if(channels == 1) CHECK_FMT_RET(AL_FORMAT_MONO_DOUBLE_EXT);
                 if(channels == 2) CHECK_FMT_RET(AL_FORMAT_STEREO_DOUBLE_EXT);
-                SetError("Unsupported channel count\n");
+                SetError("Unsupported double channel count\n");
                 return AL_NONE;
             }
         }
