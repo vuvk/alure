@@ -183,20 +183,27 @@ struct wavStream : public alureStream {
         got -= got%blockAlign;
         remLen -= got;
 
-        if(BigEndian && sampleSize > 1)
+        if(BigEndian && sampleSize == 16)
         {
-            if(sampleSize == 2)
+            for(std::streamsize i = 0;i < got;i+=2)
+                swap(data[i], data[i+1]);
+        }
+        else if(BigEndian && sampleSize == 32)
+        {
+            for(std::streamsize i = 0;i < got;i+=4)
             {
-                for(std::streamsize i = 0;i < got;i+=2)
-                    swap(data[i], data[i+1]);
+                swap(data[i+0], data[i+3]);
+                swap(data[i+1], data[i+2]);
             }
-            else if(sampleSize == 4)
+        }
+        else if(BigEndian && sampleSize == 64)
+        {
+            for(std::streamsize i = 0;i < got;i+=8)
             {
-                for(std::streamsize i = 0;i < got;i+=4)
-                {
-                    swap(data[i+0], data[i+3]);
-                    swap(data[i+1], data[i+2]);
-                }
+                swap(data[i+0], data[i+7]);
+                swap(data[i+1], data[i+6]);
+                swap(data[i+2], data[i+5]);
+                swap(data[i+3], data[i+4]);
             }
         }
 
@@ -237,9 +244,10 @@ struct wavStream : public alureStream {
 
             if(memcmp(tag, "fmt ", 4) == 0 && length >= 16)
             {
-                /* Data type (should be 1 for PCM data) */
+                /* Data type (should be 1 for PCM data, 3 for float PCM data,
+                 * and 17 for IMA4 data) */
                 int type = read_le16(fstream);
-                if(type != 1)
+                if(type != 0x0001 && type != 0x0003 && type != 0x0011)
                     break;
 
                 /* mono or stereo data */
@@ -257,11 +265,39 @@ struct wavStream : public alureStream {
                     break;
 
                 /* bits per sample */
-                sampleSize = read_le16(fstream) / 8;
-
-                format = GetSampleFormat(channels, sampleSize*8, false);
+                sampleSize = read_le16(fstream);
 
                 length -= 16;
+
+                /* Look for any extra data and try to find the format */
+                int extrabytes = 0;
+                if(length >= 2)
+                {
+                    extrabytes = read_le16(fstream);
+                    length -= 2;
+                }
+                extrabytes = std::min(extrabytes, length);
+
+                if(type == 0x0001)
+                    format = GetSampleFormat(channels, sampleSize, false);
+                else if(type == 0x0003)
+                    format = GetSampleFormat(channels, sampleSize, true);
+                else if(type == 0x0011 && extrabytes >= 2)
+                {
+                    int samples = read_le16(fstream);
+                    length -= 2;
+
+                    /* AL_EXT_IMA4 only supports 36 bytes-per-channel block
+                     * alignment, which has 65 uncompressed sample frames */
+                    if(blockAlign == 36*channels && samples == 65*channels &&
+                       alIsExtensionPresent("AL_EXT_IMA4"))
+                    {
+                         if(channels == 1)
+                             format = AL_FORMAT_MONO_IMA4;
+                         else if(channels == 2)
+                             format = AL_FORMAT_STEREO_IMA4;
+                    }
+                }
             }
             else if(memcmp(tag, "data", 4) == 0)
             {
