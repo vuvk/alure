@@ -127,13 +127,14 @@ struct AsyncPlayEntry {
 	bool paused;
 	alureUInt64 base_time;
 	alureUInt64 max_time;
+	ALuint queued_time;
 	ALuint stream_freq;
 	ALenum stream_format;
 	ALuint stream_align;
 
 	AsyncPlayEntry() : source(0), stream(NULL), loopcount(0), maxloops(0),
 	                   eos_callback(NULL), user_data(NULL), finished(false),
-	                   paused(false), base_time(0), max_time(0),
+	                   paused(false), base_time(0), max_time(0), queued_time(0),
 	                   stream_freq(0), stream_format(AL_NONE), stream_align(0)
 	{ }
 	AsyncPlayEntry(const AsyncPlayEntry &rhs)
@@ -141,8 +142,9 @@ struct AsyncPlayEntry {
 	    loopcount(rhs.loopcount), maxloops(rhs.maxloops),
 	    eos_callback(rhs.eos_callback), user_data(rhs.user_data),
 	    finished(rhs.finished), paused(rhs.paused), base_time(rhs.base_time),
-	    max_time(rhs.max_time), stream_freq(rhs.stream_freq),
-	    stream_format(rhs.stream_format), stream_align(rhs.stream_align)
+	    max_time(rhs.max_time), queued_time(rhs.queued_time),
+	    stream_freq(rhs.stream_freq), stream_format(rhs.stream_format),
+	    stream_align(rhs.stream_align)
 	{ }
 
 	ALenum Update(ALint *queued)
@@ -164,7 +166,9 @@ struct AsyncPlayEntry {
 			alGetBufferi(buf, AL_SIZE, &size);
 			alGetBufferi(buf, AL_CHANNELS, &channels);
 			alGetBufferi(buf, AL_BITS, &bits);
-			base_time += size / channels * 8 / bits;
+			size /= channels * bits / 8;
+			queued_time -= size;
+			base_time += size;
 			base_time %= max_time;
 
 			while(!finished)
@@ -176,13 +180,14 @@ struct AsyncPlayEntry {
 					alBufferData(buf, stream_format, stream->dataChunk, got, stream_freq);
 					alSourceQueueBuffers(source, 1, &buf);
 					(*queued)++;
+
+					alGetBufferi(buf, AL_SIZE, &size);
+					alGetBufferi(buf, AL_CHANNELS, &channels);
+					alGetBufferi(buf, AL_BITS, &bits);
+					size /= channels * bits / 8;
+					queued_time += size;
 					if(loopcount == 0)
-					{
-						alGetBufferi(buf, AL_SIZE, &size);
-						alGetBufferi(buf, AL_CHANNELS, &channels);
-						alGetBufferi(buf, AL_BITS, &bits);
-						max_time += size / channels * 8 / bits;
-					}
+						max_time += size;
 					break;
 				}
 				if(loopcount == maxloops)
@@ -391,14 +396,14 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlaySourceStream(ALuint source,
 			alBufferData(buf, ent.stream_format, ent.stream->dataChunk, got, ent.stream_freq);
 			numBufs++;
 
+			ALint size, channels, bits;
+			alGetBufferi(buf, AL_SIZE, &size);
+			alGetBufferi(buf, AL_CHANNELS, &channels);
+			alGetBufferi(buf, AL_BITS, &bits);
+			size /= channels * bits / 8;
+			ent.queued_time += size;
 			if(ent.loopcount == 0)
-			{
-				ALint size, channels, bits;
-				alGetBufferi(buf, AL_SIZE, &size);
-				alGetBufferi(buf, AL_CHANNELS, &channels);
-				alGetBufferi(buf, AL_BITS, &bits);
-				ent.max_time += size / channels * 8 / bits;
-			}
+				ent.max_time += size;
 		}
 	}
 	if(numBufs == 0)
@@ -699,7 +704,14 @@ ALURE_API alureUInt64 ALURE_APIENTRY alureGetSourceOffset(ALuint source)
 	{
 		if(i->source == source)
 		{
-			retval += i->base_time;
+			ALint state;
+
+			alGetSourcei(source, AL_SOURCE_STATE, &state);
+
+			retval = i->base_time + i->queued_time;
+			if(state != AL_STOPPED)
+				retval -= i->queued_time - pos;
+
 			if(i->max_time)
 				retval %= i->max_time;
 			break;
