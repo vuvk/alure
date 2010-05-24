@@ -144,6 +144,60 @@ struct AsyncPlayEntry {
 	    max_time(rhs.max_time), stream_freq(rhs.stream_freq),
 	    stream_format(rhs.stream_format), stream_align(rhs.stream_align)
 	{ }
+
+	ALenum Update(ALint *queued)
+	{
+		ALint processed, state;
+
+		alGetSourcei(source, AL_SOURCE_STATE, &state);
+		alGetSourcei(source, AL_BUFFERS_QUEUED, queued);
+		alGetSourcei(source, AL_BUFFERS_PROCESSED, &processed);
+		while(processed > 0)
+		{
+			ALint size, channels, bits;
+			ALuint buf;
+
+			alSourceUnqueueBuffers(source, 1, &buf);
+			processed--;
+			(*queued)--;
+
+			alGetBufferi(buf, AL_SIZE, &size);
+			alGetBufferi(buf, AL_CHANNELS, &channels);
+			alGetBufferi(buf, AL_BITS, &bits);
+			base_time += size / channels * 8 / bits;
+			base_time %= max_time;
+
+			while(!finished)
+			{
+				ALuint got = stream->GetData(stream->dataChunk, stream->chunkLen);
+				got -= got%stream_align;
+				if(got > 0)
+				{
+					alBufferData(buf, stream_format, stream->dataChunk, got, stream_freq);
+					alSourceQueueBuffers(source, 1, &buf);
+					(*queued)++;
+					if(loopcount == 0)
+					{
+						alGetBufferi(buf, AL_SIZE, &size);
+						alGetBufferi(buf, AL_CHANNELS, &channels);
+						alGetBufferi(buf, AL_BITS, &bits);
+						max_time += size / channels * 8 / bits;
+					}
+					break;
+				}
+				if(loopcount == maxloops)
+				{
+					finished = true;
+					break;
+				}
+				if(maxloops != -1 || loopcount < 1)
+					loopcount++;
+				finished = !stream->Rewind();
+			}
+		}
+
+		return state;
+	}
 };
 static std::list<AsyncPlayEntry> AsyncPlayList;
 static ThreadInfo *PlayThreadHandle;
@@ -678,13 +732,9 @@ restart:
 	                                    end = AsyncPlayList.end();
 	for(;i != end;i++)
 	{
-		ALuint buf;
-		ALint processed;
-		ALint queued;
-		ALint state;
-
 		if(i->stream == NULL)
 		{
+			ALint state;
 			alGetSourcei(i->source, AL_SOURCE_STATE, &state);
 			if(state != AL_PLAYING && state != AL_PAUSED)
 			{
@@ -696,53 +746,8 @@ restart:
 			continue;
 		}
 
-		alGetSourcei(i->source, AL_SOURCE_STATE, &state);
-		alGetSourcei(i->source, AL_BUFFERS_QUEUED, &queued);
-		alGetSourcei(i->source, AL_BUFFERS_PROCESSED, &processed);
-		while(processed > 0)
-		{
-			ALint size, channels, bits;
-
-			alSourceUnqueueBuffers(i->source, 1, &buf);
-			processed--;
-			queued--;
-
-			alGetBufferi(buf, AL_SIZE, &size);
-			alGetBufferi(buf, AL_CHANNELS, &channels);
-			alGetBufferi(buf, AL_BITS, &bits);
-			i->base_time += size / channels * 8 / bits;
-			i->base_time %= i->max_time;
-
-			while(!i->finished)
-			{
-				ALuint got = i->stream->GetData(i->stream->dataChunk,
-				                                i->stream->chunkLen);
-				got -= got%i->stream_align;
-				if(got > 0)
-				{
-					alBufferData(buf, i->stream_format, i->stream->dataChunk, got, i->stream_freq);
-					alSourceQueueBuffers(i->source, 1, &buf);
-					queued++;
-					if(i->loopcount == 0)
-					{
-						alGetBufferi(buf, AL_SIZE, &size);
-						alGetBufferi(buf, AL_CHANNELS, &channels);
-						alGetBufferi(buf, AL_BITS, &bits);
-						i->max_time += size / channels * 8 / bits;
-					}
-					break;
-				}
-				if(i->loopcount == i->maxloops)
-				{
-					i->finished = true;
-					break;
-				}
-				if(i->maxloops != -1 || i->loopcount < 1)
-					i->loopcount++;
-				i->finished = !i->stream->Rewind();
-			}
-		}
-		if(state != AL_PLAYING)
+		ALint queued;
+		if(i->Update(&queued) != AL_PLAYING)
 		{
 			if(queued == 0)
 			{
