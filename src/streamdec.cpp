@@ -256,7 +256,7 @@ struct wavStream : public alureStream {
                 /* sample frequency */
                 samplerate = read_le32(fstream);
 
-                /* skip four bytes */
+                /* skip average bytes per second */
                 fstream->ignore(4);
 
                 /* bytes per block */
