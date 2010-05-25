@@ -422,7 +422,6 @@ void DetectCompressionRate(ALenum format, ALuint *framesperblock)
 {
     switch(format)
     {
-#define CHECK_RET(f,s) case (f): *framesperblock = (s); return
     case AL_FORMAT_MONO8:
     case AL_FORMAT_MONO16:
     case AL_FORMAT_MONO_FLOAT32:
