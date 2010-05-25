@@ -661,23 +661,16 @@ ALURE_API ALboolean ALURE_APIENTRY alureInitDevice(const ALCchar *name, const AL
     }
 
     ALCcontext *context = alcCreateContext(device, attribs);
-    if(alcGetError(device) != ALC_NO_ERROR || !context)
+    if(!context || alcMakeContextCurrent(context) == ALC_FALSE)
     {
-        alcCloseDevice(device);
-
-        SetError("Context creation failed");
-        return AL_FALSE;
-    }
-
-    alcMakeContextCurrent(context);
-    if(alcGetError(device) != AL_NO_ERROR)
-    {
-        alcDestroyContext(context);
+        if(context)
+            alcDestroyContext(context);
         alcCloseDevice(device);
 
         SetError("Context setup failed");
         return AL_FALSE;
     }
+    alcGetError(device);
 
     return AL_TRUE;
 }
@@ -696,8 +689,9 @@ ALURE_API ALboolean ALURE_APIENTRY alureShutdownDevice(void)
 {
     ALCcontext *context = alcGetCurrentContext();
     ALCdevice *device = alcGetContextsDevice(context);
-    if(alcGetError(device) != ALC_NO_ERROR || !device)
+    if(!context || !device)
     {
+        alcGetError(device);
         SetError("Failed to get current device");
         return AL_FALSE;
     }
