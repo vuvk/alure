@@ -414,8 +414,7 @@ ALuint DetectBlockAlignment(ALenum format)
         CHECK_RET(AL_FORMAT_STEREO_IMA4, 36*2);
 #undef CHECK_RET
     }
-    fprintf(stderr, "Alure lib: Unhandled format: %#x\n", format);
-    return 1;
+    return 0;
 }
 
 void DetectCompressionRate(ALenum format, ALuint *framesperblock)

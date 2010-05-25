@@ -108,9 +108,11 @@ struct customStream : public alureStream {
     {
         if(format == AL_NONE)
         {
-            if(!cb.get_fmt ||
-               !cb.get_fmt(usrFile, &this->format, &samplerate, &blockAlign))
+            if(!cb.get_fmt || !cb.get_fmt(usrFile, &format, &samplerate, &blockAlign))
                 return false;
+
+            if(DetectBlockAlignment(format) != blockAlign)
+                format = AL_NONE;
         }
 
         *fmt = format;
