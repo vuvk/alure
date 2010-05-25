@@ -379,7 +379,7 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlaySourceStream(ALuint source,
 			got -= got%ent.stream_align;
 			if(got <= 0)
 			{
-				if(ent.loopcount == ent.maxloops)
+				if(ent.loopcount == ent.maxloops || i == 0)
 					ent.finished = true;
 				else
 				{
@@ -712,8 +712,7 @@ ALURE_API alureUInt64 ALURE_APIENTRY alureGetSourceOffset(ALuint source)
 			if(state != AL_STOPPED)
 				retval -= i->queued_time - pos;
 
-			if(i->max_time)
-				retval %= i->max_time;
+			retval %= i->max_time;
 			break;
 		}
 		i++;
