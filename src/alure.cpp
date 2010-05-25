@@ -511,45 +511,34 @@ ALenum GetSampleFormat(ALuint channels, ALuint bits, bool isFloat)
             SetError("Unsupported 16-bit channel count\n");
             return AL_NONE;
         }
+        SetError("Unsupported PCM bit depth\n");
+        return AL_NONE;
     }
-    else
+
+    if(bits == 32 && alIsExtensionPresent("AL_EXT_FLOAT32"))
     {
-        if(bits == 32)
+        if(channels == 1) CHECK_FMT_RET(AL_FORMAT_MONO_FLOAT32);
+        if(channels == 2) CHECK_FMT_RET(AL_FORMAT_STEREO_FLOAT32);
+        if(alIsExtensionPresent("AL_EXT_MCFORMATS"))
         {
-            if(alIsExtensionPresent("AL_EXT_FLOAT32"))
-            {
-                if(channels == 1) CHECK_FMT_RET(AL_FORMAT_MONO_FLOAT32);
-                if(channels == 2) CHECK_FMT_RET(AL_FORMAT_STEREO_FLOAT32);
-                if(alIsExtensionPresent("AL_EXT_MCFORMATS"))
-                {
-                    if(channels == 4) CHECK_FMT_RET(AL_FORMAT_QUAD32);
-                    if(channels == 6) CHECK_FMT_RET(AL_FORMAT_51CHN32);
-                    if(channels == 7) CHECK_FMT_RET(AL_FORMAT_61CHN32);
-                    if(channels == 8) CHECK_FMT_RET(AL_FORMAT_71CHN32);
-                }
-                SetError("Unsupported float32 channel count\n");
-                return AL_NONE;
-            }
+            if(channels == 4) CHECK_FMT_RET(AL_FORMAT_QUAD32);
+            if(channels == 6) CHECK_FMT_RET(AL_FORMAT_51CHN32);
+            if(channels == 7) CHECK_FMT_RET(AL_FORMAT_61CHN32);
+            if(channels == 8) CHECK_FMT_RET(AL_FORMAT_71CHN32);
         }
-        if(bits == 64)
-        {
-            if(alIsExtensionPresent("AL_EXT_DOUBLE"))
-            {
-                if(channels == 1) CHECK_FMT_RET(AL_FORMAT_MONO_DOUBLE_EXT);
-                if(channels == 2) CHECK_FMT_RET(AL_FORMAT_STEREO_DOUBLE_EXT);
-                SetError("Unsupported double channel count\n");
-                return AL_NONE;
-            }
-        }
+        SetError("Unsupported float32 channel count\n");
+        return AL_NONE;
+    }
+    if(bits == 64 && alIsExtensionPresent("AL_EXT_DOUBLE"))
+    {
+        if(channels == 1) CHECK_FMT_RET(AL_FORMAT_MONO_DOUBLE_EXT);
+        if(channels == 2) CHECK_FMT_RET(AL_FORMAT_STEREO_DOUBLE_EXT);
+        SetError("Unsupported double channel count\n");
+        return AL_NONE;
     }
 #undef CHECK_FMT_RET
 
-    if(isFloat)
-    {
-        SetError("Unsupported float bit depth\n");
-        return AL_NONE;
-    }
-    SetError("Unsupported PCM bit depth\n");
+    SetError("Unsupported float bit depth\n");
     return AL_NONE;
 }
 
