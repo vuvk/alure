@@ -417,7 +417,7 @@ ALuint DetectBlockAlignment(ALenum format)
     return 0;
 }
 
-void DetectCompressionRate(ALenum format, ALuint *framesperblock)
+ALuint DetectCompressionRate(ALenum format)
 {
     switch(format)
     {
@@ -444,8 +444,7 @@ void DetectCompressionRate(ALenum format, ALuint *framesperblock)
     case AL_FORMAT_71CHN8:
     case AL_FORMAT_71CHN16:
     case AL_FORMAT_71CHN32:
-        *framesperblock = 1;
-        return;
+        return 1;
 
     case AL_FORMAT_MONO_MULAW:
     case AL_FORMAT_STEREO_MULAW:
@@ -454,16 +453,14 @@ void DetectCompressionRate(ALenum format, ALuint *framesperblock)
     case AL_FORMAT_51CHN_MULAW:
     case AL_FORMAT_61CHN_MULAW:
     case AL_FORMAT_71CHN_MULAW:
-        *framesperblock = 1;
-        return;
+        return 1;
 
     case AL_FORMAT_MONO_IMA4:
     case AL_FORMAT_STEREO_IMA4:
-        *framesperblock = 65;
-        return;
+        return 65;
     }
     fprintf(stderr, "Alure lib: Unhandled format: %#x\n", format);
-    *framesperblock = 1;
+    return 0;
 }
 
 ALenum GetSampleFormat(ALuint channels, ALuint bits, bool isFloat)

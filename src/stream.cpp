@@ -64,8 +64,12 @@ static alureStream *InitStream(alureStream *instream, ALsizei chunkLength, ALsiz
     alureUInt64 len64 = chunkLength;
     if(SizeIsUS)
     {
-        ALuint framesPerBlock;
-        DetectCompressionRate(format, &framesPerBlock);
+        ALuint framesPerBlock = DetectCompressionRate(format);
+        if(framesPerBlock == 0)
+        {
+            SetError("Unknown compression rate");
+            return NULL;
+        }
 
         len64 = len64 * freq / 1000000 / framesPerBlock * blockAlign;
         if(len64 > 0xFFFFFFFF)

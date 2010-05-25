@@ -166,7 +166,7 @@ MAKE_FUNC(sf_seek);
 
 void SetError(const char *err);
 ALuint DetectBlockAlignment(ALenum format);
-void DetectCompressionRate(ALenum format, ALuint *framesperblock);
+ALuint DetectCompressionRate(ALenum format);
 ALenum GetSampleFormat(ALuint channels, ALuint bits, bool isFloat);
 
 struct UserCallbacks {
