@@ -35,6 +35,7 @@
 
 bool load_stream(alureStream *_stream, ALuint buffer)
 {
+    std::auto_ptr<std::istream> fstream(_stream->fstream);
     std::auto_ptr<alureStream> stream(_stream);
     if(!stream->IsValid())
         return false;
