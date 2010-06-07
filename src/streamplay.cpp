@@ -415,9 +415,12 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlaySourceStream(ALuint source,
 		return AL_FALSE;
 	}
 
-	if((alSourcei(source, AL_BUFFER, 0),alGetError()) != AL_NO_ERROR ||
-	   (alSourceQueueBuffers(source, numBufs, &ent.buffers[0]),alGetError()) != AL_NO_ERROR)
+	if((alSourcei(source, AL_LOOPING, AL_FALSE),
+	    alSourcei(source, AL_BUFFER, 0),alGetError()) != AL_NO_ERROR ||
+	   (alSourceQueueBuffers(source, numBufs, &ent.buffers[0]),
+	    alSourcePlay(source),alGetError()) != AL_NO_ERROR)
 	{
+		alSourcei(source, AL_BUFFER, 0);
 		alDeleteBuffers(ent.buffers.size(), &ent.buffers[0]);
 		alGetError();
 		LeaveCriticalSection(&cs_StreamPlay);
