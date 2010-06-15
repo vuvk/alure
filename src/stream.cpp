@@ -90,11 +90,14 @@ static alureStream *InitStream(alureStream *instream, ALsizei chunkLength, ALsiz
     stream->chunkLen = chunkLength;
     stream->dataChunk = new ALubyte[stream->chunkLen];
 
-    alGenBuffers(numBufs, bufs);
-    if(alGetError() != AL_NO_ERROR)
+    if(numBufs > 0)
     {
-        SetError("Buffer creation failed");
-        return NULL;
+        alGenBuffers(numBufs, bufs);
+        if(alGetError() != AL_NO_ERROR)
+        {
+            SetError("Buffer creation failed");
+            return NULL;
+        }
     }
 
     ALsizei filled;
