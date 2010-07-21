@@ -1055,9 +1055,10 @@ struct mp3Stream : public alureStream {
             unsigned char data[4096];
             long newrate;
             int newchans;
-            int ret, enc;
+            int enc;
 
             ALuint amt, total = 0;
+            int ret = MPG123_OK;
             do {
                 fstream->read((char*)data, sizeof(data));
                 amt = fstream->gcount();
@@ -1095,9 +1096,10 @@ struct mp3Stream : public alureStream {
         if(pmpg123_open_feed(mp3File) == MPG123_OK)
         {
             unsigned char data[4096];
-            int ret, enc;
+            int enc;
 
             ALuint amt, total = 0;
+            int ret = MPG123_OK;
             do {
                 fstream->read((char*)data, sizeof(data));
                 amt = fstream->gcount();
