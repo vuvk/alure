@@ -29,6 +29,7 @@
 
 #include <string.h>
 #include <errno.h>
+#include <stdio.h>
 #include <time.h>
 #ifdef HAVE_WINDOWS_H
 #include <windows.h>
