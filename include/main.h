@@ -19,6 +19,9 @@
 #ifdef HAS_DUMB
 #include <dumb.h>
 #endif
+#ifdef HAS_DUMB
+#include <fluidsynth.h>
+#endif
 
 
 #ifdef HAVE_SYS_TYPES_H
@@ -108,6 +111,7 @@ extern void *flac_handle;
 extern void *dumb_handle;
 extern void *mp123_handle;
 extern void *sndfile_handle;
+extern void *fsynth_handle;
 
 #define MAKE_FUNC(x) extern typeof(x)* p##x
 #ifdef HAS_VORBISFILE
@@ -161,6 +165,27 @@ MAKE_FUNC(sf_close);
 MAKE_FUNC(sf_open_virtual);
 MAKE_FUNC(sf_readf_short);
 MAKE_FUNC(sf_seek);
+#endif
+#ifdef HAS_FLUIDSYNTH
+MAKE_FUNC(fluid_settings_setstr);
+MAKE_FUNC(fluid_synth_program_change);
+MAKE_FUNC(fluid_synth_sfload);
+MAKE_FUNC(fluid_settings_setnum);
+MAKE_FUNC(fluid_synth_sysex);
+MAKE_FUNC(fluid_synth_cc);
+MAKE_FUNC(fluid_synth_pitch_bend);
+MAKE_FUNC(fluid_synth_channel_pressure);
+MAKE_FUNC(fluid_synth_write_float);
+MAKE_FUNC(new_fluid_synth);
+MAKE_FUNC(delete_fluid_settings);
+MAKE_FUNC(delete_fluid_synth);
+MAKE_FUNC(fluid_synth_program_reset);
+MAKE_FUNC(fluid_settings_setint);
+MAKE_FUNC(new_fluid_settings);
+MAKE_FUNC(fluid_synth_write_s16);
+MAKE_FUNC(fluid_synth_noteoff);
+MAKE_FUNC(fluid_synth_sfunload);
+MAKE_FUNC(fluid_synth_noteon);
 #endif
 #undef MAKE_FUNC
 

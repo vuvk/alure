@@ -47,8 +47,5 @@
 /* Define if we have DUMB */
 #cmakedefine HAS_DUMB
 
-/* Define if we have external Timidity */
-#cmakedefine HAS_TIMIDITY
-
-/* Define if we have GStreamer */
-#cmakedefine HAS_GSTREAMER
+/* Define if we have FluidSynth */
+#cmakedefine HAS_FLUIDSYNTH

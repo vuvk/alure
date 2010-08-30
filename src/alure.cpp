@@ -48,6 +48,7 @@ void *flac_handle = NULL;
 void *dumb_handle = NULL;
 void *mp123_handle = NULL;
 void *sndfile_handle = NULL;
+void *fsynth_handle = NULL;
 
 #define MAKE_FUNC(x) typeof(x)* p##x
 #ifdef HAS_VORBISFILE
@@ -101,6 +102,27 @@ MAKE_FUNC(sf_close);
 MAKE_FUNC(sf_open_virtual);
 MAKE_FUNC(sf_readf_short);
 MAKE_FUNC(sf_seek);
+#endif
+#ifdef HAS_FLUIDSYNTH
+MAKE_FUNC(fluid_settings_setstr);
+MAKE_FUNC(fluid_synth_program_change);
+MAKE_FUNC(fluid_synth_sfload);
+MAKE_FUNC(fluid_settings_setnum);
+MAKE_FUNC(fluid_synth_sysex);
+MAKE_FUNC(fluid_synth_cc);
+MAKE_FUNC(fluid_synth_pitch_bend);
+MAKE_FUNC(fluid_synth_channel_pressure);
+MAKE_FUNC(fluid_synth_write_float);
+MAKE_FUNC(new_fluid_synth);
+MAKE_FUNC(delete_fluid_settings);
+MAKE_FUNC(delete_fluid_synth);
+MAKE_FUNC(fluid_synth_program_reset);
+MAKE_FUNC(fluid_settings_setint);
+MAKE_FUNC(new_fluid_settings);
+MAKE_FUNC(fluid_synth_write_s16);
+MAKE_FUNC(fluid_synth_noteoff);
+MAKE_FUNC(fluid_synth_sfunload);
+MAKE_FUNC(fluid_synth_noteon);
 #endif
 #undef MAKE_FUNC
 
@@ -222,18 +244,21 @@ if(!p##x)                                                                    \
 #define DUMB_LIB "libdumb.dll"
 #define MPG123_LIB "libmpg123.dll"
 #define SNDFILE_LIB "libsndfile-1.dll"
+#define FLUIDSYNTH_LIB "libfluidsynth.dll"
 #elif defined(__APPLE__)
 #define VORBISFILE_LIB "libvorbisfile.3.dylib"
 #define FLAC_LIB "libFLAC.8.dylib"
 #define DUMB_LIB "libdumb.dylib"
 #define MPG123_LIB "libmpg123.0.dylib"
 #define SNDFILE_LIB "libsndfile.1.dylib"
+#define FLUIDSYNTH_LIB "libfluidsynth.1.dylib"
 #else
 #define VORBISFILE_LIB "libvorbisfile.so.3"
 #define FLAC_LIB "libFLAC.so.8"
 #define DUMB_LIB "libdumb.so"
 #define MPG123_LIB "libmpg123.so.0"
 #define SNDFILE_LIB "libsndfile.so.1"
+#define FLUIDSYNTH_LIB "libfluidsynth.so.1"
 #endif
 
 #ifdef HAS_VORBISFILE
@@ -315,6 +340,33 @@ if(!p##x)                                                                    \
         LOAD_FUNC(sndfile, sf_open_virtual);
         LOAD_FUNC(sndfile, sf_readf_short);
         LOAD_FUNC(sndfile, sf_seek);
+        break;
+    }
+#endif
+
+#ifdef HAS_FLUIDSYNTH
+    fsynth_handle = LoadLibraryA(FLUIDSYNTH_LIB);
+    while(fsynth_handle)
+    {
+        LOAD_FUNC(fsynth, fluid_settings_setstr);
+        LOAD_FUNC(fsynth, fluid_synth_program_change);
+        LOAD_FUNC(fsynth, fluid_synth_sfload);
+        LOAD_FUNC(fsynth, fluid_settings_setnum);
+        LOAD_FUNC(fsynth, fluid_synth_sysex);
+        LOAD_FUNC(fsynth, fluid_synth_cc);
+        LOAD_FUNC(fsynth, fluid_synth_pitch_bend);
+        LOAD_FUNC(fsynth, fluid_synth_channel_pressure);
+        LOAD_FUNC(fsynth, fluid_synth_write_float);
+        LOAD_FUNC(fsynth, new_fluid_synth);
+        LOAD_FUNC(fsynth, delete_fluid_settings);
+        LOAD_FUNC(fsynth, delete_fluid_synth);
+        LOAD_FUNC(fsynth, fluid_synth_program_reset);
+        LOAD_FUNC(fsynth, fluid_settings_setint);
+        LOAD_FUNC(fsynth, new_fluid_settings);
+        LOAD_FUNC(fsynth, fluid_synth_write_s16);
+        LOAD_FUNC(fsynth, fluid_synth_noteoff);
+        LOAD_FUNC(fsynth, fluid_synth_sfunload);
+        LOAD_FUNC(fsynth, fluid_synth_noteon);
         break;
     }
 #endif
