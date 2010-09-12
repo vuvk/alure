@@ -998,6 +998,8 @@ struct mp3Stream : public alureStream {
     long samplerate;
     int channels;
     ALenum format;
+    std::istream::pos_type dataStart;
+    std::istream::pos_type dataEnd;
 
     virtual bool IsValid()
     { return mp3File != NULL; }
@@ -1032,8 +1034,13 @@ struct mp3Stream : public alureStream {
             if(ret == MPG123_NEED_MORE)
             {
                 unsigned char data[4096];
-                fstream->read((char*)data, sizeof(data));
-                std::streamsize insize = fstream->gcount();
+                ALint insize = std::min((ALint)sizeof(data),
+                                        (ALint)(dataEnd-fstream->tellg()));
+                if(insize > 0)
+                {
+                    fstream->read((char*)data, insize);
+                    insize = fstream->gcount();
+                }
                 if(insize > 0 && pmpg123_feed(mp3File, data, insize) == MPG123_OK)
                     continue;
             }
@@ -1047,7 +1054,7 @@ struct mp3Stream : public alureStream {
     {
         fstream->clear();
         std::istream::pos_type oldpos = fstream->tellg();
-        fstream->seekg(0);
+        fstream->seekg(dataStart);
 
         mpg123_handle *newFile = pmpg123_new(NULL, NULL);
         if(pmpg123_open_feed(newFile) == MPG123_OK)
@@ -1060,7 +1067,9 @@ struct mp3Stream : public alureStream {
             ALuint amt, total = 0;
             int ret = MPG123_OK;
             do {
-                fstream->read((char*)data, sizeof(data));
+                amt = std::min((ALint)sizeof(data),
+                               (ALint)(dataEnd-fstream->tellg()));
+                fstream->read((char*)data, amt);
                 amt = fstream->gcount();
                 if(amt == 0)  break;
                 total += amt;
@@ -1088,9 +1097,13 @@ struct mp3Stream : public alureStream {
     }
 
     mp3Stream(std::istream *_fstream)
-      : alureStream(_fstream), mp3File(NULL), format(AL_NONE)
+      : alureStream(_fstream), mp3File(NULL), format(AL_NONE),
+        dataStart(0), dataEnd(0)
     {
         if(!mp123_handle) return;
+
+        if(!FindDataChunk())
+            return;
 
         mp3File = pmpg123_new(NULL, NULL);
         if(pmpg123_open_feed(mp3File) == MPG123_OK)
@@ -1101,7 +1114,9 @@ struct mp3Stream : public alureStream {
             ALuint amt, total = 0;
             int ret = MPG123_OK;
             do {
-                fstream->read((char*)data, sizeof(data));
+                amt = std::min((ALint)sizeof(data),
+                               (ALint)(dataEnd-fstream->tellg()));
+                fstream->read((char*)data, amt);
                 amt = fstream->gcount();
                 if(amt == 0)  break;
                 total += amt;
@@ -1129,6 +1144,59 @@ struct mp3Stream : public alureStream {
         if(mp3File)
             pmpg123_delete(mp3File);
         mp3File = NULL;
+    }
+
+private:
+    bool FindDataChunk()
+    {
+        ALubyte buffer[25];
+        int length;
+
+        if(!fstream->read(reinterpret_cast<char*>(buffer), 12) ||
+           memcmp(buffer, "RIFF", 4) != 0 || memcmp(buffer+8, "WAVE", 4) != 0)
+        {
+            // Assume raw MP3
+            if(fstream->seekg(0, std::ios_base::end))
+            {
+                dataStart = 0;
+                dataEnd = fstream->tellg();
+                fstream->seekg(0);
+            }
+            return true;
+        }
+
+        while(1)
+        {
+            char tag[4];
+            if(!fstream->read(tag, 4))
+                break;
+
+            /* read chunk length */
+            length = read_le32(fstream);
+
+            if(memcmp(tag, "fmt ", 4) == 0 && length >= 16)
+            {
+                /* Data type (should be 0x0050 of 0x0055 for MP3 data) */
+                int type = read_le16(fstream);
+                if(type != 0x0050 && type != 0x0055)
+                    break;
+                length -= 4;
+                /* Ignore the rest of the chunk. Everything we need is in the
+                 * data stream */
+            }
+            else if(memcmp(tag, "data", 4) == 0)
+            {
+                dataStart = fstream->tellg();
+                dataEnd = dataStart;
+                dataEnd += length;
+                fstream->seekg(dataStart);
+                return true;
+            }
+
+            fstream->seekg(length, std::ios_base::cur);
+        }
+
+        return false;
     }
 };
 #else
