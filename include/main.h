@@ -19,7 +19,7 @@
 #ifdef HAS_DUMB
 #include <dumb.h>
 #endif
-#ifdef HAS_DUMB
+#ifdef HAS_FLUIDSYNTH
 #include <fluidsynth.h>
 #endif
 
