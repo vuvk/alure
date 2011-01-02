@@ -142,7 +142,6 @@ typedef ALboolean       (ALURE_APIENTRY *LPALUREPLAYSOURCE)(ALuint,void(*)(void*
 typedef ALboolean       (ALURE_APIENTRY *LPALURESTOPSOURCE)(ALuint,ALboolean);
 typedef ALboolean       (ALURE_APIENTRY *LPALUREPAUSESOURCE)(ALuint);
 typedef ALboolean       (ALURE_APIENTRY *LPALURERESUMESOURCE)(ALuint);
-typedef alureUInt64     (ALURE_APIENTRY *LPALUREGETSOURCEOFFSET)(ALuint);
 typedef ALboolean       (ALURE_APIENTRY *LPALUREINSTALLDECODECALLBACKS)(ALint,void*(*)(const char*),void*(*)(const ALubyte*,ALuint),ALboolean(*)(void*,ALenum*,ALuint*,ALuint*),ALuint(*)(void*,ALubyte*,ALuint),ALboolean(*)(void*),void(*)(void*));
 typedef ALboolean       (ALURE_APIENTRY *LPALURESETIOCALLBACKS)(void*(*)(const char*,ALuint),void(*)(void*),ALsizei(*)(void*,ALubyte*,ALuint),ALsizei(*)(void*,const ALubyte*,ALuint),alureInt64(*)(void*,alureInt64,int));
 typedef void*           (ALURE_APIENTRY *LPALUREGETPROCADDRESS)(const ALchar*);
