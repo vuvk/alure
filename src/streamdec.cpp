@@ -1543,6 +1543,22 @@ public:
         return true;
     }
 
+    virtual bool SetPatchset(const char *sfont)
+    {
+        int newid = pfluid_synth_sfload(fluidSynth, sfont, true);
+        if(newid == FLUID_FAILED)
+        {
+            SetError("Failed to load soundfont");
+            return false;
+        }
+
+        if(fontID != FLUID_FAILED)
+            pfluid_synth_sfunload(fluidSynth, fontID, true);
+        fontID = newid;
+
+        return true;
+    }
+
     fluidStream(std::istream *_fstream)
       : alureStream(_fstream), Divisions(100),
         format(AL_NONE), sampleRate(48000), samplesPerTick(1.),

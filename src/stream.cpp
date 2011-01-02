@@ -512,6 +512,29 @@ ALURE_API ALboolean ALURE_APIENTRY alureSetStreamOrder(alureStream *stream, ALui
     return stream->SetOrder(order);
 }
 
+/* Function: alureSetStreamPatchset
+ *
+ * Specifies the patchset to use for MIDI streams. By default, the FluidSynth
+ * decoder will look for one in the FLUID_SOUNDFONT environment variable, but
+ * this can be used to change it to something different. On non-MIDI streams,
+ * this has no effect.
+ *
+ * Returns:
+ * AL_FALSE on error.
+ *
+ * *Version Added*: 1.1
+ */
+ALURE_API ALboolean ALURE_APIENTRY alureSetStreamPatchset(alureStream *stream, const ALchar *patchset)
+{
+    if(!alureStream::Verify(stream))
+    {
+        SetError("Invalid stream pointer");
+        return AL_FALSE;
+    }
+
+    return stream->SetPatchset(patchset);
+}
+
 /* Function: alureDestroyStream
  *
  * Closes an opened stream. For convenience, it will also delete the given

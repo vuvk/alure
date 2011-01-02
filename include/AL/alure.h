@@ -83,6 +83,7 @@ ALURE_API ALsizei ALURE_APIENTRY alureGetStreamFrequency(alureStream *stream);
 ALURE_API ALsizei ALURE_APIENTRY alureBufferDataFromStream(alureStream *stream, ALsizei numBufs, ALuint *bufs);
 ALURE_API ALboolean ALURE_APIENTRY alureRewindStream(alureStream *stream);
 ALURE_API ALboolean ALURE_APIENTRY alureSetStreamOrder(alureStream *stream, ALuint order);
+ALURE_API ALboolean ALURE_APIENTRY alureSetStreamPatchset(alureStream *stream, const ALchar *patchset);
 ALURE_API ALboolean ALURE_APIENTRY alureDestroyStream(alureStream *stream, ALsizei numBufs, ALuint *bufs);
 
 ALURE_API void ALURE_APIENTRY alureUpdate(void);
@@ -134,6 +135,7 @@ typedef ALsizei         (ALURE_APIENTRY *LPALUREGETSTREAMFREQUENCY)(alureStream*
 typedef ALsizei         (ALURE_APIENTRY *LPALUREBUFFERDATAFROMSTREAM)(alureStream*,ALsizei,ALuint*);
 typedef ALboolean       (ALURE_APIENTRY *LPALUREREWINDSTREAM)(alureStream*);
 typedef ALboolean       (ALURE_APIENTRY *LPALURESETSTREAMORDER)(alureStream*,ALuint);
+typedef ALboolean       (ALURE_APIENTRY *LPALURESETSTREAMPATCHSET)(alureStream*,const ALchar*);
 typedef ALboolean       (ALURE_APIENTRY *LPALUREDESTROYSTREAM)(alureStream*,ALsizei,ALuint*);
 typedef void            (ALURE_APIENTRY *LPALUREUPDATE)(void);
 typedef ALboolean       (ALURE_APIENTRY *LPALUREUPDATEINTERVAL)(ALfloat);

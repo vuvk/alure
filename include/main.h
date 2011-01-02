@@ -223,6 +223,8 @@ struct alureStream {
         SetError("Invalid order for stream");
         return false;
     }
+    virtual bool SetPatchset(const char*)
+    { return true; }
 
     alureStream(std::istream *_stream)
       : data(NULL), dataChunk(NULL), fstream(_stream)
