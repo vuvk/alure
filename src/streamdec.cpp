@@ -1845,11 +1845,7 @@ private:
             if(fluidSynth)
             {
                 const char *soundfont = getenv("FLUID_SOUNDFONT");
-                if((fontID=pfluid_synth_sfload(fluidSynth, soundfont, true)) == FLUID_FAILED)
-                {
-                    pdelete_fluid_synth(fluidSynth);
-                    fluidSynth = NULL;
-                }
+                fontID = pfluid_synth_sfload(fluidSynth, soundfont, true);
             }
         }
     }
