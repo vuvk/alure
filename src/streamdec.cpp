@@ -1854,7 +1854,8 @@ private:
             if(fluidSynth)
             {
                 const char *soundfont = getenv("FLUID_SOUNDFONT");
-                fontID = pfluid_synth_sfload(fluidSynth, soundfont, true);
+                if(soundfont && soundfont[0])
+                    fontID = pfluid_synth_sfload(fluidSynth, soundfont, true);
             }
         }
     }
