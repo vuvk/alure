@@ -1742,10 +1742,8 @@ private:
                     switch(event)
                     {
                         case MIDI_SYSEX:
-                        case MIDI_SYSEXEND:
                         {
                             unsigned long len = i->ReadVarLen();
-
                             if(i->data.size() - i->Offset < len)
                             {
                                 i->Offset = i->data.size();
@@ -1756,6 +1754,17 @@ private:
                             {
                                 char *data = reinterpret_cast<char*>(&i->data[i->Offset]);
                                 pfluid_synth_sysex(fluidSynth, data, len-1, NULL, NULL, NULL, false);
+                            }
+                            i->Offset += len;
+                            break;
+                        }
+                        case MIDI_SYSEXEND:
+                        {
+                            unsigned long len = i->ReadVarLen();
+                            if(i->data.size() - i->Offset < len)
+                            {
+                                i->Offset = i->data.size();
+                                break;
                             }
                             i->Offset += len;
                             break;
