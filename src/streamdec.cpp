@@ -1176,11 +1176,11 @@ private:
 
             if(memcmp(tag, "fmt ", 4) == 0 && length >= 16)
             {
-                /* Data type (should be 0x0050 of 0x0055 for MP3 data) */
+                /* Data type (should be 0x0050 or 0x0055 for MP3 data) */
                 int type = read_le16(fstream);
                 if(type != 0x0050 && type != 0x0055)
                     break;
-                length -= 4;
+                length -= 2;
                 /* Ignore the rest of the chunk. Everything we need is in the
                  * data stream */
             }
@@ -1189,7 +1189,6 @@ private:
                 dataStart = fstream->tellg();
                 dataEnd = dataStart;
                 dataEnd += length;
-                fstream->seekg(dataStart);
                 return true;
             }
 
