@@ -125,24 +125,20 @@ struct AsyncPlayEntry {
 	void *user_data;
 	bool finished;
 	bool paused;
-	alureUInt64 base_time;
-	alureUInt64 max_time;
-	ALuint queued_time;
 	ALuint stream_freq;
 	ALenum stream_format;
 	ALuint stream_align;
 
 	AsyncPlayEntry() : source(0), stream(NULL), loopcount(0), maxloops(0),
 	                   eos_callback(NULL), user_data(NULL), finished(false),
-	                   paused(false), base_time(0), max_time(0), queued_time(0),
-	                   stream_freq(0), stream_format(AL_NONE), stream_align(0)
+	                   paused(false), stream_freq(0), stream_format(AL_NONE),
+	                   stream_align(0)
 	{ }
 	AsyncPlayEntry(const AsyncPlayEntry &rhs)
 	  : source(rhs.source), stream(rhs.stream), buffers(rhs.buffers),
 	    loopcount(rhs.loopcount), maxloops(rhs.maxloops),
 	    eos_callback(rhs.eos_callback), user_data(rhs.user_data),
-	    finished(rhs.finished), paused(rhs.paused), base_time(rhs.base_time),
-	    max_time(rhs.max_time), queued_time(rhs.queued_time),
+	    finished(rhs.finished), paused(rhs.paused),
 	    stream_freq(rhs.stream_freq), stream_format(rhs.stream_format),
 	    stream_align(rhs.stream_align)
 	{ }
@@ -156,20 +152,11 @@ struct AsyncPlayEntry {
 		alGetSourcei(source, AL_BUFFERS_PROCESSED, &processed);
 		while(processed > 0)
 		{
-			ALint size, channels, bits;
 			ALuint buf;
 
 			alSourceUnqueueBuffers(source, 1, &buf);
 			processed--;
 			(*queued)--;
-
-			alGetBufferi(buf, AL_SIZE, &size);
-			alGetBufferi(buf, AL_CHANNELS, &channels);
-			alGetBufferi(buf, AL_BITS, &bits);
-			size /= channels * bits / 8;
-			queued_time -= size;
-			base_time += size;
-			base_time %= max_time;
 
 			while(!finished)
 			{
@@ -181,13 +168,6 @@ struct AsyncPlayEntry {
 					alSourceQueueBuffers(source, 1, &buf);
 					(*queued)++;
 
-					alGetBufferi(buf, AL_SIZE, &size);
-					alGetBufferi(buf, AL_CHANNELS, &channels);
-					alGetBufferi(buf, AL_BITS, &bits);
-					size /= channels * bits / 8;
-					queued_time += size;
-					if(loopcount == 0)
-						max_time += size;
 					break;
 				}
 				if(loopcount == maxloops)
@@ -195,7 +175,7 @@ struct AsyncPlayEntry {
 					finished = true;
 					break;
 				}
-				if(maxloops != -1 || loopcount < 1)
+				if(maxloops != -1)
 					loopcount++;
 				finished = !stream->Rewind();
 			}
@@ -383,7 +363,7 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlaySourceStream(ALuint source,
 					ent.finished = true;
 				else
 				{
-					if(ent.maxloops != -1 || ent.loopcount < 1)
+					if(ent.maxloops != -1)
 						ent.loopcount++;
 					ent.finished = !ent.stream->Rewind();
 				}
@@ -395,15 +375,6 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlaySourceStream(ALuint source,
 			ALuint buf = ent.buffers[i];
 			alBufferData(buf, ent.stream_format, ent.stream->dataChunk, got, ent.stream_freq);
 			numBufs++;
-
-			ALint size, channels, bits;
-			alGetBufferi(buf, AL_SIZE, &size);
-			alGetBufferi(buf, AL_CHANNELS, &channels);
-			alGetBufferi(buf, AL_BITS, &bits);
-			size /= channels * bits / 8;
-			ent.queued_time += size;
-			if(ent.loopcount == 0)
-				ent.max_time += size;
 		}
 	}
 	if(numBufs == 0)
@@ -664,66 +635,6 @@ ALURE_API ALboolean ALURE_APIENTRY alureResumeSource(ALuint source)
 	LeaveCriticalSection(&cs_StreamPlay);
 
 	return AL_TRUE;
-}
-
-/* Function: alureGetSourceOffset
- *
- * Gets the sample offset of the specified source. For sources started with
- * <alurePlaySourceStream>, this will be the total samples played. The offset
- * will loop back to 0 when the stream rewinds for any specified loopcount. For
- * non-streamed sources, the function will behave as if retrieving the
- * AL_SAMPLE_OFFSET source value.
- *
- * Returns:
- * (alureUInt64)-1 on error.
- *
- * *Version Added*: 1.1
- *
- * See Also:
- * <alurePlaySourceStream>
- */
-ALURE_API alureUInt64 ALURE_APIENTRY alureGetSourceOffset(ALuint source)
-{
-	if(alGetError() != AL_NO_ERROR)
-	{
-		SetError("Existing OpenAL error");
-		return (alureUInt64)-1;
-	}
-
-	EnterCriticalSection(&cs_StreamPlay);
-
-	ALint pos;
-	if((alGetSourcei(source, AL_SAMPLE_OFFSET, &pos),alGetError()) != AL_NO_ERROR)
-	{
-		LeaveCriticalSection(&cs_StreamPlay);
-		SetError("Error retrieving source offset");
-		return (alureUInt64)-1;
-	}
-
-	alureUInt64 retval = static_cast<ALuint>(pos);
-	std::list<AsyncPlayEntry>::iterator i = AsyncPlayList.begin(),
-	                                    end = AsyncPlayList.end();
-	while(i != end)
-	{
-		if(i->source == source)
-		{
-			ALint state;
-
-			alGetSourcei(source, AL_SOURCE_STATE, &state);
-
-			retval = i->base_time + i->queued_time;
-			if(state != AL_STOPPED)
-				retval -= i->queued_time - pos;
-
-			retval %= i->max_time;
-			break;
-		}
-		i++;
-	}
-
-	LeaveCriticalSection(&cs_StreamPlay);
-
-	return retval;
 }
 
 /* Function: alureUpdate

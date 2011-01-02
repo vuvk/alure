@@ -963,7 +963,6 @@ ALURE_API void* ALURE_APIENTRY alureGetProcAddress(const ALchar *funcname)
         ADD_FUNCTION(alurePlaySourceStream)
         ADD_FUNCTION(alurePlaySource)
         ADD_FUNCTION(alureStopSource)
-        ADD_FUNCTION(alureGetSourceOffset)
 #undef ADD_FUNCTION
         { NULL, NULL }
     };

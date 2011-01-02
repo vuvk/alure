@@ -96,7 +96,6 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlaySource(ALuint source,
 ALURE_API ALboolean ALURE_APIENTRY alureStopSource(ALuint source, ALboolean run_callback);
 ALURE_API ALboolean ALURE_APIENTRY alurePauseSource(ALuint source);
 ALURE_API ALboolean ALURE_APIENTRY alureResumeSource(ALuint source);
-ALURE_API alureUInt64 ALURE_APIENTRY alureGetSourceOffset(ALuint source);
 
 ALURE_API ALboolean ALURE_APIENTRY alureInstallDecodeCallbacks(ALint index,
     void*     (*open_file)(const ALchar*),
