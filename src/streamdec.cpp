@@ -1165,6 +1165,7 @@ private:
             return true;
         }
 
+        int type = 0;
         while(1)
         {
             char tag[4];
@@ -1177,7 +1178,7 @@ private:
             if(memcmp(tag, "fmt ", 4) == 0 && length >= 16)
             {
                 /* Data type (should be 0x0050 or 0x0055 for MP3 data) */
-                int type = read_le16(fstream);
+                type = read_le16(fstream);
                 if(type != 0x0050 && type != 0x0055)
                     break;
                 length -= 2;
@@ -1186,10 +1187,13 @@ private:
             }
             else if(memcmp(tag, "data", 4) == 0)
             {
-                dataStart = fstream->tellg();
-                dataEnd = dataStart;
-                dataEnd += length;
-                return true;
+                if(type == 0x0050 || type == 0x0055)
+                {
+                    dataStart = fstream->tellg();
+                    dataEnd = dataStart;
+                    dataEnd += length;
+                    return true;
+                }
             }
 
             fstream->seekg(length, std::ios_base::cur);
