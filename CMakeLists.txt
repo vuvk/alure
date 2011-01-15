@@ -376,10 +376,18 @@ SET(PACKAGE_VERSION "${LIB_VERSION}")
 CONFIGURE_FILE(
     "${ALURE_SOURCE_DIR}/config.h.in"
     "${ALURE_BINARY_DIR}/config.h")
-CONFIGURE_FILE(
-    "${ALURE_SOURCE_DIR}/alure.pc.in"
-    "${ALURE_BINARY_DIR}/alure.pc"
-    @ONLY)
+IF(BUILD_SHARED)
+    CONFIGURE_FILE(
+        "${ALURE_SOURCE_DIR}/alure.pc.in"
+        "${ALURE_BINARY_DIR}/alure.pc"
+        @ONLY)
+ENDIF(BUILD_SHARED)
+IF(BUILD_STATIC)
+    CONFIGURE_FILE(
+        "${ALURE_SOURCE_DIR}/alure-static.pc.in"
+        "${ALURE_BINARY_DIR}/alure-static.pc"
+        @ONLY)
+ENDIF(BUILD_STATIC)
 
 ADD_DEFINITIONS(-DHAVE_CONFIG_H)
 
@@ -457,9 +465,16 @@ INSTALL(DIRECTORY "${ALURE_SOURCE_DIR}/docs/html"
 INSTALL(FILES include/AL/alure.h
         DESTINATION "include/${INCPATH}"
 )
-INSTALL(FILES "${ALURE_BINARY_DIR}/alure.pc"
-        DESTINATION "lib${LIB_SUFFIX}/pkgconfig"
-)
+IF(BUILD_SHARED)
+    INSTALL(FILES "${ALURE_BINARY_DIR}/alure.pc"
+            DESTINATION "lib${LIB_SUFFIX}/pkgconfig"
+    )
+ENDIF(BUILD_SHARED)
+IF(BUILD_STATIC)
+    INSTALL(FILES "${ALURE_BINARY_DIR}/alure-static.pc"
+            DESTINATION "lib${LIB_SUFFIX}/pkgconfig"
+    )
+ENDIF(BUILD_STATIC)
 
 
 MESSAGE(STATUS "\n********************** Configured options **********************")
