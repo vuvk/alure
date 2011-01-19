@@ -47,5 +47,8 @@
 /* Define if we have DUMB */
 #cmakedefine HAS_DUMB
 
+/* Define if we have ModPlug */
+#cmakedefine HAS_MODPLUG
+
 /* Define if we have FluidSynth */
 #cmakedefine HAS_FLUIDSYNTH

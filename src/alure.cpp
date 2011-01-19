@@ -46,6 +46,7 @@ alureStream::ListType alureStream::StreamList;
 void *vorbisfile_handle = NULL;
 void *flac_handle = NULL;
 void *dumb_handle = NULL;
+void *mod_handle = NULL;
 void *mp123_handle = NULL;
 void *sndfile_handle = NULL;
 void *fsynth_handle = NULL;
@@ -83,6 +84,12 @@ MAKE_FUNC(dumb_it_start_at_order);
 MAKE_FUNC(dumb_it_set_loop_callback);
 MAKE_FUNC(dumb_it_sr_get_speed);
 MAKE_FUNC(dumb_it_sr_set_speed);
+#endif
+#ifdef HAS_MODPLUG
+MAKE_FUNC(ModPlug_Load);
+MAKE_FUNC(ModPlug_Unload);
+MAKE_FUNC(ModPlug_Read);
+MAKE_FUNC(ModPlug_SeekOrder);
 #endif
 #ifdef HAS_MPG123
 MAKE_FUNC(mpg123_read);
@@ -242,6 +249,7 @@ if(!p##x)                                                                    \
 #define VORBISFILE_LIB "vorbisfile.dll"
 #define FLAC_LIB "libFLAC.dll"
 #define DUMB_LIB "libdumb.dll"
+#define MODPLUG_LIB "libmodplug.dll"
 #define MPG123_LIB "libmpg123.dll"
 #define SNDFILE_LIB "libsndfile-1.dll"
 #define FLUIDSYNTH_LIB "libfluidsynth.dll"
@@ -249,6 +257,7 @@ if(!p##x)                                                                    \
 #define VORBISFILE_LIB "libvorbisfile.3.dylib"
 #define FLAC_LIB "libFLAC.8.dylib"
 #define DUMB_LIB "libdumb.dylib"
+#define MODPLUG_LIB "libmodplug.1.dylib"
 #define MPG123_LIB "libmpg123.0.dylib"
 #define SNDFILE_LIB "libsndfile.1.dylib"
 #define FLUIDSYNTH_LIB "libfluidsynth.1.dylib"
@@ -256,6 +265,7 @@ if(!p##x)                                                                    \
 #define VORBISFILE_LIB "libvorbisfile.so.3"
 #define FLAC_LIB "libFLAC.so.8"
 #define DUMB_LIB "libdumb.so"
+#define MODPLUG_LIB "libmodplug.so.1"
 #define MPG123_LIB "libmpg123.so.0"
 #define SNDFILE_LIB "libsndfile.so.1"
 #define FLUIDSYNTH_LIB "libfluidsynth.so.1"
@@ -308,6 +318,18 @@ if(!p##x)                                                                    \
         LOAD_FUNC(dumb, dumb_it_set_loop_callback);
         LOAD_FUNC(dumb, dumb_it_sr_get_speed);
         LOAD_FUNC(dumb, dumb_it_sr_set_speed);
+        break;
+    }
+#endif
+
+#ifdef HAS_MODPLUG
+    mod_handle = LoadLibraryA(MODPLUG_LIB);
+    while(mod_handle)
+    {
+        LOAD_FUNC(mod, ModPlug_Load);
+        LOAD_FUNC(mod, ModPlug_Unload);
+        LOAD_FUNC(mod, ModPlug_Read);
+        LOAD_FUNC(mod, ModPlug_SeekOrder);
         break;
     }
 #endif

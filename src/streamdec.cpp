@@ -1414,6 +1414,94 @@ struct dumbStream : public nullStream {
 #endif
 
 
+#ifdef HAS_MODPLUG
+struct modStream : public alureStream {
+    ModPlugFile *modFile;
+
+    virtual bool IsValid()
+    { return modFile != NULL; }
+
+    virtual bool GetFormat(ALenum *fmt, ALuint *frequency, ALuint *blockalign)
+    {
+        *fmt = AL_FORMAT_STEREO16;
+        *frequency = 44100;
+        *blockalign = 2 * sizeof(ALshort);
+        return true;
+    }
+
+    virtual ALuint GetData(ALubyte *data, ALuint bytes)
+    {
+        int ret = pModPlug_Read(modFile, data, bytes);
+        if(ret < 0) return 0;
+        return ret;
+    }
+
+    virtual bool Rewind()
+    { return SetOrder(0); }
+
+    virtual bool SetOrder(ALuint order)
+    {
+        std::vector<char> data(16384);
+        ALuint total = 0;
+        while(1)
+        {
+            fstream->read(&data[total], data.size()-total);
+            if(fstream->gcount() == 0) break;
+            total += fstream->gcount();
+            data.resize(total*2);
+        }
+        data.resize(total);
+
+        ModPlugFile *newMod = pModPlug_Load(&data[0], data.size());
+        if(!newMod)
+        {
+            SetError("Could not reload data");
+            return false;
+        }
+        pModPlug_Unload(modFile);
+        modFile = newMod;
+
+        // There seems to be no way to tell if the seek succeeds
+        pModPlug_SeekOrder(modFile, order);
+
+        return true;
+    }
+
+    modStream(std::istream *_fstream)
+      : alureStream(_fstream), modFile(NULL)
+    {
+        if(!mod_handle) return;
+
+        std::vector<char> data(16384);
+        ALuint total = 0;
+        while(1)
+        {
+            fstream->read(&data[total], data.size()-total);
+            if(fstream->gcount() == 0) break;
+            total += fstream->gcount();
+            data.resize(total*2);
+        }
+        data.resize(total);
+
+        modFile = pModPlug_Load(&data[0], data.size());
+    }
+
+    virtual ~modStream()
+    {
+        if(modFile)
+            pModPlug_Unload(modFile);
+        modFile = NULL;
+    }
+
+private:
+};
+#else
+struct modStream : public nullStream {
+    modStream(std::istream*){}
+};
+#endif
+
+
 #ifdef HAS_FLUIDSYNTH
 struct fluidStream : public alureStream {
 private:
@@ -1925,6 +2013,14 @@ alureStream *get_stream_decoder(const T &fdata)
         file->clear();
         file->seekg(0, std::ios_base::beg);
         stream = new dumbStream(file);
+        if(stream->IsValid())
+            return stream;
+        delete stream;
+
+        // Try ModPlug
+        file->clear();
+        file->seekg(0, std::ios_base::beg);
+        stream = new modStream(file);
         if(stream->IsValid())
             return stream;
         delete stream;

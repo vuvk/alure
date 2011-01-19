@@ -19,6 +19,9 @@
 #ifdef HAS_DUMB
 #include <dumb.h>
 #endif
+#ifdef HAS_MODPLUG
+#include <modplug.h>
+#endif
 #ifdef HAS_FLUIDSYNTH
 #include <fluidsynth.h>
 #endif
@@ -109,6 +112,7 @@ static const bool BigEndian = !LittleEndian;
 extern void *vorbisfile_handle;
 extern void *flac_handle;
 extern void *dumb_handle;
+extern void *mod_handle;
 extern void *mp123_handle;
 extern void *sndfile_handle;
 extern void *fsynth_handle;
@@ -146,6 +150,12 @@ MAKE_FUNC(dumb_it_start_at_order);
 MAKE_FUNC(dumb_it_set_loop_callback);
 MAKE_FUNC(dumb_it_sr_get_speed);
 MAKE_FUNC(dumb_it_sr_set_speed);
+#endif
+#ifdef HAS_MODPLUG
+MAKE_FUNC(ModPlug_Load);
+MAKE_FUNC(ModPlug_Unload);
+MAKE_FUNC(ModPlug_Read);
+MAKE_FUNC(ModPlug_SeekOrder);
 #endif
 #ifdef HAS_MPG123
 MAKE_FUNC(mpg123_read);
