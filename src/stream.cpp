@@ -62,25 +62,27 @@ static alureStream *InitStream(alureStream *instream, ALsizei chunkLength, ALsiz
         return NULL;
     }
 
-    alureUInt64 len64 = chunkLength;
     if(SizeIsUS)
     {
+        alureUInt64 len64 = chunkLength;
         ALuint framesPerBlock = DetectCompressionRate(format);
-        if(framesPerBlock == 0)
+        ALuint blockSize = DetectBlockAlignment(format);
+        if(framesPerBlock == 0 || blockSize == 0)
         {
             SetError("Unknown compression rate");
             return NULL;
         }
 
-        len64 = len64 * freq / 1000000 / framesPerBlock * blockAlign;
-        if(len64 > 0xFFFFFFFF)
+        len64 = len64 * freq / 1000000 / framesPerBlock * blockSize;
+        if(len64 > 0x7FFFFFFF)
         {
             SetError("Chunk length too large");
             return NULL;
         }
+        chunkLength = len64;
     }
 
-    chunkLength = len64 - (len64%blockAlign);
+    chunkLength -= chunkLength%blockAlign;
     if(chunkLength <= 0)
     {
         SetError("Chunk length too small");
