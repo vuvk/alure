@@ -160,11 +160,11 @@ struct AsyncPlayEntry {
 
 			while(!finished)
 			{
-				ALuint got = stream->GetData(stream->dataChunk, stream->chunkLen);
+				ALuint got = stream->GetData(&stream->dataChunk[0], stream->dataChunk.size());
 				got -= got%stream_align;
 				if(got > 0)
 				{
-					alBufferData(buf, stream_format, stream->dataChunk, got, stream_freq);
+					alBufferData(buf, stream_format, &stream->dataChunk[0], got, stream_freq);
 					alSourceQueueBuffers(source, 1, &buf);
 					(*queued)++;
 
@@ -354,8 +354,8 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlaySourceStream(ALuint source,
 	{
 		for(size_t i = 0;i < ent.buffers.size();i++)
 		{
-			ALuint got = ent.stream->GetData(ent.stream->dataChunk,
-			                                 ent.stream->chunkLen);
+			ALuint got = ent.stream->GetData(&ent.stream->dataChunk[0],
+			                                 ent.stream->dataChunk.size());
 			got -= got%ent.stream_align;
 			if(got <= 0)
 			{
@@ -373,7 +373,7 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlaySourceStream(ALuint source,
 				continue;
 			}
 			ALuint buf = ent.buffers[i];
-			alBufferData(buf, ent.stream_format, ent.stream->dataChunk, got, ent.stream_freq);
+			alBufferData(buf, ent.stream_format, &ent.stream->dataChunk[0], got, ent.stream_freq);
 			numBufs++;
 		}
 	}

@@ -100,6 +100,7 @@ static inline void DeleteCriticalSection(CRITICAL_SECTION *cs)
 #include <istream>
 #include <list>
 #include <algorithm>
+#include <vector>
 
 static const union {
     int val;
@@ -216,11 +217,13 @@ extern std::map<ALint,UserCallbacks> InstalledCallbacks;
 
 
 struct alureStream {
+    // Local copy of memory data
     ALubyte *data;
 
-    ALubyte *dataChunk;
-    ALsizei chunkLen;
+    // Storage when reading chunks
+    std::vector<ALubyte> dataChunk;
 
+    // Abstracted input stream
     std::istream *fstream;
 
     virtual bool IsValid() = 0;
@@ -237,11 +240,11 @@ struct alureStream {
     { return true; }
 
     alureStream(std::istream *_stream)
-      : data(NULL), dataChunk(NULL), fstream(_stream)
+      : data(NULL), fstream(_stream)
     { StreamList.push_front(this); }
     virtual ~alureStream()
     {
-        delete[] data; delete[] dataChunk;
+        delete[] data;
         StreamList.erase(std::find(StreamList.begin(), StreamList.end(), this));
     }
 

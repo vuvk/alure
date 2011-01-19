@@ -87,8 +87,7 @@ static alureStream *InitStream(alureStream *instream, ALsizei chunkLength, ALsiz
         return NULL;
     }
 
-    stream->chunkLen = chunkLength;
-    stream->dataChunk = new ALubyte[stream->chunkLen];
+    stream->dataChunk.resize(chunkLength);
 
     if(numBufs > 0)
     {
@@ -103,16 +102,16 @@ static alureStream *InitStream(alureStream *instream, ALsizei chunkLength, ALsiz
     ALsizei filled;
     for(filled = 0;filled < numBufs;filled++)
     {
-        ALuint got = stream->GetData(stream->dataChunk, stream->chunkLen);
+        ALuint got = stream->GetData(&stream->dataChunk[0], stream->dataChunk.size());
         got -= got%blockAlign;
         if(got == 0) break;
 
-        alBufferData(bufs[filled], format, stream->dataChunk, got, freq);
+        alBufferData(bufs[filled], format, &stream->dataChunk[0], got, freq);
     }
 
     while(filled < numBufs)
     {
-        alBufferData(bufs[filled], format, stream->dataChunk, 0, freq);
+        alBufferData(bufs[filled], format, &stream->dataChunk[0], 0, freq);
         filled++;
     }
     if(alGetError() != AL_NO_ERROR)
@@ -450,11 +449,11 @@ ALURE_API ALsizei ALURE_APIENTRY alureBufferDataFromStream(alureStream *stream, 
     ALsizei filled;
     for(filled = 0;filled < numBufs;filled++)
     {
-        ALuint got = stream->GetData(stream->dataChunk, stream->chunkLen);
+        ALuint got = stream->GetData(&stream->dataChunk[0], stream->dataChunk.size());
         got -= got%blockAlign;
         if(got == 0) break;
 
-        alBufferData(bufs[filled], format, stream->dataChunk, got, freq);
+        alBufferData(bufs[filled], format, &stream->dataChunk[0], got, freq);
         if(alGetError() != AL_NO_ERROR)
         {
             SetError("Buffer load failed");
