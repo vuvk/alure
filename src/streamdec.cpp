@@ -1417,6 +1417,7 @@ struct dumbStream : public nullStream {
 #ifdef HAS_MODPLUG
 struct modStream : public alureStream {
     ModPlugFile *modFile;
+    int lastOrder;
 
     virtual bool IsValid()
     { return modFile != NULL; }
@@ -1437,7 +1438,7 @@ struct modStream : public alureStream {
     }
 
     virtual bool Rewind()
-    { return SetOrder(0); }
+    { return SetOrder(lastOrder); }
 
     virtual bool SetOrder(ALuint order)
     {
@@ -1463,12 +1464,13 @@ struct modStream : public alureStream {
 
         // There seems to be no way to tell if the seek succeeds
         pModPlug_SeekOrder(modFile, order);
+        lastOrder = order;
 
         return true;
     }
 
     modStream(std::istream *_fstream)
-      : alureStream(_fstream), modFile(NULL)
+      : alureStream(_fstream), modFile(NULL), lastOrder(0)
     {
         if(!mod_handle) return;
 
