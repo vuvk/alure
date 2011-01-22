@@ -998,8 +998,8 @@ struct mp3Stream : public alureStream {
     long samplerate;
     int channels;
     ALenum format;
-    std::istream::pos_type dataStart;
-    std::istream::pos_type dataEnd;
+    std::ios::pos_type dataStart;
+    std::ios::pos_type dataEnd;
 
     virtual bool IsValid()
     { return mp3File != NULL; }
@@ -1152,15 +1152,29 @@ private:
         ALubyte buffer[25];
         int length;
 
-        if(!fstream->read(reinterpret_cast<char*>(buffer), 12) ||
-           memcmp(buffer, "RIFF", 4) != 0 || memcmp(buffer+8, "WAVE", 4) != 0)
+        if(!fstream->read(reinterpret_cast<char*>(buffer), 12))
+            return false;
+
+        if(memcmp(buffer, "RIFF", 4) != 0 || memcmp(buffer+8, "WAVE", 4) != 0)
         {
-            // Assume raw MP3
+            dataStart = 0;
+
+            // Check for an ID3v2 tag, and skip it
+            if(memcmp(buffer, "ID3", 3) == 0 &&
+               buffer[3] <= 4 && buffer[4] != 0xff &&
+               (buffer[5]&0x0f) == 0 && (buffer[6]&0x80) == 0 &&
+               (buffer[7]&0x80) == 0 && (buffer[8]&0x80) == 0 &&
+               (buffer[9]&0x80) == 0)
+            {
+                dataStart = (buffer[6]<<21) | (buffer[7]<<14) |
+                            (buffer[8]<< 7) | (buffer[9]    );
+                dataStart += ((buffer[5]&0x10) ? 20 : 10);
+            }
+
             if(fstream->seekg(0, std::ios_base::end))
             {
-                dataStart = 0;
                 dataEnd = fstream->tellg();
-                fstream->seekg(0);
+                fstream->seekg(dataStart);
             }
             return true;
         }
