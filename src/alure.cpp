@@ -133,7 +133,14 @@ MAKE_FUNC(fluid_synth_noteon);
 #endif
 #undef MAKE_FUNC
 
-#if defined(_WIN32) && !defined(ALURE_STATIC_LIBRARY)
+#ifdef HAVE_GCC_CONSTRUCTOR
+static void init_alure(void) __attribute__((constructor));
+static void deinit_alure(void) __attribute__((destructor));
+static struct MyConstructorClass {
+    ~MyConstructorClass()
+    { alureStream::Clear(); };
+} MyConstructor;
+#elif defined(_WIN32) && !defined(ALURE_STATIC_LIBRARY)
 static void init_alure(void);
 static void deinit_alure(void);
 static struct MyConstructorClass {
@@ -159,13 +166,6 @@ extern "C" BOOL APIENTRY DllMain(HINSTANCE module, DWORD reason, LPVOID reserved
     }
     return TRUE;
 }
-#elif defined(HAVE_GCC_CONSTRUCTOR)
-static void init_alure(void) __attribute__((constructor));
-static void deinit_alure(void) __attribute__((destructor));
-static struct MyConstructorClass {
-    ~MyConstructorClass()
-    { alureStream::Clear(); };
-} MyConstructor;
 #else
 static void init_alure(void);
 static void deinit_alure(void);
