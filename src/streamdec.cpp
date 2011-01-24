@@ -56,7 +56,11 @@ protected:
     static ListType& AddList(FactoryType func)
     {
         static ListType FuncList;
-        if(func) FuncList.push_back(func);
+        if(func)
+        {
+            assert(std::find(FuncList.begin(), FuncList.end(), func) == FuncList.end());
+            FuncList.push_back(func);
+        }
         return FuncList;
     }
 };
