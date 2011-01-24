@@ -1562,6 +1562,11 @@ private:
 
         MidiTrack() : Offset(0), LastEvent(0), SamplesLeft(0.)
         { }
+        MidiTrack(const MidiTrack &rhs)
+          : data(rhs.data), Offset(rhs.Offset), LastEvent(rhs.LastEvent),
+            SamplesLeft(rhs.SamplesLeft)
+        { }
+
         void Reset()
         {
             Offset = 0;
@@ -1569,7 +1574,7 @@ private:
             SamplesLeft = 0.;
         }
 
-        MidiTrack& operator=(const MidiTrack &rhs)
+        const MidiTrack& operator=(const MidiTrack &rhs)
         {
             data = rhs.data;
             Offset = rhs.Offset;
