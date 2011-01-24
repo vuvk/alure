@@ -53,7 +53,7 @@ protected:
         return std::auto_ptr<alureStream>();
     }
 
-    static const ListType& AddList(FactoryType func)
+    static ListType& AddList(FactoryType func)
     {
         static ListType FuncList;
         if(func) FuncList.push_back(func);
@@ -63,6 +63,11 @@ protected:
 template<typename T>
 struct DecoderDecl : public Decoder {
     DecoderDecl() { AddList(Factory<T>); }
+    ~DecoderDecl()
+    {
+        ListType &list = AddList(NULL);
+        list.erase(std::find(list.begin(), list.end(), Factory<T>));
+    }
 };
 
 
