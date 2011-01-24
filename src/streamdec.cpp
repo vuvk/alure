@@ -1475,7 +1475,7 @@ struct modStream : public alureStream {
     {
         std::vector<char> data(16384);
         ALuint total = 0;
-        while(1)
+        while(total < 2*1024*1024)
         {
             fstream->read(&data[total], data.size()-total);
             if(fstream->gcount() == 0) break;
@@ -1507,7 +1507,7 @@ struct modStream : public alureStream {
 
         std::vector<char> data(16384);
         ALuint total = 0;
-        while(1)
+        while(total < 2*1024*1024)
         {
             fstream->read(&data[total], data.size()-total);
             if(fstream->gcount() == 0) break;
