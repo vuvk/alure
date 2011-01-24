@@ -470,117 +470,6 @@ struct aiffStream : public alureStream {
 };
 static DecoderDecl<aiffStream> aiffStream_decoder;
 
-#ifdef HAS_SNDFILE
-struct sndStream : public alureStream {
-    SNDFILE *sndFile;
-    SF_INFO sndInfo;
-    ALenum format;
-
-    virtual bool IsValid()
-    { return sndFile != NULL; }
-
-    virtual bool GetFormat(ALenum *fmt, ALuint *frequency, ALuint *blockalign)
-    {
-        if(format == AL_NONE)
-            format = GetSampleFormat(sndInfo.channels, 16, false);
-        *fmt = format;
-        *frequency = sndInfo.samplerate;
-        *blockalign = sndInfo.channels*2;
-        return true;
-    }
-
-    virtual ALuint GetData(ALubyte *data, ALuint bytes)
-    {
-        const ALuint frameSize = 2*sndInfo.channels;
-        return psf_readf_short(sndFile, (short*)data, bytes/frameSize) * frameSize;
-    }
-
-    virtual bool Rewind()
-    {
-        if(psf_seek(sndFile, 0, SEEK_SET) != -1)
-            return true;
-
-        SetError("Seek failed");
-        return false;
-    }
-
-    sndStream(std::istream *_fstream)
-      : alureStream(_fstream), sndFile(NULL), format(AL_NONE)
-    {
-        memset(&sndInfo, 0, sizeof(sndInfo));
-
-        if(!sndfile_handle) return;
-
-        static SF_VIRTUAL_IO streamIO = {
-            get_filelen, seek,
-            read, write, tell
-        };
-        sndFile = psf_open_virtual(&streamIO, SFM_READ, &sndInfo, this);
-    }
-
-    virtual ~sndStream()
-    {
-        if(sndFile)
-            psf_close(sndFile);
-        sndFile = NULL;
-    }
-
-private:
-    // libSndFile iostream callbacks
-    static sf_count_t get_filelen(void *user_data)
-    {
-        std::istream *stream = static_cast<sndStream*>(user_data)->fstream;
-        stream->clear();
-
-        std::streampos len = -1;
-        std::streampos pos = stream->tellg();
-        if(stream->seekg(0, std::ios_base::end))
-        {
-            len = stream->tellg();
-            stream->seekg(pos);
-        }
-
-        return len;
-    }
-
-    static sf_count_t seek(sf_count_t offset, int whence, void *user_data)
-    {
-        std::istream *stream = static_cast<sndStream*>(user_data)->fstream;
-        stream->clear();
-
-        if(whence == SEEK_CUR)
-            stream->seekg(offset, std::ios_base::cur);
-        else if(whence == SEEK_SET)
-            stream->seekg(offset, std::ios_base::beg);
-        else if(whence == SEEK_END)
-            stream->seekg(offset, std::ios_base::end);
-        else
-            return -1;
-
-        return stream->tellg();
-    }
-
-    static sf_count_t read(void *ptr, sf_count_t count, void *user_data)
-    {
-        std::istream *stream = static_cast<sndStream*>(user_data)->fstream;
-        stream->clear();
-        stream->read(static_cast<char*>(ptr), count);
-        return stream->gcount();
-    }
-
-    static sf_count_t write(const void*, sf_count_t, void*)
-    { return -1; }
-
-    static sf_count_t tell(void *user_data)
-    {
-        std::istream *stream = static_cast<sndStream*>(user_data)->fstream;
-        stream->clear();
-        return stream->tellg();
-    }
-};
-static DecoderDecl<sndStream> sndStream_decoder;
-#endif
-
 #ifdef HAS_VORBISFILE
 struct oggStream : public alureStream {
     OggVorbis_File oggFile;
@@ -1013,522 +902,6 @@ private:
 };
 static DecoderDecl<flacStream> flacStream_decoder;
 #endif
-
-
-#ifdef HAS_MPG123
-struct mp3Stream : public alureStream {
-    mpg123_handle *mp3File;
-    long samplerate;
-    int channels;
-    ALenum format;
-    std::ios::pos_type dataStart;
-    std::ios::pos_type dataEnd;
-
-    virtual bool IsValid()
-    { return mp3File != NULL; }
-
-    virtual bool GetFormat(ALenum *fmt, ALuint *frequency, ALuint *blockalign)
-    {
-        *fmt = format;
-        *frequency = samplerate;
-        *blockalign = channels*2;
-        return true;
-    }
-
-    virtual ALuint GetData(ALubyte *data, ALuint bytes)
-    {
-        ALuint amt = 0;
-        while(bytes > 0)
-        {
-            size_t got = 0;
-            int ret = pmpg123_read(mp3File, data, bytes, &got);
-
-            bytes -= got;
-            data += got;
-            amt += got;
-
-            if(ret == MPG123_NEW_FORMAT)
-            {
-                long newrate;
-                int newchans, enc;
-                pmpg123_getformat(mp3File, &newrate, &newchans, &enc);
-                continue;
-            }
-            if(ret == MPG123_NEED_MORE)
-            {
-                unsigned char data[4096];
-                ALint insize = std::min((ALint)sizeof(data),
-                                        (ALint)(dataEnd-fstream->tellg()));
-                if(insize > 0)
-                {
-                    fstream->read((char*)data, insize);
-                    insize = fstream->gcount();
-                }
-                if(insize > 0 && pmpg123_feed(mp3File, data, insize) == MPG123_OK)
-                    continue;
-            }
-            if(got == 0)
-                break;
-        }
-        return amt;
-    }
-
-    virtual bool Rewind()
-    {
-        fstream->clear();
-        std::istream::pos_type oldpos = fstream->tellg();
-        fstream->seekg(dataStart);
-
-        mpg123_handle *newFile = pmpg123_new(NULL, NULL);
-        if(pmpg123_open_feed(newFile) == MPG123_OK)
-        {
-            unsigned char data[4096];
-            long newrate;
-            int newchans;
-            int enc;
-
-            ALuint amt, total = 0;
-            int ret = MPG123_OK;
-            do {
-                amt = std::min((ALint)sizeof(data),
-                               (ALint)(dataEnd-fstream->tellg()));
-                fstream->read((char*)data, amt);
-                amt = fstream->gcount();
-                if(amt == 0)  break;
-                total += amt;
-                ret = pmpg123_decode(newFile, data, amt, NULL, 0, NULL);
-            } while(ret == MPG123_NEED_MORE && total < 64*1024);
-
-            if(ret == MPG123_NEW_FORMAT &&
-               pmpg123_getformat(newFile, &newrate, &newchans, &enc) == MPG123_OK)
-            {
-                if(pmpg123_format_none(newFile) == MPG123_OK &&
-                   pmpg123_format(newFile, samplerate, channels, MPG123_ENC_SIGNED_16) == MPG123_OK)
-                {
-                    // All OK
-                    pmpg123_delete(mp3File);
-                    mp3File = newFile;
-                    return true;
-                }
-            }
-            pmpg123_delete(newFile);
-        }
-
-        fstream->seekg(oldpos);
-        SetError("Restart failed");
-        return false;
-    }
-
-    mp3Stream(std::istream *_fstream)
-      : alureStream(_fstream), mp3File(NULL), format(AL_NONE),
-        dataStart(0), dataEnd(0)
-    {
-        if(!mp123_handle) return;
-
-        if(!FindDataChunk())
-            return;
-
-        mp3File = pmpg123_new(NULL, NULL);
-        if(pmpg123_open_feed(mp3File) == MPG123_OK)
-        {
-            unsigned char data[4096];
-            int enc;
-
-            ALuint amt, total = 0;
-            int ret = MPG123_OK;
-            do {
-                amt = std::min((ALint)sizeof(data),
-                               (ALint)(dataEnd-fstream->tellg()));
-                fstream->read((char*)data, amt);
-                amt = fstream->gcount();
-                if(amt == 0)  break;
-                total += amt;
-                ret = pmpg123_decode(mp3File, data, amt, NULL, 0, NULL);
-            } while(ret == MPG123_NEED_MORE && total < 64*1024);
-
-            if(ret == MPG123_NEW_FORMAT &&
-               pmpg123_getformat(mp3File, &samplerate, &channels, &enc) == MPG123_OK)
-            {
-                format = GetSampleFormat(channels, 16, false);
-                if(pmpg123_format_none(mp3File) == MPG123_OK &&
-                   pmpg123_format(mp3File, samplerate, channels, MPG123_ENC_SIGNED_16) == MPG123_OK)
-                {
-                    // All OK
-                    return;
-                }
-            }
-        }
-        pmpg123_delete(mp3File);
-        mp3File = NULL;
-    }
-
-    virtual ~mp3Stream()
-    {
-        if(mp3File)
-            pmpg123_delete(mp3File);
-        mp3File = NULL;
-    }
-
-private:
-    bool FindDataChunk()
-    {
-        ALubyte buffer[25];
-        int length;
-
-        if(!fstream->read(reinterpret_cast<char*>(buffer), 12))
-            return false;
-
-        if(memcmp(buffer, "RIFF", 4) != 0 || memcmp(buffer+8, "WAVE", 4) != 0)
-        {
-            dataStart = 0;
-
-            // Check for an ID3v2 tag, and skip it
-            if(memcmp(buffer, "ID3", 3) == 0 &&
-               buffer[3] <= 4 && buffer[4] != 0xff &&
-               (buffer[5]&0x0f) == 0 && (buffer[6]&0x80) == 0 &&
-               (buffer[7]&0x80) == 0 && (buffer[8]&0x80) == 0 &&
-               (buffer[9]&0x80) == 0)
-            {
-                dataStart = (buffer[6]<<21) | (buffer[7]<<14) |
-                            (buffer[8]<< 7) | (buffer[9]    );
-                dataStart += ((buffer[5]&0x10) ? 20 : 10);
-            }
-
-            if(fstream->seekg(0, std::ios_base::end))
-            {
-                dataEnd = fstream->tellg();
-                fstream->seekg(dataStart);
-            }
-            return true;
-        }
-
-        int type = 0;
-        while(1)
-        {
-            char tag[4];
-            if(!fstream->read(tag, 4))
-                break;
-
-            /* read chunk length */
-            length = read_le32(fstream);
-
-            if(memcmp(tag, "fmt ", 4) == 0 && length >= 16)
-            {
-                /* Data type (should be 0x0050 or 0x0055 for MP3 data) */
-                type = read_le16(fstream);
-                if(type != 0x0050 && type != 0x0055)
-                    break;
-                length -= 2;
-                /* Ignore the rest of the chunk. Everything we need is in the
-                 * data stream */
-            }
-            else if(memcmp(tag, "data", 4) == 0)
-            {
-                if(type == 0x0050 || type == 0x0055)
-                {
-                    dataStart = fstream->tellg();
-                    dataEnd = dataStart;
-                    dataEnd += length;
-                    return true;
-                }
-            }
-
-            fstream->seekg(length, std::ios_base::cur);
-        }
-
-        return false;
-    }
-};
-static DecoderDecl<mp3Stream> mp3Stream_decoder;
-#endif
-
-
-#ifdef HAS_DUMB
-struct dumbStream : public alureStream {
-    DUMBFILE_SYSTEM vfs;
-    DUMBFILE *dumbFile;
-    DUH *duh;
-    DUH_SIGRENDERER *renderer;
-    std::vector<sample_t> sampleBuf;
-    ALuint lastOrder;
-    ALenum format;
-    ALCint samplerate;
-
-    virtual bool IsValid()
-    { return renderer != NULL; }
-
-    virtual bool GetFormat(ALenum *fmt, ALuint *frequency, ALuint *blockalign)
-    {
-        if(format == AL_NONE)
-        {
-            format = GetSampleFormat(2, 32, true);
-            if(format == AL_NONE)
-                format = AL_FORMAT_STEREO16;
-        }
-        *fmt = format;
-        *frequency = samplerate;
-        *blockalign = 2 * ((format==AL_FORMAT_STEREO16) ? sizeof(ALshort) :
-                                                          sizeof(ALfloat));
-        return true;
-    }
-
-    virtual ALuint GetData(ALubyte *data, ALuint bytes)
-    {
-        ALuint ret = 0;
-
-        if(pdumb_it_sr_get_speed(pduh_get_it_sigrenderer(renderer)) == 0)
-            return 0;
-
-        ALuint sample_count = bytes / ((format==AL_FORMAT_STEREO16) ?
-                                       sizeof(ALshort) : sizeof(ALfloat));
-
-        sampleBuf.resize(sample_count);
-        sample_t *samples[] = {
-            &sampleBuf[0]
-        };
-
-        pdumb_silence(samples[0], sample_count);
-        ret = pduh_sigrenderer_generate_samples(renderer, 1.0f, 65536.0f/samplerate, sample_count/2, samples);
-        ret *= 2;
-        if(format == AL_FORMAT_STEREO16)
-        {
-            for(ALuint i = 0;i < ret;i++)
-                ((ALshort*)data)[i] = clamp(samples[0][i]>>8, -32768, 32767);
-        }
-        else
-        {
-            for(ALuint i = 0;i < ret;i++)
-                ((ALfloat*)data)[i] = ((samples[0][i]>=0) ?
-                                       samples[0][i]/(float)0x7FFFFF :
-                                       samples[0][i]/(float)0x800000);
-        }
-        ret *= ((format==AL_FORMAT_STEREO16) ? sizeof(ALshort) : sizeof(ALfloat));
-
-        return ret;
-    }
-
-    virtual bool Rewind()
-    {
-        DUH_SIGRENDERER *newrenderer = pdumb_it_start_at_order(duh, 2, lastOrder);
-        if(!newrenderer)
-        {
-            SetError("Could not start renderer");
-            return false;
-        }
-        pduh_end_sigrenderer(renderer);
-        renderer = newrenderer;
-        return true;
-    }
-
-    virtual bool SetOrder(ALuint order)
-    {
-        DUH_SIGRENDERER *newrenderer = pdumb_it_start_at_order(duh, 2, order);
-        if(!newrenderer)
-        {
-            SetError("Could not set order");
-            return false;
-        }
-        pduh_end_sigrenderer(renderer);
-        renderer = newrenderer;
-
-        lastOrder = order;
-        return true;
-    }
-
-    dumbStream(std::istream *_fstream)
-      : alureStream(_fstream), dumbFile(NULL), duh(NULL), renderer(NULL),
-        lastOrder(0), format(AL_NONE), samplerate(48000)
-    {
-        if(!dumb_handle) return;
-
-        ALCdevice *device = alcGetContextsDevice(alcGetCurrentContext());
-        if(device)
-            alcGetIntegerv(device, ALC_FREQUENCY, 1, &samplerate);
-
-        DUH* (*funcs[])(DUMBFILE*) = {
-            pdumb_read_it,
-            pdumb_read_xm,
-            pdumb_read_s3m,
-            pdumb_read_mod,
-            NULL
-        };
-
-        vfs.open = NULL;
-        vfs.skip = skip;
-        vfs.getc = read_char;
-        vfs.getnc = read;
-        vfs.close = NULL;
-
-        for(size_t i = 0;funcs[i];i++)
-        {
-            dumbFile = pdumbfile_open_ex(this, &vfs);
-            if(dumbFile)
-            {
-                duh = funcs[i](dumbFile);
-                if(duh)
-                {
-                    renderer = pdumb_it_start_at_order(duh, 2, lastOrder);
-                    if(renderer)
-                    {
-                        pdumb_it_set_loop_callback(pduh_get_it_sigrenderer(renderer), loop_cb, this);
-                        break;
-                    }
-
-                    punload_duh(duh);
-                    duh = NULL;
-                }
-
-                pdumbfile_close(dumbFile);
-                dumbFile = NULL;
-            }
-            fstream->clear();
-            fstream->seekg(0);
-        }
-    }
-
-    virtual ~dumbStream()
-    {
-        if(renderer)
-            pduh_end_sigrenderer(renderer);
-        renderer = NULL;
-
-        if(duh)
-            punload_duh(duh);
-        duh = NULL;
-
-        if(dumbFile)
-            pdumbfile_close(dumbFile);
-        dumbFile = NULL;
-    }
-
-private:
-    // DUMBFILE iostream callbacks
-    static int skip(void *user_data, long offset)
-    {
-        std::istream *stream = static_cast<dumbStream*>(user_data)->fstream;
-        stream->clear();
-
-        if(stream->seekg(offset, std::ios_base::cur))
-            return 0;
-        return -1;
-    }
-
-    static long read(char *ptr, long size, void *user_data)
-    {
-        std::istream *stream = static_cast<dumbStream*>(user_data)->fstream;
-        stream->clear();
-
-        stream->read(ptr, size);
-        return stream->gcount();
-    }
-
-    static int read_char(void *user_data)
-    {
-        std::istream *stream = static_cast<dumbStream*>(user_data)->fstream;
-        stream->clear();
-
-        unsigned char ret;
-        stream->read(reinterpret_cast<char*>(&ret), 1);
-        if(stream->gcount() > 0)
-            return ret;
-        return -1;
-    }
-
-    static int loop_cb(void *user_data)
-    {
-        dumbStream *self = static_cast<dumbStream*>(user_data);
-        pdumb_it_sr_set_speed(pduh_get_it_sigrenderer(self->renderer), 0);
-        return 0;
-    }
-};
-static DecoderDecl<dumbStream> dumbStream_decoder;
-#endif
-
-
-#ifdef HAS_MODPLUG
-struct modStream : public alureStream {
-    ModPlugFile *modFile;
-    int lastOrder;
-
-    virtual bool IsValid()
-    { return modFile != NULL; }
-
-    virtual bool GetFormat(ALenum *fmt, ALuint *frequency, ALuint *blockalign)
-    {
-        *fmt = AL_FORMAT_STEREO16;
-        *frequency = 44100;
-        *blockalign = 2 * sizeof(ALshort);
-        return true;
-    }
-
-    virtual ALuint GetData(ALubyte *data, ALuint bytes)
-    {
-        int ret = pModPlug_Read(modFile, data, bytes);
-        if(ret < 0) return 0;
-        return ret;
-    }
-
-    virtual bool Rewind()
-    { return SetOrder(lastOrder); }
-
-    virtual bool SetOrder(ALuint order)
-    {
-        std::vector<char> data(16384);
-        ALuint total = 0;
-        while(total < 2*1024*1024)
-        {
-            fstream->read(&data[total], data.size()-total);
-            if(fstream->gcount() == 0) break;
-            total += fstream->gcount();
-            data.resize(total*2);
-        }
-        data.resize(total);
-
-        ModPlugFile *newMod = pModPlug_Load(&data[0], data.size());
-        if(!newMod)
-        {
-            SetError("Could not reload data");
-            return false;
-        }
-        pModPlug_Unload(modFile);
-        modFile = newMod;
-
-        // There seems to be no way to tell if the seek succeeds
-        pModPlug_SeekOrder(modFile, order);
-        lastOrder = order;
-
-        return true;
-    }
-
-    modStream(std::istream *_fstream)
-      : alureStream(_fstream), modFile(NULL), lastOrder(0)
-    {
-        if(!mod_handle) return;
-
-        std::vector<char> data(16384);
-        ALuint total = 0;
-        while(total < 2*1024*1024)
-        {
-            fstream->read(&data[total], data.size()-total);
-            if(fstream->gcount() == 0) break;
-            total += fstream->gcount();
-            data.resize(total*2);
-        }
-        data.resize(total);
-
-        modFile = pModPlug_Load(&data[0], data.size());
-    }
-
-    virtual ~modStream()
-    {
-        if(modFile)
-            pModPlug_Unload(modFile);
-        modFile = NULL;
-    }
-};
-static DecoderDecl<modStream> modStream_decoder;
-#endif
-
 
 #ifdef HAS_FLUIDSYNTH
 struct fluidStream : public alureStream {
@@ -1982,6 +1355,629 @@ private:
     }
 };
 static DecoderDecl<fluidStream> fluidStream_decoder;
+#endif
+
+#ifdef HAS_SNDFILE
+struct sndStream : public alureStream {
+    SNDFILE *sndFile;
+    SF_INFO sndInfo;
+    ALenum format;
+
+    virtual bool IsValid()
+    { return sndFile != NULL; }
+
+    virtual bool GetFormat(ALenum *fmt, ALuint *frequency, ALuint *blockalign)
+    {
+        if(format == AL_NONE)
+            format = GetSampleFormat(sndInfo.channels, 16, false);
+        *fmt = format;
+        *frequency = sndInfo.samplerate;
+        *blockalign = sndInfo.channels*2;
+        return true;
+    }
+
+    virtual ALuint GetData(ALubyte *data, ALuint bytes)
+    {
+        const ALuint frameSize = 2*sndInfo.channels;
+        return psf_readf_short(sndFile, (short*)data, bytes/frameSize) * frameSize;
+    }
+
+    virtual bool Rewind()
+    {
+        if(psf_seek(sndFile, 0, SEEK_SET) != -1)
+            return true;
+
+        SetError("Seek failed");
+        return false;
+    }
+
+    sndStream(std::istream *_fstream)
+      : alureStream(_fstream), sndFile(NULL), format(AL_NONE)
+    {
+        memset(&sndInfo, 0, sizeof(sndInfo));
+
+        if(!sndfile_handle) return;
+
+        static SF_VIRTUAL_IO streamIO = {
+            get_filelen, seek,
+            read, write, tell
+        };
+        sndFile = psf_open_virtual(&streamIO, SFM_READ, &sndInfo, this);
+    }
+
+    virtual ~sndStream()
+    {
+        if(sndFile)
+            psf_close(sndFile);
+        sndFile = NULL;
+    }
+
+private:
+    // libSndFile iostream callbacks
+    static sf_count_t get_filelen(void *user_data)
+    {
+        std::istream *stream = static_cast<sndStream*>(user_data)->fstream;
+        stream->clear();
+
+        std::streampos len = -1;
+        std::streampos pos = stream->tellg();
+        if(stream->seekg(0, std::ios_base::end))
+        {
+            len = stream->tellg();
+            stream->seekg(pos);
+        }
+
+        return len;
+    }
+
+    static sf_count_t seek(sf_count_t offset, int whence, void *user_data)
+    {
+        std::istream *stream = static_cast<sndStream*>(user_data)->fstream;
+        stream->clear();
+
+        if(whence == SEEK_CUR)
+            stream->seekg(offset, std::ios_base::cur);
+        else if(whence == SEEK_SET)
+            stream->seekg(offset, std::ios_base::beg);
+        else if(whence == SEEK_END)
+            stream->seekg(offset, std::ios_base::end);
+        else
+            return -1;
+
+        return stream->tellg();
+    }
+
+    static sf_count_t read(void *ptr, sf_count_t count, void *user_data)
+    {
+        std::istream *stream = static_cast<sndStream*>(user_data)->fstream;
+        stream->clear();
+        stream->read(static_cast<char*>(ptr), count);
+        return stream->gcount();
+    }
+
+    static sf_count_t write(const void*, sf_count_t, void*)
+    { return -1; }
+
+    static sf_count_t tell(void *user_data)
+    {
+        std::istream *stream = static_cast<sndStream*>(user_data)->fstream;
+        stream->clear();
+        return stream->tellg();
+    }
+};
+static DecoderDecl<sndStream> sndStream_decoder;
+#endif
+
+#ifdef HAS_DUMB
+struct dumbStream : public alureStream {
+    DUMBFILE_SYSTEM vfs;
+    DUMBFILE *dumbFile;
+    DUH *duh;
+    DUH_SIGRENDERER *renderer;
+    std::vector<sample_t> sampleBuf;
+    ALuint lastOrder;
+    ALenum format;
+    ALCint samplerate;
+
+    virtual bool IsValid()
+    { return renderer != NULL; }
+
+    virtual bool GetFormat(ALenum *fmt, ALuint *frequency, ALuint *blockalign)
+    {
+        if(format == AL_NONE)
+        {
+            format = GetSampleFormat(2, 32, true);
+            if(format == AL_NONE)
+                format = AL_FORMAT_STEREO16;
+        }
+        *fmt = format;
+        *frequency = samplerate;
+        *blockalign = 2 * ((format==AL_FORMAT_STEREO16) ? sizeof(ALshort) :
+                                                          sizeof(ALfloat));
+        return true;
+    }
+
+    virtual ALuint GetData(ALubyte *data, ALuint bytes)
+    {
+        ALuint ret = 0;
+
+        if(pdumb_it_sr_get_speed(pduh_get_it_sigrenderer(renderer)) == 0)
+            return 0;
+
+        ALuint sample_count = bytes / ((format==AL_FORMAT_STEREO16) ?
+                                       sizeof(ALshort) : sizeof(ALfloat));
+
+        sampleBuf.resize(sample_count);
+        sample_t *samples[] = {
+            &sampleBuf[0]
+        };
+
+        pdumb_silence(samples[0], sample_count);
+        ret = pduh_sigrenderer_generate_samples(renderer, 1.0f, 65536.0f/samplerate, sample_count/2, samples);
+        ret *= 2;
+        if(format == AL_FORMAT_STEREO16)
+        {
+            for(ALuint i = 0;i < ret;i++)
+                ((ALshort*)data)[i] = clamp(samples[0][i]>>8, -32768, 32767);
+        }
+        else
+        {
+            for(ALuint i = 0;i < ret;i++)
+                ((ALfloat*)data)[i] = ((samples[0][i]>=0) ?
+                                       samples[0][i]/(float)0x7FFFFF :
+                                       samples[0][i]/(float)0x800000);
+        }
+        ret *= ((format==AL_FORMAT_STEREO16) ? sizeof(ALshort) : sizeof(ALfloat));
+
+        return ret;
+    }
+
+    virtual bool Rewind()
+    {
+        DUH_SIGRENDERER *newrenderer = pdumb_it_start_at_order(duh, 2, lastOrder);
+        if(!newrenderer)
+        {
+            SetError("Could not start renderer");
+            return false;
+        }
+        pduh_end_sigrenderer(renderer);
+        renderer = newrenderer;
+        return true;
+    }
+
+    virtual bool SetOrder(ALuint order)
+    {
+        DUH_SIGRENDERER *newrenderer = pdumb_it_start_at_order(duh, 2, order);
+        if(!newrenderer)
+        {
+            SetError("Could not set order");
+            return false;
+        }
+        pduh_end_sigrenderer(renderer);
+        renderer = newrenderer;
+
+        lastOrder = order;
+        return true;
+    }
+
+    dumbStream(std::istream *_fstream)
+      : alureStream(_fstream), dumbFile(NULL), duh(NULL), renderer(NULL),
+        lastOrder(0), format(AL_NONE), samplerate(48000)
+    {
+        if(!dumb_handle) return;
+
+        ALCdevice *device = alcGetContextsDevice(alcGetCurrentContext());
+        if(device)
+            alcGetIntegerv(device, ALC_FREQUENCY, 1, &samplerate);
+
+        DUH* (*funcs[])(DUMBFILE*) = {
+            pdumb_read_it,
+            pdumb_read_xm,
+            pdumb_read_s3m,
+            pdumb_read_mod,
+            NULL
+        };
+
+        vfs.open = NULL;
+        vfs.skip = skip;
+        vfs.getc = read_char;
+        vfs.getnc = read;
+        vfs.close = NULL;
+
+        for(size_t i = 0;funcs[i];i++)
+        {
+            dumbFile = pdumbfile_open_ex(this, &vfs);
+            if(dumbFile)
+            {
+                duh = funcs[i](dumbFile);
+                if(duh)
+                {
+                    renderer = pdumb_it_start_at_order(duh, 2, lastOrder);
+                    if(renderer)
+                    {
+                        pdumb_it_set_loop_callback(pduh_get_it_sigrenderer(renderer), loop_cb, this);
+                        break;
+                    }
+
+                    punload_duh(duh);
+                    duh = NULL;
+                }
+
+                pdumbfile_close(dumbFile);
+                dumbFile = NULL;
+            }
+            fstream->clear();
+            fstream->seekg(0);
+        }
+    }
+
+    virtual ~dumbStream()
+    {
+        if(renderer)
+            pduh_end_sigrenderer(renderer);
+        renderer = NULL;
+
+        if(duh)
+            punload_duh(duh);
+        duh = NULL;
+
+        if(dumbFile)
+            pdumbfile_close(dumbFile);
+        dumbFile = NULL;
+    }
+
+private:
+    // DUMBFILE iostream callbacks
+    static int skip(void *user_data, long offset)
+    {
+        std::istream *stream = static_cast<dumbStream*>(user_data)->fstream;
+        stream->clear();
+
+        if(stream->seekg(offset, std::ios_base::cur))
+            return 0;
+        return -1;
+    }
+
+    static long read(char *ptr, long size, void *user_data)
+    {
+        std::istream *stream = static_cast<dumbStream*>(user_data)->fstream;
+        stream->clear();
+
+        stream->read(ptr, size);
+        return stream->gcount();
+    }
+
+    static int read_char(void *user_data)
+    {
+        std::istream *stream = static_cast<dumbStream*>(user_data)->fstream;
+        stream->clear();
+
+        unsigned char ret;
+        stream->read(reinterpret_cast<char*>(&ret), 1);
+        if(stream->gcount() > 0)
+            return ret;
+        return -1;
+    }
+
+    static int loop_cb(void *user_data)
+    {
+        dumbStream *self = static_cast<dumbStream*>(user_data);
+        pdumb_it_sr_set_speed(pduh_get_it_sigrenderer(self->renderer), 0);
+        return 0;
+    }
+};
+static DecoderDecl<dumbStream> dumbStream_decoder;
+#endif
+
+#ifdef HAS_MODPLUG
+struct modStream : public alureStream {
+    ModPlugFile *modFile;
+    int lastOrder;
+
+    virtual bool IsValid()
+    { return modFile != NULL; }
+
+    virtual bool GetFormat(ALenum *fmt, ALuint *frequency, ALuint *blockalign)
+    {
+        *fmt = AL_FORMAT_STEREO16;
+        *frequency = 44100;
+        *blockalign = 2 * sizeof(ALshort);
+        return true;
+    }
+
+    virtual ALuint GetData(ALubyte *data, ALuint bytes)
+    {
+        int ret = pModPlug_Read(modFile, data, bytes);
+        if(ret < 0) return 0;
+        return ret;
+    }
+
+    virtual bool Rewind()
+    { return SetOrder(lastOrder); }
+
+    virtual bool SetOrder(ALuint order)
+    {
+        std::vector<char> data(16384);
+        ALuint total = 0;
+        while(total < 2*1024*1024)
+        {
+            fstream->read(&data[total], data.size()-total);
+            if(fstream->gcount() == 0) break;
+            total += fstream->gcount();
+            data.resize(total*2);
+        }
+        data.resize(total);
+
+        ModPlugFile *newMod = pModPlug_Load(&data[0], data.size());
+        if(!newMod)
+        {
+            SetError("Could not reload data");
+            return false;
+        }
+        pModPlug_Unload(modFile);
+        modFile = newMod;
+
+        // There seems to be no way to tell if the seek succeeds
+        pModPlug_SeekOrder(modFile, order);
+        lastOrder = order;
+
+        return true;
+    }
+
+    modStream(std::istream *_fstream)
+      : alureStream(_fstream), modFile(NULL), lastOrder(0)
+    {
+        if(!mod_handle) return;
+
+        std::vector<char> data(16384);
+        ALuint total = 0;
+        while(total < 2*1024*1024)
+        {
+            fstream->read(&data[total], data.size()-total);
+            if(fstream->gcount() == 0) break;
+            total += fstream->gcount();
+            data.resize(total*2);
+        }
+        data.resize(total);
+
+        modFile = pModPlug_Load(&data[0], data.size());
+    }
+
+    virtual ~modStream()
+    {
+        if(modFile)
+            pModPlug_Unload(modFile);
+        modFile = NULL;
+    }
+};
+static DecoderDecl<modStream> modStream_decoder;
+#endif
+
+#ifdef HAS_MPG123
+struct mp3Stream : public alureStream {
+    mpg123_handle *mp3File;
+    long samplerate;
+    int channels;
+    ALenum format;
+    std::ios::pos_type dataStart;
+    std::ios::pos_type dataEnd;
+
+    virtual bool IsValid()
+    { return mp3File != NULL; }
+
+    virtual bool GetFormat(ALenum *fmt, ALuint *frequency, ALuint *blockalign)
+    {
+        *fmt = format;
+        *frequency = samplerate;
+        *blockalign = channels*2;
+        return true;
+    }
+
+    virtual ALuint GetData(ALubyte *data, ALuint bytes)
+    {
+        ALuint amt = 0;
+        while(bytes > 0)
+        {
+            size_t got = 0;
+            int ret = pmpg123_read(mp3File, data, bytes, &got);
+
+            bytes -= got;
+            data += got;
+            amt += got;
+
+            if(ret == MPG123_NEW_FORMAT)
+            {
+                long newrate;
+                int newchans, enc;
+                pmpg123_getformat(mp3File, &newrate, &newchans, &enc);
+                continue;
+            }
+            if(ret == MPG123_NEED_MORE)
+            {
+                unsigned char data[4096];
+                ALint insize = std::min((ALint)sizeof(data),
+                                        (ALint)(dataEnd-fstream->tellg()));
+                if(insize > 0)
+                {
+                    fstream->read((char*)data, insize);
+                    insize = fstream->gcount();
+                }
+                if(insize > 0 && pmpg123_feed(mp3File, data, insize) == MPG123_OK)
+                    continue;
+            }
+            if(got == 0)
+                break;
+        }
+        return amt;
+    }
+
+    virtual bool Rewind()
+    {
+        fstream->clear();
+        std::istream::pos_type oldpos = fstream->tellg();
+        fstream->seekg(dataStart);
+
+        mpg123_handle *newFile = pmpg123_new(NULL, NULL);
+        if(pmpg123_open_feed(newFile) == MPG123_OK)
+        {
+            unsigned char data[4096];
+            long newrate;
+            int newchans;
+            int enc;
+
+            ALuint amt, total = 0;
+            int ret = MPG123_OK;
+            do {
+                amt = std::min((ALint)sizeof(data),
+                               (ALint)(dataEnd-fstream->tellg()));
+                fstream->read((char*)data, amt);
+                amt = fstream->gcount();
+                if(amt == 0)  break;
+                total += amt;
+                ret = pmpg123_decode(newFile, data, amt, NULL, 0, NULL);
+            } while(ret == MPG123_NEED_MORE && total < 64*1024);
+
+            if(ret == MPG123_NEW_FORMAT &&
+               pmpg123_getformat(newFile, &newrate, &newchans, &enc) == MPG123_OK)
+            {
+                if(pmpg123_format_none(newFile) == MPG123_OK &&
+                   pmpg123_format(newFile, samplerate, channels, MPG123_ENC_SIGNED_16) == MPG123_OK)
+                {
+                    // All OK
+                    pmpg123_delete(mp3File);
+                    mp3File = newFile;
+                    return true;
+                }
+            }
+            pmpg123_delete(newFile);
+        }
+
+        fstream->seekg(oldpos);
+        SetError("Restart failed");
+        return false;
+    }
+
+    mp3Stream(std::istream *_fstream)
+      : alureStream(_fstream), mp3File(NULL), format(AL_NONE),
+        dataStart(0), dataEnd(0)
+    {
+        if(!mp123_handle) return;
+
+        if(!FindDataChunk())
+            return;
+
+        mp3File = pmpg123_new(NULL, NULL);
+        if(pmpg123_open_feed(mp3File) == MPG123_OK)
+        {
+            unsigned char data[4096];
+            int enc;
+
+            ALuint amt, total = 0;
+            int ret = MPG123_OK;
+            do {
+                amt = std::min((ALint)sizeof(data),
+                               (ALint)(dataEnd-fstream->tellg()));
+                fstream->read((char*)data, amt);
+                amt = fstream->gcount();
+                if(amt == 0)  break;
+                total += amt;
+                ret = pmpg123_decode(mp3File, data, amt, NULL, 0, NULL);
+            } while(ret == MPG123_NEED_MORE && total < 64*1024);
+
+            if(ret == MPG123_NEW_FORMAT &&
+               pmpg123_getformat(mp3File, &samplerate, &channels, &enc) == MPG123_OK)
+            {
+                format = GetSampleFormat(channels, 16, false);
+                if(pmpg123_format_none(mp3File) == MPG123_OK &&
+                   pmpg123_format(mp3File, samplerate, channels, MPG123_ENC_SIGNED_16) == MPG123_OK)
+                {
+                    // All OK
+                    return;
+                }
+            }
+        }
+        pmpg123_delete(mp3File);
+        mp3File = NULL;
+    }
+
+    virtual ~mp3Stream()
+    {
+        if(mp3File)
+            pmpg123_delete(mp3File);
+        mp3File = NULL;
+    }
+
+private:
+    bool FindDataChunk()
+    {
+        ALubyte buffer[25];
+        int length;
+
+        if(!fstream->read(reinterpret_cast<char*>(buffer), 12))
+            return false;
+
+        if(memcmp(buffer, "RIFF", 4) != 0 || memcmp(buffer+8, "WAVE", 4) != 0)
+        {
+            dataStart = 0;
+
+            // Check for an ID3v2 tag, and skip it
+            if(memcmp(buffer, "ID3", 3) == 0 &&
+               buffer[3] <= 4 && buffer[4] != 0xff &&
+               (buffer[5]&0x0f) == 0 && (buffer[6]&0x80) == 0 &&
+               (buffer[7]&0x80) == 0 && (buffer[8]&0x80) == 0 &&
+               (buffer[9]&0x80) == 0)
+            {
+                dataStart = (buffer[6]<<21) | (buffer[7]<<14) |
+                            (buffer[8]<< 7) | (buffer[9]    );
+                dataStart += ((buffer[5]&0x10) ? 20 : 10);
+            }
+
+            if(fstream->seekg(0, std::ios_base::end))
+            {
+                dataEnd = fstream->tellg();
+                fstream->seekg(dataStart);
+            }
+            return true;
+        }
+
+        int type = 0;
+        while(1)
+        {
+            char tag[4];
+            if(!fstream->read(tag, 4))
+                break;
+
+            /* read chunk length */
+            length = read_le32(fstream);
+
+            if(memcmp(tag, "fmt ", 4) == 0 && length >= 16)
+            {
+                /* Data type (should be 0x0050 or 0x0055 for MP3 data) */
+                type = read_le16(fstream);
+                if(type != 0x0050 && type != 0x0055)
+                    break;
+                length -= 2;
+                /* Ignore the rest of the chunk. Everything we need is in the
+                 * data stream */
+            }
+            else if(memcmp(tag, "data", 4) == 0)
+            {
+                if(type == 0x0050 || type == 0x0055)
+                {
+                    dataStart = fstream->tellg();
+                    dataEnd = dataStart;
+                    dataEnd += length;
+                    return true;
+                }
+            }
+
+            fstream->seekg(length, std::ios_base::cur);
+        }
+
+        return false;
+    }
+};
+static DecoderDecl<mp3Stream> mp3Stream_decoder;
 #endif
 
 
