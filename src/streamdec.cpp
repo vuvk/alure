@@ -1312,7 +1312,7 @@ struct dumbStream : public alureStream {
         DUH_SIGRENDERER *newrenderer = pdumb_it_start_at_order(duh, 2, lastOrder);
         if(!newrenderer)
         {
-            SetError("Could start renderer");
+            SetError("Could not start renderer");
             return false;
         }
         pduh_end_sigrenderer(renderer);
