@@ -37,6 +37,35 @@
 #include <sstream>
 
 
+struct Decoder {
+    typedef std::auto_ptr<alureStream>(*FactoryType)(std::istream*);
+    typedef std::vector<FactoryType> ListType;
+
+    static const ListType& GetList()
+    { return AddList(NULL); }
+
+protected:
+    template<typename T>
+    static std::auto_ptr<alureStream> Factory(std::istream *file)
+    {
+        std::auto_ptr<alureStream> ret(new T(file));
+        if(ret->IsValid()) return ret;
+        return std::auto_ptr<alureStream>();
+    }
+
+    static const ListType& AddList(FactoryType func)
+    {
+        static ListType FuncList;
+        if(func) FuncList.push_back(func);
+        return FuncList;
+    }
+};
+template<typename T>
+struct DecoderDecl : public Decoder {
+    DecoderDecl() { AddList(Factory<T>); }
+};
+
+
 static inline ALuint read_le32(std::istream *file)
 {
     ALubyte buffer[4];
@@ -317,6 +346,8 @@ struct wavStream : public alureStream {
     virtual ~wavStream()
     { }
 };
+static DecoderDecl<wavStream> wavStream_decoder;
+
 
 struct aiffStream : public alureStream {
     ALenum format;
@@ -437,6 +468,7 @@ struct aiffStream : public alureStream {
     virtual ~aiffStream()
     { }
 };
+static DecoderDecl<aiffStream> aiffStream_decoder;
 
 #ifdef HAS_SNDFILE
 struct sndStream : public alureStream {
@@ -546,10 +578,7 @@ private:
         return stream->tellg();
     }
 };
-#else
-struct sndStream : public nullStream {
-    sndStream(std::istream*){}
-};
+static DecoderDecl<sndStream> sndStream_decoder;
 #endif
 
 #ifdef HAS_VORBISFILE
@@ -702,10 +731,7 @@ private:
         return 0;
     }
 };
-#else
-struct oggStream : public nullStream {
-    oggStream(std::istream*){}
-};
+static DecoderDecl<oggStream> oggStream_decoder;
 #endif
 
 #ifdef HAS_FLAC
@@ -985,10 +1011,7 @@ private:
         return (stream->eof()) ? true : false;
     }
 };
-#else
-struct flacStream : public nullStream {
-    flacStream(std::istream*){}
-};
+static DecoderDecl<flacStream> flacStream_decoder;
 #endif
 
 
@@ -1216,10 +1239,7 @@ private:
         return false;
     }
 };
-#else
-struct mp3Stream : public nullStream {
-    mp3Stream(std::istream*){}
-};
+static DecoderDecl<mp3Stream> mp3Stream_decoder;
 #endif
 
 
@@ -1421,10 +1441,7 @@ private:
         return 0;
     }
 };
-#else
-struct dumbStream : public nullStream {
-    dumbStream(std::istream*){}
-};
+static DecoderDecl<dumbStream> dumbStream_decoder;
 #endif
 
 
@@ -1508,13 +1525,8 @@ struct modStream : public alureStream {
             pModPlug_Unload(modFile);
         modFile = NULL;
     }
-
-private:
 };
-#else
-struct modStream : public nullStream {
-    modStream(std::istream*){}
-};
+static DecoderDecl<modStream> modStream_decoder;
 #endif
 
 
@@ -1964,98 +1976,37 @@ private:
         }
     }
 };
-#else
-struct fluidStream : public nullStream {
-    fluidStream(std::istream*){}
-};
+static DecoderDecl<fluidStream> fluidStream_decoder;
 #endif
 
 
 template <typename T>
 alureStream *get_stream_decoder(const T &fdata)
 {
-    alureStream *stream;
-
     std::map<ALint,UserCallbacks>::iterator i = InstalledCallbacks.begin();
     while(i != InstalledCallbacks.end() && i->first < 0)
     {
-        stream = new customStream(fdata, i->second);
-        if(stream->IsValid())
-            return stream;
-        delete stream;
+        std::auto_ptr<alureStream> stream(new customStream(fdata, i->second));
+        if(stream->IsValid()) return stream.release();
         i++;
     }
 
     std::istream *file = new InStream(fdata);
     if(!file->fail())
     {
-        stream = new wavStream(file);
-        if(stream->IsValid())
-            return stream;
-        delete stream;
+        Decoder::ListType Factories = Decoder::GetList();
+        Decoder::ListType::iterator factory = Factories.begin();
+        Decoder::ListType::iterator end = Factories.end();
+        while(factory != end)
+        {
+            file->clear();
+            file->seekg(0, std::ios_base::beg);
 
-        file->clear();
-        file->seekg(0, std::ios_base::beg);
-        stream = new aiffStream(file);
-        if(stream->IsValid())
-            return stream;
-        delete stream;
+            std::auto_ptr<alureStream> stream((*factory)(file));
+            if(stream.get() != NULL) return stream.release();
 
-        // Try libVorbisFile
-        file->clear();
-        file->seekg(0, std::ios_base::beg);
-        stream = new oggStream(file);
-        if(stream->IsValid())
-            return stream;
-        delete stream;
-
-        // Try libFLAC
-        file->clear();
-        file->seekg(0, std::ios_base::beg);
-        stream = new flacStream(file);
-        if(stream->IsValid())
-            return stream;
-        delete stream;
-
-        // Try FluidSynth
-        file->clear();
-        file->seekg(0, std::ios_base::beg);
-        stream = new fluidStream(file);
-        if(stream->IsValid())
-            return stream;
-        delete stream;
-
-        // Try DUMB
-        file->clear();
-        file->seekg(0, std::ios_base::beg);
-        stream = new dumbStream(file);
-        if(stream->IsValid())
-            return stream;
-        delete stream;
-
-        // Try ModPlug
-        file->clear();
-        file->seekg(0, std::ios_base::beg);
-        stream = new modStream(file);
-        if(stream->IsValid())
-            return stream;
-        delete stream;
-
-        // Try libSndFile
-        file->clear();
-        file->seekg(0, std::ios_base::beg);
-        stream = new sndStream(file);
-        if(stream->IsValid())
-            return stream;
-        delete stream;
-
-        // Try MPG123
-        file->clear();
-        file->seekg(0, std::ios_base::beg);
-        stream = new mp3Stream(file);
-        if(stream->IsValid())
-            return stream;
-        delete stream;
+            factory++;
+        }
 
         SetError("Unsupported type");
         delete file;
@@ -2068,10 +2019,8 @@ alureStream *get_stream_decoder(const T &fdata)
 
     while(i != InstalledCallbacks.end())
     {
-        stream = new customStream(fdata, i->second);
-        if(stream->IsValid())
-            return stream;
-        delete stream;
+        std::auto_ptr<alureStream> stream(new customStream(fdata, i->second));
+        if(stream->IsValid()) return stream.release();
         i++;
     }
 
