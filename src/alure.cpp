@@ -413,6 +413,11 @@ static void deinit_alure(void)
         CloseLib(dumb_handle);
     dumb_handle = NULL;
 #endif
+#ifdef HAS_MODPLUG
+    if(mod_handle)
+        CloseLib(mod_handle);
+    mod_handle = NULL;
+#endif
 #ifdef HAS_MPG123
     if(mp123_handle)
     {
@@ -425,6 +430,11 @@ static void deinit_alure(void)
     if(sndfile_handle)
         CloseLib(sndfile_handle);
     sndfile_handle = NULL;
+#endif
+#ifdef HAS_FLUIDSYNTH
+    if(fsynth_handle)
+        CloseLib(fsynth_handle);
+    fsynth_handle = NULL;
 #endif
 
     DeleteCriticalSection(&cs_StreamPlay);
