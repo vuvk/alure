@@ -192,10 +192,10 @@ static inline void CloseLib(void*)
 
 static inline void *OpenLib(const char *libname)
 { return LoadLibraryA(libname); }
-static inline void CloseLib(void*)
-{ FreeLibrary((HINSTANCE)(x)); }
+static inline void CloseLib(void *hdl)
+{ FreeLibrary((HINSTANCE)hdl); }
 static inline void *GetLibProc(void *hdl, const char *funcname)
-{ return GetProcAddress((HINSTANCE)hdl, funcname); }
+{ return (void*)GetProcAddress((HINSTANCE)hdl, funcname); }
 
 #else
 
