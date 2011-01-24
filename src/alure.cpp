@@ -179,10 +179,27 @@ static struct MyConstructorClass {
 } MyConstructor;
 #endif
 
-#ifndef _WIN32
 
-#ifdef DYNLOAD
-static inline void *LoadLibraryA(const char *libname)
+#ifndef DYNLOAD
+static inline void *OpenLib(const char*)
+{ return (void*)0xDEADBEEF; }
+static inline void CloseLib(void*)
+{ }
+#define LOAD_FUNC(h, x) p##x = x
+
+#else
+#ifdef _WIN32
+
+static inline void *OpenLib(const char *libname)
+{ return LoadLibraryA(libname); }
+static inline void CloseLib(void*)
+{ FreeLibrary((HINSTANCE)(x)); }
+static inline void *GetLibProc(void *hdl, const char *funcname)
+{ return GetProcAddress((HINSTANCE)hdl, funcname); }
+
+#else
+
+static inline void *OpenLib(const char *libname)
 {
     dlerror();
     void *hdl = dlopen(libname, RTLD_NOW);
@@ -194,7 +211,7 @@ static inline void *LoadLibraryA(const char *libname)
     }
     return hdl;
 }
-static inline void *GetProcAddress(void *hdl, const char *funcname)
+static inline void *GetLibProc(void *hdl, const char *funcname)
 {
     dlerror();
     void *fn = dlsym(hdl, funcname);
@@ -206,44 +223,22 @@ static inline void *GetProcAddress(void *hdl, const char *funcname)
     }
     return fn;
 }
-static inline void FreeLibrary(void *hdl)
-{
-    dlclose(hdl);
+static inline void CloseLib(void *hdl)
+{ dlclose(hdl); }
+#endif
+
+#define LOAD_FUNC(h, x) p##x = (typeof(p##x))GetLibProc(h##_handle, #x);     \
+if(!p##x)                                                                    \
+{                                                                            \
+    CloseLib(h##_handle);                                                    \
+    h##_handle = NULL;                                                       \
+    break;                                                                   \
 }
-#else // DYNLOAD
-static inline void *LoadLibraryA(const char*)
-{ return (void*)0xDEADBEEF; }
-static inline void FreeLibrary(void*)
-{ }
-#define LOAD_FUNC(h, x) p##x = x
-#endif
-
-#else // _WIN32
-
-#ifndef DYNLOAD
-#define LoadLibraryA(x) ((void*)0xDEADBEEF)
-#define FreeLibrary(x)
-#define LOAD_FUNC(h, x) p##x = x
-#else
-#define GetProcAddress(x,y) GetProcAddress((HINSTANCE)(x),(y))
-#define FreeLibrary(x) FreeLibrary((HINSTANCE)(x))
-#endif
-
 #endif
 
 static void init_alure(void)
 {
     InitializeCriticalSection(&cs_StreamPlay);
-
-#ifndef LOAD_FUNC
-#define LOAD_FUNC(h, x) p##x = (typeof(p##x))GetProcAddress(h##_handle, #x); \
-if(!p##x)                                                                    \
-{                                                                            \
-    FreeLibrary(h##_handle);                                                 \
-    h##_handle = NULL;                                                       \
-    break;                                                                   \
-}
-#endif
 
 #ifdef _WIN32
 #define VORBISFILE_LIB "vorbisfile.dll"
@@ -272,7 +267,7 @@ if(!p##x)                                                                    \
 #endif
 
 #ifdef HAS_VORBISFILE
-    vorbisfile_handle = LoadLibraryA(VORBISFILE_LIB);
+    vorbisfile_handle = OpenLib(VORBISFILE_LIB);
     while(vorbisfile_handle)
     {
         LOAD_FUNC(vorbisfile, ov_clear);
@@ -285,7 +280,7 @@ if(!p##x)                                                                    \
 #endif
 
 #ifdef HAS_FLAC
-    flac_handle = LoadLibraryA(FLAC_LIB);
+    flac_handle = OpenLib(FLAC_LIB);
     while(flac_handle)
     {
         LOAD_FUNC(flac, FLAC__stream_decoder_get_state);
@@ -300,7 +295,7 @@ if(!p##x)                                                                    \
 #endif
 
 #ifdef HAS_DUMB
-    dumb_handle = LoadLibraryA(DUMB_LIB);
+    dumb_handle = OpenLib(DUMB_LIB);
     while(dumb_handle)
     {
         LOAD_FUNC(dumb, dumbfile_open_ex);
@@ -323,7 +318,7 @@ if(!p##x)                                                                    \
 #endif
 
 #ifdef HAS_MODPLUG
-    mod_handle = LoadLibraryA(MODPLUG_LIB);
+    mod_handle = OpenLib(MODPLUG_LIB);
     while(mod_handle)
     {
         LOAD_FUNC(mod, ModPlug_Load);
@@ -335,7 +330,7 @@ if(!p##x)                                                                    \
 #endif
 
 #ifdef HAS_MPG123
-    mp123_handle = LoadLibraryA(MPG123_LIB);
+    mp123_handle = OpenLib(MPG123_LIB);
     while(mp123_handle)
     {
         LOAD_FUNC(mp123, mpg123_read);
@@ -355,7 +350,7 @@ if(!p##x)                                                                    \
 #endif
 
 #ifdef HAS_SNDFILE
-    sndfile_handle = LoadLibraryA(SNDFILE_LIB);
+    sndfile_handle = OpenLib(SNDFILE_LIB);
     while(sndfile_handle)
     {
         LOAD_FUNC(sndfile, sf_close);
@@ -367,7 +362,7 @@ if(!p##x)                                                                    \
 #endif
 
 #ifdef HAS_FLUIDSYNTH
-    fsynth_handle = LoadLibraryA(FLUIDSYNTH_LIB);
+    fsynth_handle = OpenLib(FLUIDSYNTH_LIB);
     while(fsynth_handle)
     {
         LOAD_FUNC(fsynth, fluid_settings_setstr);
@@ -405,30 +400,30 @@ static void deinit_alure(void)
 {
 #ifdef HAS_VORBISFILE
     if(vorbisfile_handle)
-        FreeLibrary(vorbisfile_handle);
+        CloseLib(vorbisfile_handle);
     vorbisfile_handle = NULL;
 #endif
 #ifdef HAS_FLAC
     if(flac_handle)
-        FreeLibrary(flac_handle);
+        CloseLib(flac_handle);
     flac_handle = NULL;
 #endif
 #ifdef HAS_DUMB
     if(dumb_handle)
-        FreeLibrary(dumb_handle);
+        CloseLib(dumb_handle);
     dumb_handle = NULL;
 #endif
 #ifdef HAS_MPG123
     if(mp123_handle)
     {
         pmpg123_exit();
-        FreeLibrary(mp123_handle);
+        CloseLib(mp123_handle);
     }
     mp123_handle = NULL;
 #endif
 #ifdef HAS_SNDFILE
     if(sndfile_handle)
-        FreeLibrary(sndfile_handle);
+        CloseLib(sndfile_handle);
     sndfile_handle = NULL;
 #endif
 
