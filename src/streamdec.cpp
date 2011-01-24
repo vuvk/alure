@@ -45,14 +45,6 @@ struct Decoder {
     { return AddList(NULL); }
 
 protected:
-    template<typename T>
-    static std::auto_ptr<alureStream> Factory(std::istream *file)
-    {
-        std::auto_ptr<alureStream> ret(new T(file));
-        if(ret->IsValid()) return ret;
-        return std::auto_ptr<alureStream>();
-    }
-
     static ListType& AddList(FactoryType func)
     {
         static ListType FuncList;
@@ -66,11 +58,19 @@ protected:
 };
 template<typename T>
 struct DecoderDecl : public Decoder {
-    DecoderDecl() { AddList(Factory<T>); }
+    DecoderDecl() { AddList(Factory); }
     ~DecoderDecl()
     {
         ListType &list = AddList(NULL);
-        list.erase(std::find(list.begin(), list.end(), Factory<T>));
+        list.erase(std::find(list.begin(), list.end(), Factory));
+    }
+
+private:
+    static std::auto_ptr<alureStream> Factory(std::istream *file)
+    {
+        std::auto_ptr<alureStream> ret(new T(file));
+        if(ret->IsValid()) return ret;
+        return std::auto_ptr<alureStream>();
     }
 };
 
