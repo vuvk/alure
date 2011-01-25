@@ -422,7 +422,30 @@ SET(ALURE_OBJS  src/alure.cpp
                 src/stream.cpp
                 src/streamdec.cpp
                 src/streamplay.cpp
+                src/codec_wav.cpp
+                src/codec_aiff.cpp
 )
+IF(HAS_VORBISFILE)
+    SET(ALURE_OBJS ${ALURE_OBJS} src/codec_vorbisfile.cpp)
+ENDIF(HAS_VORBISFILE)
+IF(HAS_FLAC)
+    SET(ALURE_OBJS ${ALURE_OBJS} src/codec_flac.cpp)
+ENDIF(HAS_FLAC)
+IF(HAS_SNDFILE)
+    SET(ALURE_OBJS ${ALURE_OBJS} src/codec_sndfile.cpp)
+ENDIF(HAS_SNDFILE)
+IF(HAS_FLUIDSYNTH)
+    SET(ALURE_OBJS ${ALURE_OBJS} src/codec_fluidsynth.cpp)
+ENDIF(HAS_FLUIDSYNTH)
+IF(HAS_DUMB)
+    SET(ALURE_OBJS ${ALURE_OBJS} src/codec_dumb.cpp)
+ENDIF(HAS_DUMB)
+IF(HAS_MODPLUG)
+    SET(ALURE_OBJS ${ALURE_OBJS} src/codec_modplug.cpp)
+ENDIF(HAS_MODPLUG)
+IF(HAS_MPG123)
+    SET(ALURE_OBJS ${ALURE_OBJS} src/codec_mpg123.cpp)
+ENDIF(HAS_MPG123)
 
 IF(BUILD_SHARED)
     #build a shared library
