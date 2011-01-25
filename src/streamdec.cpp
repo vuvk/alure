@@ -26,6 +26,7 @@
 #include "main.h"
 
 #include <string.h>
+#include <assert.h>
 
 #include <algorithm>
 #include <vector>
