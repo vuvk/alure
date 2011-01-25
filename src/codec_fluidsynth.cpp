@@ -547,4 +547,4 @@ private:
         }
     }
 };
-static DecoderDecl<fluidStream> fluidStream_decoder;
+static DecoderDecl<fluidStream,0> fluidStream_decoder;

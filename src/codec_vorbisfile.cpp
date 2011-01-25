@@ -220,4 +220,5 @@ private:
         return 0;
     }
 };
-static DecoderDecl<oggStream> oggStream_decoder;
+// Priority = 2, so it's preferred over libsndfile and libFLAC
+static DecoderDecl<oggStream,2> oggStream_decoder;

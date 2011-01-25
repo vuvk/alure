@@ -310,4 +310,6 @@ private:
         return false;
     }
 };
-static DecoderDecl<mp3Stream> mp3Stream_decoder;
+// Priority = -2, because mp3 loading can find false-positives, and interferes
+// with mod files
+static DecoderDecl<mp3Stream,-2> mp3Stream_decoder;

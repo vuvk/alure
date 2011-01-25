@@ -197,4 +197,5 @@ public:
     virtual ~wavStream()
     { }
 };
-static DecoderDecl<wavStream> wavStream_decoder;
+// Priority = 10, prefer this decoder over external ones
+static DecoderDecl<wavStream,10> wavStream_decoder;

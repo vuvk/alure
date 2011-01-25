@@ -343,4 +343,5 @@ private:
         return (stream->eof()) ? true : false;
     }
 };
-static DecoderDecl<flacStream> flacStream_decoder;
+// Priority = 1, so it's preferred over libsndfile
+static DecoderDecl<flacStream,1> flacStream_decoder;

@@ -39,15 +39,15 @@
 
 
 const Decoder::ListType& Decoder::GetList()
-{ return AddList(NULL); }
+{ return AddList(); }
 
-Decoder::ListType& Decoder::AddList(Decoder::FactoryType func)
+Decoder::ListType& Decoder::AddList(Decoder::FactoryType func, ALint prio)
 {
     static ListType FuncList;
     if(func)
     {
-        assert(std::find(FuncList.begin(), FuncList.end(), func) == FuncList.end());
-        FuncList.push_back(func);
+        assert(SearchSecond(FuncList.begin(), FuncList.end(), func) == FuncList.end());
+        FuncList.insert(std::make_pair(prio, func));
     }
     return FuncList;
 }
@@ -139,15 +139,15 @@ alureStream *get_stream_decoder(const T &fdata)
     std::istream *file = new InStream(fdata);
     if(!file->fail())
     {
-        Decoder::ListType Factories = Decoder::GetList();
-        Decoder::ListType::iterator factory = Factories.begin();
-        Decoder::ListType::iterator end = Factories.end();
+        const Decoder::ListType Factories = Decoder::GetList();
+        Decoder::ListType::const_reverse_iterator factory = Factories.rbegin();
+        Decoder::ListType::const_reverse_iterator end = Factories.rend();
         while(factory != end)
         {
             file->clear();
             file->seekg(0, std::ios_base::beg);
 
-            std::auto_ptr<alureStream> stream((*factory)(file));
+            std::auto_ptr<alureStream> stream(factory->second(file));
             if(stream.get() != NULL) return stream.release();
 
             factory++;

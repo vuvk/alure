@@ -286,4 +286,5 @@ private:
         return 0;
     }
 };
-static DecoderDecl<dumbStream> dumbStream_decoder;
+// Priority = -1, because mod loading can find false-positives
+static DecoderDecl<dumbStream,-1> dumbStream_decoder;

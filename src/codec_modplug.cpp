@@ -149,4 +149,5 @@ public:
         modFile = NULL;
     }
 };
-static DecoderDecl<modStream> modStream_decoder;
+// Priority = -1, because mod loading can find false-positives
+static DecoderDecl<modStream,-1> modStream_decoder;

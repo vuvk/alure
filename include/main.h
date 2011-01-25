@@ -316,27 +316,35 @@ void swap(T &val1, T &val2)
 }
 
 
+template<typename T1, typename T2>
+T1 SearchSecond(T1 start, T1 end, T2 val)
+{
+    while(start != end && start->second != val)
+        ++start;
+    return start;
+}
+
 struct Decoder {
     typedef std::auto_ptr<alureStream>(*FactoryType)(std::istream*);
-    typedef std::vector<FactoryType> ListType;
+    typedef std::multimap<ALint,FactoryType> ListType;
 
     static const ListType& GetList();
 
 protected:
-    static ListType& AddList(FactoryType func);
+    static ListType& AddList(FactoryType func=NULL, ALint prio=0);
 };
 
-template<typename T>
+template<typename T, ALint prio>
 struct DecoderDecl : public Decoder {
     DecoderDecl()
     {
         T::Init();
-        AddList(Factory);
+        AddList(Factory, prio);
     }
     ~DecoderDecl()
     {
-        ListType &list = AddList(NULL);
-        list.erase(std::find(list.begin(), list.end(), Factory));
+        ListType &list = AddList();
+        list.erase(SearchSecond(list.begin(), list.end(), Factory));
         T::Deinit();
     }
 

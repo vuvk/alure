@@ -176,4 +176,4 @@ private:
         return stream->tellg();
     }
 };
-static DecoderDecl<sndStream> sndStream_decoder;
+static DecoderDecl<sndStream,0> sndStream_decoder;
