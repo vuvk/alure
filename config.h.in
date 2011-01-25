@@ -31,24 +31,3 @@
 
 /* Define if we have fseeko */
 #cmakedefine HAVE_FSEEKO
-
-/* Define if we have sndfile */
-#cmakedefine HAS_SNDFILE
-
-/* Define if we have vorbisfile */
-#cmakedefine HAS_VORBISFILE
-
-/* Define if we have FLAC */
-#cmakedefine HAS_FLAC
-
-/* Define if we have MPG123 */
-#cmakedefine HAS_MPG123
-
-/* Define if we have DUMB */
-#cmakedefine HAS_DUMB
-
-/* Define if we have ModPlug */
-#cmakedefine HAS_MODPLUG
-
-/* Define if we have FluidSynth */
-#cmakedefine HAS_FLUIDSYNTH
