@@ -32,6 +32,24 @@
 
 #include <mpg123.h>
 
+
+void *mp123_handle;
+
+#define MAKE_FUNC(x) typeof(x)* p##x
+MAKE_FUNC(mpg123_read);
+MAKE_FUNC(mpg123_init);
+MAKE_FUNC(mpg123_open_feed);
+MAKE_FUNC(mpg123_new);
+MAKE_FUNC(mpg123_delete);
+MAKE_FUNC(mpg123_feed);
+MAKE_FUNC(mpg123_exit);
+MAKE_FUNC(mpg123_getformat);
+MAKE_FUNC(mpg123_format_none);
+MAKE_FUNC(mpg123_decode);
+MAKE_FUNC(mpg123_format);
+#undef MAKE_FUNC
+
+
 struct mp3Stream : public alureStream {
     mpg123_handle *mp3File;
     long samplerate;

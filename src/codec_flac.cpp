@@ -32,6 +32,19 @@
 
 #include <FLAC/all.h>
 
+
+void *flac_handle;
+
+#define MAKE_FUNC(x) typeof(x)* p##x
+MAKE_FUNC(FLAC__stream_decoder_get_state);
+MAKE_FUNC(FLAC__stream_decoder_finish);
+MAKE_FUNC(FLAC__stream_decoder_new);
+MAKE_FUNC(FLAC__stream_decoder_seek_absolute);
+MAKE_FUNC(FLAC__stream_decoder_delete);
+MAKE_FUNC(FLAC__stream_decoder_process_single);
+MAKE_FUNC(FLAC__stream_decoder_init_stream);
+#undef MAKE_FUNC
+
 struct flacStream : public alureStream {
     FLAC__StreamDecoder *flacFile;
     ALenum format;

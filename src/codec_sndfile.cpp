@@ -32,6 +32,17 @@
 
 #include <sndfile.h>
 
+
+void *sndfile_handle;
+
+#define MAKE_FUNC(x) typeof(x)* p##x
+MAKE_FUNC(sf_close);
+MAKE_FUNC(sf_open_virtual);
+MAKE_FUNC(sf_readf_short);
+MAKE_FUNC(sf_seek);
+#undef MAKE_FUNC
+
+
 struct sndStream : public alureStream {
     SNDFILE *sndFile;
     SF_INFO sndInfo;

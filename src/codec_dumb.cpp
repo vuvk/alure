@@ -32,6 +32,28 @@
 
 #include <dumb.h>
 
+
+void *dumb_handle;
+
+#define MAKE_FUNC(x) typeof(x)* p##x
+MAKE_FUNC(dumbfile_open_ex);
+MAKE_FUNC(dumbfile_close);
+MAKE_FUNC(dumb_read_mod);
+MAKE_FUNC(dumb_read_s3m);
+MAKE_FUNC(dumb_read_xm);
+MAKE_FUNC(dumb_read_it);
+MAKE_FUNC(dumb_silence);
+MAKE_FUNC(duh_sigrenderer_generate_samples);
+MAKE_FUNC(duh_get_it_sigrenderer);
+MAKE_FUNC(duh_end_sigrenderer);
+MAKE_FUNC(unload_duh);
+MAKE_FUNC(dumb_it_start_at_order);
+MAKE_FUNC(dumb_it_set_loop_callback);
+MAKE_FUNC(dumb_it_sr_get_speed);
+MAKE_FUNC(dumb_it_sr_set_speed);
+#undef MAKE_FUNC
+
+
 struct dumbStream : public alureStream {
     DUMBFILE_SYSTEM vfs;
     DUMBFILE *dumbFile;

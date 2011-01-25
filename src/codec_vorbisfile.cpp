@@ -32,6 +32,17 @@
 
 #include <vorbis/vorbisfile.h>
 
+
+void *vorbisfile_handle;
+
+#define MAKE_FUNC(x) typeof(x)* p##x
+MAKE_FUNC(ov_clear);
+MAKE_FUNC(ov_info);
+MAKE_FUNC(ov_open_callbacks);
+MAKE_FUNC(ov_pcm_seek);
+MAKE_FUNC(ov_read);
+
+
 struct oggStream : public alureStream {
     OggVorbis_File oggFile;
     vorbis_info *oggInfo;

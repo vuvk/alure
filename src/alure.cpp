@@ -43,16 +43,32 @@ std::map<ALint,UserCallbacks> InstalledCallbacks;
 CRITICAL_SECTION cs_StreamPlay;
 alureStream::ListType alureStream::StreamList;
 
-void *vorbisfile_handle = NULL;
-void *flac_handle = NULL;
-void *dumb_handle = NULL;
-void *mod_handle = NULL;
-void *mp123_handle = NULL;
-void *sndfile_handle = NULL;
-void *fsynth_handle = NULL;
 
-#define MAKE_FUNC(x) typeof(x)* p##x
+#ifdef HAS_SNDFILE
+#include <sndfile.h>
+#endif
 #ifdef HAS_VORBISFILE
+#include <vorbis/vorbisfile.h>
+#endif
+#ifdef HAS_FLAC
+#include <FLAC/all.h>
+#endif
+#ifdef HAS_MPG123
+#include <mpg123.h>
+#endif
+#ifdef HAS_DUMB
+#include <dumb.h>
+#endif
+#ifdef HAS_MODPLUG
+#include <modplug.h>
+#endif
+#ifdef HAS_FLUIDSYNTH
+#include <fluidsynth.h>
+#endif
+
+#define MAKE_FUNC(x) extern typeof(x)* p##x
+#ifdef HAS_VORBISFILE
+extern void *vorbisfile_handle;
 MAKE_FUNC(ov_clear);
 MAKE_FUNC(ov_info);
 MAKE_FUNC(ov_open_callbacks);
@@ -60,6 +76,7 @@ MAKE_FUNC(ov_pcm_seek);
 MAKE_FUNC(ov_read);
 #endif
 #ifdef HAS_FLAC
+extern void *flac_handle;
 MAKE_FUNC(FLAC__stream_decoder_get_state);
 MAKE_FUNC(FLAC__stream_decoder_finish);
 MAKE_FUNC(FLAC__stream_decoder_new);
@@ -69,6 +86,7 @@ MAKE_FUNC(FLAC__stream_decoder_process_single);
 MAKE_FUNC(FLAC__stream_decoder_init_stream);
 #endif
 #ifdef HAS_DUMB
+extern void *dumb_handle;
 MAKE_FUNC(dumbfile_open_ex);
 MAKE_FUNC(dumbfile_close);
 MAKE_FUNC(dumb_read_mod);
@@ -86,12 +104,14 @@ MAKE_FUNC(dumb_it_sr_get_speed);
 MAKE_FUNC(dumb_it_sr_set_speed);
 #endif
 #ifdef HAS_MODPLUG
+extern void *mod_handle;
 MAKE_FUNC(ModPlug_Load);
 MAKE_FUNC(ModPlug_Unload);
 MAKE_FUNC(ModPlug_Read);
 MAKE_FUNC(ModPlug_SeekOrder);
 #endif
 #ifdef HAS_MPG123
+extern void *mp123_handle;
 MAKE_FUNC(mpg123_read);
 MAKE_FUNC(mpg123_init);
 MAKE_FUNC(mpg123_open_feed);
@@ -105,12 +125,14 @@ MAKE_FUNC(mpg123_decode);
 MAKE_FUNC(mpg123_format);
 #endif
 #ifdef HAS_SNDFILE
+extern void *sndfile_handle;
 MAKE_FUNC(sf_close);
 MAKE_FUNC(sf_open_virtual);
 MAKE_FUNC(sf_readf_short);
 MAKE_FUNC(sf_seek);
 #endif
 #ifdef HAS_FLUIDSYNTH
+extern void *fsynth_handle;
 MAKE_FUNC(fluid_settings_setstr);
 MAKE_FUNC(fluid_synth_program_change);
 MAKE_FUNC(fluid_synth_sfload);

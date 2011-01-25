@@ -4,29 +4,6 @@
 #include "AL/alure.h"
 #include "alext.h"
 
-#ifdef HAS_SNDFILE
-#include <sndfile.h>
-#endif
-#ifdef HAS_VORBISFILE
-#include <vorbis/vorbisfile.h>
-#endif
-#ifdef HAS_FLAC
-#include <FLAC/all.h>
-#endif
-#ifdef HAS_MPG123
-#include <mpg123.h>
-#endif
-#ifdef HAS_DUMB
-#include <dumb.h>
-#endif
-#ifdef HAS_MODPLUG
-#include <modplug.h>
-#endif
-#ifdef HAS_FLUIDSYNTH
-#include <fluidsynth.h>
-#endif
-
-
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
@@ -131,96 +108,6 @@ if(!(p##x))                                                                  \
 }
 #endif
 
-
-extern void *vorbisfile_handle;
-extern void *flac_handle;
-extern void *dumb_handle;
-extern void *mod_handle;
-extern void *mp123_handle;
-extern void *sndfile_handle;
-extern void *fsynth_handle;
-
-#define MAKE_FUNC(x) extern typeof(x)* p##x
-#ifdef HAS_VORBISFILE
-MAKE_FUNC(ov_clear);
-MAKE_FUNC(ov_info);
-MAKE_FUNC(ov_open_callbacks);
-MAKE_FUNC(ov_pcm_seek);
-MAKE_FUNC(ov_read);
-#endif
-#ifdef HAS_FLAC
-MAKE_FUNC(FLAC__stream_decoder_get_state);
-MAKE_FUNC(FLAC__stream_decoder_finish);
-MAKE_FUNC(FLAC__stream_decoder_new);
-MAKE_FUNC(FLAC__stream_decoder_seek_absolute);
-MAKE_FUNC(FLAC__stream_decoder_delete);
-MAKE_FUNC(FLAC__stream_decoder_process_single);
-MAKE_FUNC(FLAC__stream_decoder_init_stream);
-#endif
-#ifdef HAS_DUMB
-MAKE_FUNC(dumbfile_open_ex);
-MAKE_FUNC(dumbfile_close);
-MAKE_FUNC(dumb_read_mod);
-MAKE_FUNC(dumb_read_s3m);
-MAKE_FUNC(dumb_read_xm);
-MAKE_FUNC(dumb_read_it);
-MAKE_FUNC(dumb_silence);
-MAKE_FUNC(duh_sigrenderer_generate_samples);
-MAKE_FUNC(duh_get_it_sigrenderer);
-MAKE_FUNC(duh_end_sigrenderer);
-MAKE_FUNC(unload_duh);
-MAKE_FUNC(dumb_it_start_at_order);
-MAKE_FUNC(dumb_it_set_loop_callback);
-MAKE_FUNC(dumb_it_sr_get_speed);
-MAKE_FUNC(dumb_it_sr_set_speed);
-#endif
-#ifdef HAS_MODPLUG
-MAKE_FUNC(ModPlug_Load);
-MAKE_FUNC(ModPlug_Unload);
-MAKE_FUNC(ModPlug_Read);
-MAKE_FUNC(ModPlug_SeekOrder);
-#endif
-#ifdef HAS_MPG123
-MAKE_FUNC(mpg123_read);
-MAKE_FUNC(mpg123_init);
-MAKE_FUNC(mpg123_open_feed);
-MAKE_FUNC(mpg123_new);
-MAKE_FUNC(mpg123_delete);
-MAKE_FUNC(mpg123_feed);
-MAKE_FUNC(mpg123_exit);
-MAKE_FUNC(mpg123_getformat);
-MAKE_FUNC(mpg123_format_none);
-MAKE_FUNC(mpg123_decode);
-MAKE_FUNC(mpg123_format);
-#endif
-#ifdef HAS_SNDFILE
-MAKE_FUNC(sf_close);
-MAKE_FUNC(sf_open_virtual);
-MAKE_FUNC(sf_readf_short);
-MAKE_FUNC(sf_seek);
-#endif
-#ifdef HAS_FLUIDSYNTH
-MAKE_FUNC(fluid_settings_setstr);
-MAKE_FUNC(fluid_synth_program_change);
-MAKE_FUNC(fluid_synth_sfload);
-MAKE_FUNC(fluid_settings_setnum);
-MAKE_FUNC(fluid_synth_sysex);
-MAKE_FUNC(fluid_synth_cc);
-MAKE_FUNC(fluid_synth_pitch_bend);
-MAKE_FUNC(fluid_synth_channel_pressure);
-MAKE_FUNC(fluid_synth_write_float);
-MAKE_FUNC(new_fluid_synth);
-MAKE_FUNC(delete_fluid_settings);
-MAKE_FUNC(delete_fluid_synth);
-MAKE_FUNC(fluid_synth_program_reset);
-MAKE_FUNC(fluid_settings_setint);
-MAKE_FUNC(new_fluid_settings);
-MAKE_FUNC(fluid_synth_write_s16);
-MAKE_FUNC(fluid_synth_noteoff);
-MAKE_FUNC(fluid_synth_sfunload);
-MAKE_FUNC(fluid_synth_noteon);
-#endif
-#undef MAKE_FUNC
 
 void SetError(const char *err);
 ALuint DetectBlockAlignment(ALenum format);

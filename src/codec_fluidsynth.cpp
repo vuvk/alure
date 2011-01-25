@@ -32,6 +32,32 @@
 
 #include <fluidsynth.h>
 
+
+void *fsynth_handle;
+
+#define MAKE_FUNC(x) typeof(x)* p##x
+MAKE_FUNC(fluid_settings_setstr);
+MAKE_FUNC(fluid_synth_program_change);
+MAKE_FUNC(fluid_synth_sfload);
+MAKE_FUNC(fluid_settings_setnum);
+MAKE_FUNC(fluid_synth_sysex);
+MAKE_FUNC(fluid_synth_cc);
+MAKE_FUNC(fluid_synth_pitch_bend);
+MAKE_FUNC(fluid_synth_channel_pressure);
+MAKE_FUNC(fluid_synth_write_float);
+MAKE_FUNC(new_fluid_synth);
+MAKE_FUNC(delete_fluid_settings);
+MAKE_FUNC(delete_fluid_synth);
+MAKE_FUNC(fluid_synth_program_reset);
+MAKE_FUNC(fluid_settings_setint);
+MAKE_FUNC(new_fluid_settings);
+MAKE_FUNC(fluid_synth_write_s16);
+MAKE_FUNC(fluid_synth_noteoff);
+MAKE_FUNC(fluid_synth_sfunload);
+MAKE_FUNC(fluid_synth_noteon);
+#undef MAKE_FUNC
+
+
 struct fluidStream : public alureStream {
 private:
     static const ALubyte MIDI_CHANNEL_MASK = 0x0F;

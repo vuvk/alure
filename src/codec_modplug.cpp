@@ -32,6 +32,17 @@
 
 #include <modplug.h>
 
+
+void *mod_handle;
+
+#define MAKE_FUNC(x) typeof(x)* p##x
+MAKE_FUNC(ModPlug_Load);
+MAKE_FUNC(ModPlug_Unload);
+MAKE_FUNC(ModPlug_Read);
+MAKE_FUNC(ModPlug_SeekOrder);
+#undef MAKE_FUNC
+
+
 struct modStream : public alureStream {
     ModPlugFile *modFile;
     int lastOrder;
