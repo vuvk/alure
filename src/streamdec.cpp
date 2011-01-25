@@ -53,52 +53,6 @@ Decoder::ListType& Decoder::AddList(Decoder::FactoryType func)
 }
 
 
-static inline ALuint read_le32(std::istream *file)
-{
-    ALubyte buffer[4];
-    if(!file->read(reinterpret_cast<char*>(buffer), 4)) return 0;
-    return buffer[0] | (buffer[1]<<8) | (buffer[2]<<16) | (buffer[3]<<24);
-}
-
-static inline ALushort read_le16(std::istream *file)
-{
-    ALubyte buffer[2];
-    if(!file->read(reinterpret_cast<char*>(buffer), 2)) return 0;
-    return buffer[0] | (buffer[1]<<8);
-}
-
-static inline ALuint read_be32(std::istream *file)
-{
-    ALubyte buffer[4];
-    if(!file->read(reinterpret_cast<char*>(buffer), 4)) return 0;
-    return (buffer[0]<<24) | (buffer[1]<<16) | (buffer[2]<<8) | buffer[3];
-}
-
-static inline ALushort read_be16(std::istream *file)
-{
-    ALubyte buffer[2];
-    if(!file->read(reinterpret_cast<char*>(buffer), 2)) return 0;
-    return (buffer[0]<<8) | buffer[1];
-}
-
-static inline ALuint read_be80extended(std::istream *file)
-{
-    ALubyte buffer[10];
-    if(!file->read(reinterpret_cast<char*>(buffer), 10)) return 0;
-    ALuint mantissa, last = 0;
-    ALubyte exp = buffer[1];
-    exp = 30 - exp;
-    mantissa = (buffer[2]<<24) | (buffer[3]<<16) | (buffer[4]<<8) | buffer[5];
-    while (exp--)
-    {
-        last = mantissa;
-        mantissa >>= 1;
-    }
-    if((last&1)) mantissa++;
-    return mantissa;
-}
-
-
 struct nullStream : public alureStream {
     virtual bool IsValid() { return false; }
     virtual bool GetFormat(ALenum*,ALuint*,ALuint*) { return false; }
