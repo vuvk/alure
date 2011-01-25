@@ -181,29 +181,26 @@ static struct MyConstructorClass {
 
 
 #ifndef DYNLOAD
-static inline void *OpenLib(const char*)
+void *OpenLib(const char*)
 { return (void*)0xDEADBEEF; }
-static inline void CloseLib(void*)
+void CloseLib(void*)
 { }
-#define LOAD_FUNC(h, x) p##x = x
 
-#else
-#ifdef _WIN32
+#elif defined(_WIN32)
 
-static inline void *OpenLib(const char *libname)
+void *OpenLib(const char *libname)
 { return LoadLibraryA(libname); }
-static inline void CloseLib(void *hdl)
+void CloseLib(void *hdl)
 { FreeLibrary((HINSTANCE)hdl); }
-static inline void *GetLibProc(void *hdl, const char *funcname)
+void *GetLibProc(void *hdl, const char *funcname)
 { return (void*)GetProcAddress((HINSTANCE)hdl, funcname); }
 
 #else
 
-static inline void *OpenLib(const char *libname)
+void *OpenLib(const char *libname)
 {
-    dlerror();
+    const char *err = dlerror();
     void *hdl = dlopen(libname, RTLD_NOW);
-    const char *err;
     if((err=dlerror()) != NULL)
     {
         fprintf(stderr, "Error loading %s: %s\n", libname, err);
@@ -211,11 +208,10 @@ static inline void *OpenLib(const char *libname)
     }
     return hdl;
 }
-static inline void *GetLibProc(void *hdl, const char *funcname)
+void *GetLibProc(void *hdl, const char *funcname)
 {
-    dlerror();
+    const char *err = dlerror();
     void *fn = dlsym(hdl, funcname);
-    const char *err;
     if((err=dlerror()) != NULL)
     {
         fprintf(stderr, "Error loading %s: %s\n", funcname, err);
@@ -223,21 +219,8 @@ static inline void *GetLibProc(void *hdl, const char *funcname)
     }
     return fn;
 }
-static inline void CloseLib(void *hdl)
+void CloseLib(void *hdl)
 { dlclose(hdl); }
-#endif
-
-template<typename T>
-void LoadFunc(void *hdl, const char *funcname, T **funcptr)
-{ *funcptr = reinterpret_cast<T*>(GetLibProc(hdl, funcname)); }
-
-#define LOAD_FUNC(h, x) LoadFunc((h), #x, &(p##x));                          \
-if(!(p##x))                                                                  \
-{                                                                            \
-    CloseLib((h));                                                           \
-    (h) = NULL;                                                              \
-    break;                                                                   \
-}
 #endif
 
 static void init_alure(void)
