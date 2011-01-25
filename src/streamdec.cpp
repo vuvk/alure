@@ -37,42 +37,19 @@
 #include <sstream>
 
 
-struct Decoder {
-    typedef std::auto_ptr<alureStream>(*FactoryType)(std::istream*);
-    typedef std::vector<FactoryType> ListType;
+const Decoder::ListType& Decoder::GetList()
+{ return AddList(NULL); }
 
-    static const ListType& GetList()
-    { return AddList(NULL); }
-
-protected:
-    static ListType& AddList(FactoryType func)
+Decoder::ListType& Decoder::AddList(Decoder::FactoryType func)
+{
+    static ListType FuncList;
+    if(func)
     {
-        static ListType FuncList;
-        if(func)
-        {
-            assert(std::find(FuncList.begin(), FuncList.end(), func) == FuncList.end());
-            FuncList.push_back(func);
-        }
-        return FuncList;
+        assert(std::find(FuncList.begin(), FuncList.end(), func) == FuncList.end());
+        FuncList.push_back(func);
     }
-};
-template<typename T>
-struct DecoderDecl : public Decoder {
-    DecoderDecl() { AddList(Factory); }
-    ~DecoderDecl()
-    {
-        ListType &list = AddList(NULL);
-        list.erase(std::find(list.begin(), list.end(), Factory));
-    }
-
-private:
-    static std::auto_ptr<alureStream> Factory(std::istream *file)
-    {
-        std::auto_ptr<alureStream> ret(new T(file));
-        if(ret->IsValid()) return ret;
-        return std::auto_ptr<alureStream>();
-    }
-};
+    return FuncList;
+}
 
 
 static inline ALuint read_le32(std::istream *file)

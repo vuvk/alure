@@ -101,6 +101,7 @@ static inline void DeleteCriticalSection(CRITICAL_SECTION *cs)
 #include <list>
 #include <algorithm>
 #include <vector>
+#include <memory>
 
 static const union {
     int val;
@@ -359,5 +360,34 @@ void swap(T &val1, T &val2)
     val2 ^= val1;
     val1 ^= val2;
 }
+
+
+struct Decoder {
+    typedef std::auto_ptr<alureStream>(*FactoryType)(std::istream*);
+    typedef std::vector<FactoryType> ListType;
+
+    static const ListType& GetList();
+
+protected:
+    static ListType& AddList(FactoryType func);
+};
+
+template<typename T>
+struct DecoderDecl : public Decoder {
+    DecoderDecl() { AddList(Factory); }
+    ~DecoderDecl()
+    {
+        ListType &list = AddList(NULL);
+        list.erase(std::find(list.begin(), list.end(), Factory));
+    }
+
+private:
+    static std::auto_ptr<alureStream> Factory(std::istream *file)
+    {
+        std::auto_ptr<alureStream> ret(new T(file));
+        if(ret->IsValid()) return ret;
+        return std::auto_ptr<alureStream>();
+    }
+};
 
 #endif // MAIN_H
