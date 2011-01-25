@@ -33,9 +33,16 @@
 #include <modplug.h>
 
 
-void *mod_handle;
+#ifdef _WIN32
+#define MODPLUG_LIB "libmodplug.dll"
+#elif defined(__APPLE__)
+#define MODPLUG_LIB "libmodplug.1.dylib"
+#else
+#define MODPLUG_LIB "libmodplug.so.1"
+#endif
 
-#define MAKE_FUNC(x) typeof(x)* p##x
+static void *mod_handle;
+#define MAKE_FUNC(x) static typeof(x)* p##x
 MAKE_FUNC(ModPlug_Load);
 MAKE_FUNC(ModPlug_Unload);
 MAKE_FUNC(ModPlug_Read);
@@ -44,8 +51,27 @@ MAKE_FUNC(ModPlug_SeekOrder);
 
 
 struct modStream : public alureStream {
+private:
     ModPlugFile *modFile;
     int lastOrder;
+
+public:
+    static void Init()
+    {
+        mod_handle = OpenLib(MODPLUG_LIB);
+        if(!mod_handle) return;
+
+        LOAD_FUNC(mod_handle, ModPlug_Load);
+        LOAD_FUNC(mod_handle, ModPlug_Unload);
+        LOAD_FUNC(mod_handle, ModPlug_Read);
+        LOAD_FUNC(mod_handle, ModPlug_SeekOrder);
+    }
+    static void Deinit()
+    {
+        if(mod_handle)
+            CloseLib(mod_handle);
+        mod_handle = NULL;
+    }
 
     virtual bool IsValid()
     { return modFile != NULL; }

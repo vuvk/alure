@@ -33,9 +33,16 @@
 #include <FLAC/all.h>
 
 
-void *flac_handle;
+#ifdef _WIN32
+#define FLAC_LIB "libFLAC.dll"
+#elif defined(__APPLE__)
+#define FLAC_LIB "libFLAC.8.dylib"
+#else
+#define FLAC_LIB "libFLAC.so.8"
+#endif
 
-#define MAKE_FUNC(x) typeof(x)* p##x
+static void *flac_handle;
+#define MAKE_FUNC(x) static typeof(x)* p##x
 MAKE_FUNC(FLAC__stream_decoder_get_state);
 MAKE_FUNC(FLAC__stream_decoder_finish);
 MAKE_FUNC(FLAC__stream_decoder_new);
@@ -45,7 +52,9 @@ MAKE_FUNC(FLAC__stream_decoder_process_single);
 MAKE_FUNC(FLAC__stream_decoder_init_stream);
 #undef MAKE_FUNC
 
+
 struct flacStream : public alureStream {
+private:
     FLAC__StreamDecoder *flacFile;
     ALenum format;
     ALuint samplerate;
@@ -57,6 +66,27 @@ struct flacStream : public alureStream {
     ALubyte *outBytes;
     ALuint outLen;
     ALuint outTotal;
+
+public:
+    static void Init()
+    {
+        flac_handle = OpenLib(FLAC_LIB);
+        if(!flac_handle) return;
+
+        LOAD_FUNC(flac_handle, FLAC__stream_decoder_get_state);
+        LOAD_FUNC(flac_handle, FLAC__stream_decoder_finish);
+        LOAD_FUNC(flac_handle, FLAC__stream_decoder_new);
+        LOAD_FUNC(flac_handle, FLAC__stream_decoder_seek_absolute);
+        LOAD_FUNC(flac_handle, FLAC__stream_decoder_delete);
+        LOAD_FUNC(flac_handle, FLAC__stream_decoder_process_single);
+        LOAD_FUNC(flac_handle, FLAC__stream_decoder_init_stream);
+    }
+    static void Deinit()
+    {
+        if(flac_handle)
+            CloseLib(flac_handle);
+        flac_handle = NULL;
+    }
 
     virtual bool IsValid()
     { return flacFile != NULL; }

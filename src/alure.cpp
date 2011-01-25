@@ -44,117 +44,6 @@ CRITICAL_SECTION cs_StreamPlay;
 alureStream::ListType alureStream::StreamList;
 
 
-#ifdef HAS_SNDFILE
-#include <sndfile.h>
-#endif
-#ifdef HAS_VORBISFILE
-#include <vorbis/vorbisfile.h>
-#endif
-#ifdef HAS_FLAC
-#include <FLAC/all.h>
-#endif
-#ifdef HAS_MPG123
-#include <mpg123.h>
-#endif
-#ifdef HAS_DUMB
-#include <dumb.h>
-#endif
-#ifdef HAS_MODPLUG
-#include <modplug.h>
-#endif
-#ifdef HAS_FLUIDSYNTH
-#include <fluidsynth.h>
-#endif
-
-#define MAKE_FUNC(x) extern typeof(x)* p##x
-#ifdef HAS_VORBISFILE
-extern void *vorbisfile_handle;
-MAKE_FUNC(ov_clear);
-MAKE_FUNC(ov_info);
-MAKE_FUNC(ov_open_callbacks);
-MAKE_FUNC(ov_pcm_seek);
-MAKE_FUNC(ov_read);
-#endif
-#ifdef HAS_FLAC
-extern void *flac_handle;
-MAKE_FUNC(FLAC__stream_decoder_get_state);
-MAKE_FUNC(FLAC__stream_decoder_finish);
-MAKE_FUNC(FLAC__stream_decoder_new);
-MAKE_FUNC(FLAC__stream_decoder_seek_absolute);
-MAKE_FUNC(FLAC__stream_decoder_delete);
-MAKE_FUNC(FLAC__stream_decoder_process_single);
-MAKE_FUNC(FLAC__stream_decoder_init_stream);
-#endif
-#ifdef HAS_DUMB
-extern void *dumb_handle;
-MAKE_FUNC(dumbfile_open_ex);
-MAKE_FUNC(dumbfile_close);
-MAKE_FUNC(dumb_read_mod);
-MAKE_FUNC(dumb_read_s3m);
-MAKE_FUNC(dumb_read_xm);
-MAKE_FUNC(dumb_read_it);
-MAKE_FUNC(dumb_silence);
-MAKE_FUNC(duh_sigrenderer_generate_samples);
-MAKE_FUNC(duh_get_it_sigrenderer);
-MAKE_FUNC(duh_end_sigrenderer);
-MAKE_FUNC(unload_duh);
-MAKE_FUNC(dumb_it_start_at_order);
-MAKE_FUNC(dumb_it_set_loop_callback);
-MAKE_FUNC(dumb_it_sr_get_speed);
-MAKE_FUNC(dumb_it_sr_set_speed);
-#endif
-#ifdef HAS_MODPLUG
-extern void *mod_handle;
-MAKE_FUNC(ModPlug_Load);
-MAKE_FUNC(ModPlug_Unload);
-MAKE_FUNC(ModPlug_Read);
-MAKE_FUNC(ModPlug_SeekOrder);
-#endif
-#ifdef HAS_MPG123
-extern void *mp123_handle;
-MAKE_FUNC(mpg123_read);
-MAKE_FUNC(mpg123_init);
-MAKE_FUNC(mpg123_open_feed);
-MAKE_FUNC(mpg123_new);
-MAKE_FUNC(mpg123_delete);
-MAKE_FUNC(mpg123_feed);
-MAKE_FUNC(mpg123_exit);
-MAKE_FUNC(mpg123_getformat);
-MAKE_FUNC(mpg123_format_none);
-MAKE_FUNC(mpg123_decode);
-MAKE_FUNC(mpg123_format);
-#endif
-#ifdef HAS_SNDFILE
-extern void *sndfile_handle;
-MAKE_FUNC(sf_close);
-MAKE_FUNC(sf_open_virtual);
-MAKE_FUNC(sf_readf_short);
-MAKE_FUNC(sf_seek);
-#endif
-#ifdef HAS_FLUIDSYNTH
-extern void *fsynth_handle;
-MAKE_FUNC(fluid_settings_setstr);
-MAKE_FUNC(fluid_synth_program_change);
-MAKE_FUNC(fluid_synth_sfload);
-MAKE_FUNC(fluid_settings_setnum);
-MAKE_FUNC(fluid_synth_sysex);
-MAKE_FUNC(fluid_synth_cc);
-MAKE_FUNC(fluid_synth_pitch_bend);
-MAKE_FUNC(fluid_synth_channel_pressure);
-MAKE_FUNC(fluid_synth_write_float);
-MAKE_FUNC(new_fluid_synth);
-MAKE_FUNC(delete_fluid_settings);
-MAKE_FUNC(delete_fluid_synth);
-MAKE_FUNC(fluid_synth_program_reset);
-MAKE_FUNC(fluid_settings_setint);
-MAKE_FUNC(new_fluid_settings);
-MAKE_FUNC(fluid_synth_write_s16);
-MAKE_FUNC(fluid_synth_noteoff);
-MAKE_FUNC(fluid_synth_sfunload);
-MAKE_FUNC(fluid_synth_noteon);
-#endif
-#undef MAKE_FUNC
-
 #ifdef HAVE_GCC_CONSTRUCTOR
 static void init_alure(void) __attribute__((constructor));
 static void deinit_alure(void) __attribute__((destructor));
@@ -201,6 +90,16 @@ static struct MyConstructorClass {
 } MyConstructor;
 #endif
 
+static void init_alure(void)
+{
+    InitializeCriticalSection(&cs_StreamPlay);
+}
+
+static void deinit_alure(void)
+{
+    DeleteCriticalSection(&cs_StreamPlay);
+}
+
 
 #ifndef DYNLOAD
 void *OpenLib(const char*)
@@ -245,217 +144,13 @@ void CloseLib(void *hdl)
 { dlclose(hdl); }
 #endif
 
-static void init_alure(void)
-{
-    InitializeCriticalSection(&cs_StreamPlay);
-
-#ifdef _WIN32
-#define VORBISFILE_LIB "vorbisfile.dll"
-#define FLAC_LIB "libFLAC.dll"
-#define DUMB_LIB "libdumb.dll"
-#define MODPLUG_LIB "libmodplug.dll"
-#define MPG123_LIB "libmpg123.dll"
-#define SNDFILE_LIB "libsndfile-1.dll"
-#define FLUIDSYNTH_LIB "libfluidsynth.dll"
-#elif defined(__APPLE__)
-#define VORBISFILE_LIB "libvorbisfile.3.dylib"
-#define FLAC_LIB "libFLAC.8.dylib"
-#define DUMB_LIB "libdumb.dylib"
-#define MODPLUG_LIB "libmodplug.1.dylib"
-#define MPG123_LIB "libmpg123.0.dylib"
-#define SNDFILE_LIB "libsndfile.1.dylib"
-#define FLUIDSYNTH_LIB "libfluidsynth.1.dylib"
-#else
-#define VORBISFILE_LIB "libvorbisfile.so.3"
-#define FLAC_LIB "libFLAC.so.8"
-#define DUMB_LIB "libdumb.so"
-#define MODPLUG_LIB "libmodplug.so.1"
-#define MPG123_LIB "libmpg123.so.0"
-#define SNDFILE_LIB "libsndfile.so.1"
-#define FLUIDSYNTH_LIB "libfluidsynth.so.1"
-#endif
-
-#ifdef HAS_VORBISFILE
-    vorbisfile_handle = OpenLib(VORBISFILE_LIB);
-    while(vorbisfile_handle)
-    {
-        LOAD_FUNC(vorbisfile_handle, ov_clear);
-        LOAD_FUNC(vorbisfile_handle, ov_info);
-        LOAD_FUNC(vorbisfile_handle, ov_open_callbacks);
-        LOAD_FUNC(vorbisfile_handle, ov_pcm_seek);
-        LOAD_FUNC(vorbisfile_handle, ov_read);
-        break;
-    }
-#endif
-
-#ifdef HAS_FLAC
-    flac_handle = OpenLib(FLAC_LIB);
-    while(flac_handle)
-    {
-        LOAD_FUNC(flac_handle, FLAC__stream_decoder_get_state);
-        LOAD_FUNC(flac_handle, FLAC__stream_decoder_finish);
-        LOAD_FUNC(flac_handle, FLAC__stream_decoder_new);
-        LOAD_FUNC(flac_handle, FLAC__stream_decoder_seek_absolute);
-        LOAD_FUNC(flac_handle, FLAC__stream_decoder_delete);
-        LOAD_FUNC(flac_handle, FLAC__stream_decoder_process_single);
-        LOAD_FUNC(flac_handle, FLAC__stream_decoder_init_stream);
-        break;
-    }
-#endif
-
-#ifdef HAS_DUMB
-    dumb_handle = OpenLib(DUMB_LIB);
-    while(dumb_handle)
-    {
-        LOAD_FUNC(dumb_handle, dumbfile_open_ex);
-        LOAD_FUNC(dumb_handle, dumbfile_close);
-        LOAD_FUNC(dumb_handle, dumb_read_mod);
-        LOAD_FUNC(dumb_handle, dumb_read_s3m);
-        LOAD_FUNC(dumb_handle, dumb_read_xm);
-        LOAD_FUNC(dumb_handle, dumb_read_it);
-        LOAD_FUNC(dumb_handle, dumb_silence);
-        LOAD_FUNC(dumb_handle, duh_sigrenderer_generate_samples);
-        LOAD_FUNC(dumb_handle, duh_get_it_sigrenderer);
-        LOAD_FUNC(dumb_handle, duh_end_sigrenderer);
-        LOAD_FUNC(dumb_handle, unload_duh);
-        LOAD_FUNC(dumb_handle, dumb_it_start_at_order);
-        LOAD_FUNC(dumb_handle, dumb_it_set_loop_callback);
-        LOAD_FUNC(dumb_handle, dumb_it_sr_get_speed);
-        LOAD_FUNC(dumb_handle, dumb_it_sr_set_speed);
-        break;
-    }
-#endif
-
-#ifdef HAS_MODPLUG
-    mod_handle = OpenLib(MODPLUG_LIB);
-    while(mod_handle)
-    {
-        LOAD_FUNC(mod_handle, ModPlug_Load);
-        LOAD_FUNC(mod_handle, ModPlug_Unload);
-        LOAD_FUNC(mod_handle, ModPlug_Read);
-        LOAD_FUNC(mod_handle, ModPlug_SeekOrder);
-        break;
-    }
-#endif
-
-#ifdef HAS_MPG123
-    mp123_handle = OpenLib(MPG123_LIB);
-    while(mp123_handle)
-    {
-        LOAD_FUNC(mp123_handle, mpg123_read);
-        LOAD_FUNC(mp123_handle, mpg123_init);
-        LOAD_FUNC(mp123_handle, mpg123_open_feed);
-        LOAD_FUNC(mp123_handle, mpg123_new);
-        LOAD_FUNC(mp123_handle, mpg123_delete);
-        LOAD_FUNC(mp123_handle, mpg123_feed);
-        LOAD_FUNC(mp123_handle, mpg123_exit);
-        LOAD_FUNC(mp123_handle, mpg123_getformat);
-        LOAD_FUNC(mp123_handle, mpg123_format_none);
-        LOAD_FUNC(mp123_handle, mpg123_decode);
-        LOAD_FUNC(mp123_handle, mpg123_format);
-        pmpg123_init();
-        break;
-    }
-#endif
-
-#ifdef HAS_SNDFILE
-    sndfile_handle = OpenLib(SNDFILE_LIB);
-    while(sndfile_handle)
-    {
-        LOAD_FUNC(sndfile_handle, sf_close);
-        LOAD_FUNC(sndfile_handle, sf_open_virtual);
-        LOAD_FUNC(sndfile_handle, sf_readf_short);
-        LOAD_FUNC(sndfile_handle, sf_seek);
-        break;
-    }
-#endif
-
-#ifdef HAS_FLUIDSYNTH
-    fsynth_handle = OpenLib(FLUIDSYNTH_LIB);
-    while(fsynth_handle)
-    {
-        LOAD_FUNC(fsynth_handle, fluid_settings_setstr);
-        LOAD_FUNC(fsynth_handle, fluid_synth_program_change);
-        LOAD_FUNC(fsynth_handle, fluid_synth_sfload);
-        LOAD_FUNC(fsynth_handle, fluid_settings_setnum);
-        LOAD_FUNC(fsynth_handle, fluid_synth_sysex);
-        LOAD_FUNC(fsynth_handle, fluid_synth_cc);
-        LOAD_FUNC(fsynth_handle, fluid_synth_pitch_bend);
-        LOAD_FUNC(fsynth_handle, fluid_synth_channel_pressure);
-        LOAD_FUNC(fsynth_handle, fluid_synth_write_float);
-        LOAD_FUNC(fsynth_handle, new_fluid_synth);
-        LOAD_FUNC(fsynth_handle, delete_fluid_settings);
-        LOAD_FUNC(fsynth_handle, delete_fluid_synth);
-        LOAD_FUNC(fsynth_handle, fluid_synth_program_reset);
-        LOAD_FUNC(fsynth_handle, fluid_settings_setint);
-        LOAD_FUNC(fsynth_handle, new_fluid_settings);
-        LOAD_FUNC(fsynth_handle, fluid_synth_write_s16);
-        LOAD_FUNC(fsynth_handle, fluid_synth_noteoff);
-        LOAD_FUNC(fsynth_handle, fluid_synth_sfunload);
-        LOAD_FUNC(fsynth_handle, fluid_synth_noteon);
-        break;
-    }
-#endif
-
-#undef VORBISFILE_LIB
-#undef FLAC_LIB
-#undef DUMB_LIB
-#undef MPG123_LIB
-#undef SNDFILE_LIB
-#undef LOAD_FUNC
-}
-
-static void deinit_alure(void)
-{
-#ifdef HAS_VORBISFILE
-    if(vorbisfile_handle)
-        CloseLib(vorbisfile_handle);
-    vorbisfile_handle = NULL;
-#endif
-#ifdef HAS_FLAC
-    if(flac_handle)
-        CloseLib(flac_handle);
-    flac_handle = NULL;
-#endif
-#ifdef HAS_DUMB
-    if(dumb_handle)
-        CloseLib(dumb_handle);
-    dumb_handle = NULL;
-#endif
-#ifdef HAS_MODPLUG
-    if(mod_handle)
-        CloseLib(mod_handle);
-    mod_handle = NULL;
-#endif
-#ifdef HAS_MPG123
-    if(mp123_handle)
-    {
-        pmpg123_exit();
-        CloseLib(mp123_handle);
-    }
-    mp123_handle = NULL;
-#endif
-#ifdef HAS_SNDFILE
-    if(sndfile_handle)
-        CloseLib(sndfile_handle);
-    sndfile_handle = NULL;
-#endif
-#ifdef HAS_FLUIDSYNTH
-    if(fsynth_handle)
-        CloseLib(fsynth_handle);
-    fsynth_handle = NULL;
-#endif
-
-    DeleteCriticalSection(&cs_StreamPlay);
-}
-
 
 static const ALchar *last_error = "No error";
-
 void SetError(const char *err)
 {
     last_error = err;
 }
+
 
 ALuint DetectBlockAlignment(ALenum format)
 {

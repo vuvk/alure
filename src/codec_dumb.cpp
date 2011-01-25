@@ -33,9 +33,16 @@
 #include <dumb.h>
 
 
-void *dumb_handle;
+#ifdef _WIN32
+#define DUMB_LIB "libdumb.dll"
+#elif defined(__APPLE__)
+#define DUMB_LIB "libdumb.dylib"
+#else
+#define DUMB_LIB "libdumb.so"
+#endif
 
-#define MAKE_FUNC(x) typeof(x)* p##x
+static void *dumb_handle;
+#define MAKE_FUNC(x) static typeof(x)* p##x
 MAKE_FUNC(dumbfile_open_ex);
 MAKE_FUNC(dumbfile_close);
 MAKE_FUNC(dumb_read_mod);
@@ -55,6 +62,7 @@ MAKE_FUNC(dumb_it_sr_set_speed);
 
 
 struct dumbStream : public alureStream {
+private:
     DUMBFILE_SYSTEM vfs;
     DUMBFILE *dumbFile;
     DUH *duh;
@@ -63,6 +71,35 @@ struct dumbStream : public alureStream {
     ALuint lastOrder;
     ALenum format;
     ALCint samplerate;
+
+public:
+    static void Init()
+    {
+        dumb_handle = OpenLib(DUMB_LIB);
+        if(!dumb_handle) return;
+
+        LOAD_FUNC(dumb_handle, dumbfile_open_ex);
+        LOAD_FUNC(dumb_handle, dumbfile_close);
+        LOAD_FUNC(dumb_handle, dumb_read_mod);
+        LOAD_FUNC(dumb_handle, dumb_read_s3m);
+        LOAD_FUNC(dumb_handle, dumb_read_xm);
+        LOAD_FUNC(dumb_handle, dumb_read_it);
+        LOAD_FUNC(dumb_handle, dumb_silence);
+        LOAD_FUNC(dumb_handle, duh_sigrenderer_generate_samples);
+        LOAD_FUNC(dumb_handle, duh_get_it_sigrenderer);
+        LOAD_FUNC(dumb_handle, duh_end_sigrenderer);
+        LOAD_FUNC(dumb_handle, unload_duh);
+        LOAD_FUNC(dumb_handle, dumb_it_start_at_order);
+        LOAD_FUNC(dumb_handle, dumb_it_set_loop_callback);
+        LOAD_FUNC(dumb_handle, dumb_it_sr_get_speed);
+        LOAD_FUNC(dumb_handle, dumb_it_sr_set_speed);
+    }
+    static void Deinit()
+    {
+        if(dumb_handle)
+            CloseLib(dumb_handle);
+        dumb_handle = NULL;
+    }
 
     virtual bool IsValid()
     { return renderer != NULL; }

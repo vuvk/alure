@@ -104,7 +104,7 @@ if(!(p##x))                                                                  \
 {                                                                            \
     CloseLib((h));                                                           \
     (h) = NULL;                                                              \
-    break;                                                                   \
+    return;                                                                  \
 }
 #endif
 
@@ -328,11 +328,16 @@ protected:
 
 template<typename T>
 struct DecoderDecl : public Decoder {
-    DecoderDecl() { AddList(Factory); }
+    DecoderDecl()
+    {
+        T::Init();
+        AddList(Factory);
+    }
     ~DecoderDecl()
     {
         ListType &list = AddList(NULL);
         list.erase(std::find(list.begin(), list.end(), Factory));
+        T::Deinit();
     }
 
 private:

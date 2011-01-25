@@ -33,21 +33,49 @@
 #include <vorbis/vorbisfile.h>
 
 
-void *vorbisfile_handle;
+#ifdef _WIN32
+#define VORBISFILE_LIB "vorbisfile.dll"
+#elif defined(__APPLE__)
+#define VORBISFILE_LIB "libvorbisfile.3.dylib"
+#else
+#define VORBISFILE_LIB "libvorbisfile.so.3"
+#endif
 
-#define MAKE_FUNC(x) typeof(x)* p##x
+static void *vorbisfile_handle;
+#define MAKE_FUNC(x) static typeof(x)* p##x
 MAKE_FUNC(ov_clear);
 MAKE_FUNC(ov_info);
 MAKE_FUNC(ov_open_callbacks);
 MAKE_FUNC(ov_pcm_seek);
 MAKE_FUNC(ov_read);
+#undef MAKE_FUNC
 
 
 struct oggStream : public alureStream {
+private:
     OggVorbis_File oggFile;
     vorbis_info *oggInfo;
     int oggBitstream;
     ALenum format;
+
+public:
+    static void Init()
+    {
+        vorbisfile_handle = OpenLib(VORBISFILE_LIB);
+        if(!vorbisfile_handle) return;
+
+        LOAD_FUNC(vorbisfile_handle, ov_clear);
+        LOAD_FUNC(vorbisfile_handle, ov_info);
+        LOAD_FUNC(vorbisfile_handle, ov_open_callbacks);
+        LOAD_FUNC(vorbisfile_handle, ov_pcm_seek);
+        LOAD_FUNC(vorbisfile_handle, ov_read);
+    }
+    static void Deinit()
+    {
+        if(vorbisfile_handle)
+            CloseLib(vorbisfile_handle);
+        vorbisfile_handle = NULL;
+    }
 
     virtual bool IsValid()
     { return oggInfo != NULL; }

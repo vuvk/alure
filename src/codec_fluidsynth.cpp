@@ -33,9 +33,16 @@
 #include <fluidsynth.h>
 
 
-void *fsynth_handle;
+#ifdef _WIN32
+#define FLUIDSYNTH_LIB "libfluidsynth.dll"
+#elif defined(__APPLE__)
+#define FLUIDSYNTH_LIB "libfluidsynth.1.dylib"
+#else
+#define FLUIDSYNTH_LIB "libfluidsynth.so.1"
+#endif
 
-#define MAKE_FUNC(x) typeof(x)* p##x
+static void *fsynth_handle;
+#define MAKE_FUNC(x) static typeof(x)* p##x
 MAKE_FUNC(fluid_settings_setstr);
 MAKE_FUNC(fluid_synth_program_change);
 MAKE_FUNC(fluid_synth_sfload);
@@ -140,6 +147,38 @@ private:
     int fontID;
 
 public:
+    static void Init()
+    {
+        fsynth_handle = OpenLib(FLUIDSYNTH_LIB);
+        if(!fsynth_handle)
+
+        LOAD_FUNC(fsynth_handle, fluid_settings_setstr);
+        LOAD_FUNC(fsynth_handle, fluid_synth_program_change);
+        LOAD_FUNC(fsynth_handle, fluid_synth_sfload);
+        LOAD_FUNC(fsynth_handle, fluid_settings_setnum);
+        LOAD_FUNC(fsynth_handle, fluid_synth_sysex);
+        LOAD_FUNC(fsynth_handle, fluid_synth_cc);
+        LOAD_FUNC(fsynth_handle, fluid_synth_pitch_bend);
+        LOAD_FUNC(fsynth_handle, fluid_synth_channel_pressure);
+        LOAD_FUNC(fsynth_handle, fluid_synth_write_float);
+        LOAD_FUNC(fsynth_handle, new_fluid_synth);
+        LOAD_FUNC(fsynth_handle, delete_fluid_settings);
+        LOAD_FUNC(fsynth_handle, delete_fluid_synth);
+        LOAD_FUNC(fsynth_handle, fluid_synth_program_reset);
+        LOAD_FUNC(fsynth_handle, fluid_settings_setint);
+        LOAD_FUNC(fsynth_handle, new_fluid_settings);
+        LOAD_FUNC(fsynth_handle, fluid_synth_write_s16);
+        LOAD_FUNC(fsynth_handle, fluid_synth_noteoff);
+        LOAD_FUNC(fsynth_handle, fluid_synth_sfunload);
+        LOAD_FUNC(fsynth_handle, fluid_synth_noteon);
+    }
+    static void Deinit()
+    {
+        if(fsynth_handle)
+            CloseLib(fsynth_handle);
+        fsynth_handle = NULL;
+    }
+
     virtual bool IsValid()
     { return fluidSynth != NULL; }
 

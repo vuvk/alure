@@ -33,9 +33,16 @@
 #include <sndfile.h>
 
 
-void *sndfile_handle;
+#ifdef _WIN32
+#define SNDFILE_LIB "libsndfile-1.dll"
+#elif defined(__APPLE__)
+#define SNDFILE_LIB "libsndfile.1.dylib"
+#else
+#define SNDFILE_LIB "libsndfile.so.1"
+#endif
 
-#define MAKE_FUNC(x) typeof(x)* p##x
+static void *sndfile_handle;
+#define MAKE_FUNC(x) static typeof(x)* p##x
 MAKE_FUNC(sf_close);
 MAKE_FUNC(sf_open_virtual);
 MAKE_FUNC(sf_readf_short);
@@ -44,9 +51,28 @@ MAKE_FUNC(sf_seek);
 
 
 struct sndStream : public alureStream {
+private:
     SNDFILE *sndFile;
     SF_INFO sndInfo;
     ALenum format;
+
+public:
+    static void Init()
+    {
+        sndfile_handle = OpenLib(SNDFILE_LIB);
+        if(!sndfile_handle) return;
+
+        LOAD_FUNC(sndfile_handle, sf_close);
+        LOAD_FUNC(sndfile_handle, sf_open_virtual);
+        LOAD_FUNC(sndfile_handle, sf_readf_short);
+        LOAD_FUNC(sndfile_handle, sf_seek);
+    }
+    static void Deinit()
+    {
+        if(sndfile_handle)
+            CloseLib(sndfile_handle);
+        sndfile_handle = NULL;
+    }
 
     virtual bool IsValid()
     { return sndFile != NULL; }

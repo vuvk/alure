@@ -32,6 +32,7 @@
 
 
 struct wavStream : public alureStream {
+private:
     ALenum format;
     int samplerate;
     int blockAlign;
@@ -39,6 +40,10 @@ struct wavStream : public alureStream {
     long dataStart;
     long dataLen;
     size_t remLen;
+
+public:
+    static void Init() { }
+    static void Deinit() { }
 
     virtual bool IsValid()
     { return (dataStart > 0 && format != AL_NONE); }
