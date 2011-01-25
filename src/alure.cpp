@@ -227,11 +227,15 @@ static inline void CloseLib(void *hdl)
 { dlclose(hdl); }
 #endif
 
-#define LOAD_FUNC(h, x) p##x = (typeof(p##x))GetLibProc(h##_handle, #x);     \
-if(!p##x)                                                                    \
+template<typename T>
+void LoadFunc(void *hdl, const char *funcname, T **funcptr)
+{ *funcptr = reinterpret_cast<T*>(GetLibProc(hdl, funcname)); }
+
+#define LOAD_FUNC(h, x) LoadFunc((h), #x, &(p##x));                          \
+if(!(p##x))                                                                  \
 {                                                                            \
-    CloseLib(h##_handle);                                                    \
-    h##_handle = NULL;                                                       \
+    CloseLib((h));                                                           \
+    (h) = NULL;                                                              \
     break;                                                                   \
 }
 #endif
@@ -270,11 +274,11 @@ static void init_alure(void)
     vorbisfile_handle = OpenLib(VORBISFILE_LIB);
     while(vorbisfile_handle)
     {
-        LOAD_FUNC(vorbisfile, ov_clear);
-        LOAD_FUNC(vorbisfile, ov_info);
-        LOAD_FUNC(vorbisfile, ov_open_callbacks);
-        LOAD_FUNC(vorbisfile, ov_pcm_seek);
-        LOAD_FUNC(vorbisfile, ov_read);
+        LOAD_FUNC(vorbisfile_handle, ov_clear);
+        LOAD_FUNC(vorbisfile_handle, ov_info);
+        LOAD_FUNC(vorbisfile_handle, ov_open_callbacks);
+        LOAD_FUNC(vorbisfile_handle, ov_pcm_seek);
+        LOAD_FUNC(vorbisfile_handle, ov_read);
         break;
     }
 #endif
@@ -283,13 +287,13 @@ static void init_alure(void)
     flac_handle = OpenLib(FLAC_LIB);
     while(flac_handle)
     {
-        LOAD_FUNC(flac, FLAC__stream_decoder_get_state);
-        LOAD_FUNC(flac, FLAC__stream_decoder_finish);
-        LOAD_FUNC(flac, FLAC__stream_decoder_new);
-        LOAD_FUNC(flac, FLAC__stream_decoder_seek_absolute);
-        LOAD_FUNC(flac, FLAC__stream_decoder_delete);
-        LOAD_FUNC(flac, FLAC__stream_decoder_process_single);
-        LOAD_FUNC(flac, FLAC__stream_decoder_init_stream);
+        LOAD_FUNC(flac_handle, FLAC__stream_decoder_get_state);
+        LOAD_FUNC(flac_handle, FLAC__stream_decoder_finish);
+        LOAD_FUNC(flac_handle, FLAC__stream_decoder_new);
+        LOAD_FUNC(flac_handle, FLAC__stream_decoder_seek_absolute);
+        LOAD_FUNC(flac_handle, FLAC__stream_decoder_delete);
+        LOAD_FUNC(flac_handle, FLAC__stream_decoder_process_single);
+        LOAD_FUNC(flac_handle, FLAC__stream_decoder_init_stream);
         break;
     }
 #endif
@@ -298,21 +302,21 @@ static void init_alure(void)
     dumb_handle = OpenLib(DUMB_LIB);
     while(dumb_handle)
     {
-        LOAD_FUNC(dumb, dumbfile_open_ex);
-        LOAD_FUNC(dumb, dumbfile_close);
-        LOAD_FUNC(dumb, dumb_read_mod);
-        LOAD_FUNC(dumb, dumb_read_s3m);
-        LOAD_FUNC(dumb, dumb_read_xm);
-        LOAD_FUNC(dumb, dumb_read_it);
-        LOAD_FUNC(dumb, dumb_silence);
-        LOAD_FUNC(dumb, duh_sigrenderer_generate_samples);
-        LOAD_FUNC(dumb, duh_get_it_sigrenderer);
-        LOAD_FUNC(dumb, duh_end_sigrenderer);
-        LOAD_FUNC(dumb, unload_duh);
-        LOAD_FUNC(dumb, dumb_it_start_at_order);
-        LOAD_FUNC(dumb, dumb_it_set_loop_callback);
-        LOAD_FUNC(dumb, dumb_it_sr_get_speed);
-        LOAD_FUNC(dumb, dumb_it_sr_set_speed);
+        LOAD_FUNC(dumb_handle, dumbfile_open_ex);
+        LOAD_FUNC(dumb_handle, dumbfile_close);
+        LOAD_FUNC(dumb_handle, dumb_read_mod);
+        LOAD_FUNC(dumb_handle, dumb_read_s3m);
+        LOAD_FUNC(dumb_handle, dumb_read_xm);
+        LOAD_FUNC(dumb_handle, dumb_read_it);
+        LOAD_FUNC(dumb_handle, dumb_silence);
+        LOAD_FUNC(dumb_handle, duh_sigrenderer_generate_samples);
+        LOAD_FUNC(dumb_handle, duh_get_it_sigrenderer);
+        LOAD_FUNC(dumb_handle, duh_end_sigrenderer);
+        LOAD_FUNC(dumb_handle, unload_duh);
+        LOAD_FUNC(dumb_handle, dumb_it_start_at_order);
+        LOAD_FUNC(dumb_handle, dumb_it_set_loop_callback);
+        LOAD_FUNC(dumb_handle, dumb_it_sr_get_speed);
+        LOAD_FUNC(dumb_handle, dumb_it_sr_set_speed);
         break;
     }
 #endif
@@ -321,10 +325,10 @@ static void init_alure(void)
     mod_handle = OpenLib(MODPLUG_LIB);
     while(mod_handle)
     {
-        LOAD_FUNC(mod, ModPlug_Load);
-        LOAD_FUNC(mod, ModPlug_Unload);
-        LOAD_FUNC(mod, ModPlug_Read);
-        LOAD_FUNC(mod, ModPlug_SeekOrder);
+        LOAD_FUNC(mod_handle, ModPlug_Load);
+        LOAD_FUNC(mod_handle, ModPlug_Unload);
+        LOAD_FUNC(mod_handle, ModPlug_Read);
+        LOAD_FUNC(mod_handle, ModPlug_SeekOrder);
         break;
     }
 #endif
@@ -333,17 +337,17 @@ static void init_alure(void)
     mp123_handle = OpenLib(MPG123_LIB);
     while(mp123_handle)
     {
-        LOAD_FUNC(mp123, mpg123_read);
-        LOAD_FUNC(mp123, mpg123_init);
-        LOAD_FUNC(mp123, mpg123_open_feed);
-        LOAD_FUNC(mp123, mpg123_new);
-        LOAD_FUNC(mp123, mpg123_delete);
-        LOAD_FUNC(mp123, mpg123_feed);
-        LOAD_FUNC(mp123, mpg123_exit);
-        LOAD_FUNC(mp123, mpg123_getformat);
-        LOAD_FUNC(mp123, mpg123_format_none);
-        LOAD_FUNC(mp123, mpg123_decode);
-        LOAD_FUNC(mp123, mpg123_format);
+        LOAD_FUNC(mp123_handle, mpg123_read);
+        LOAD_FUNC(mp123_handle, mpg123_init);
+        LOAD_FUNC(mp123_handle, mpg123_open_feed);
+        LOAD_FUNC(mp123_handle, mpg123_new);
+        LOAD_FUNC(mp123_handle, mpg123_delete);
+        LOAD_FUNC(mp123_handle, mpg123_feed);
+        LOAD_FUNC(mp123_handle, mpg123_exit);
+        LOAD_FUNC(mp123_handle, mpg123_getformat);
+        LOAD_FUNC(mp123_handle, mpg123_format_none);
+        LOAD_FUNC(mp123_handle, mpg123_decode);
+        LOAD_FUNC(mp123_handle, mpg123_format);
         pmpg123_init();
         break;
     }
@@ -353,10 +357,10 @@ static void init_alure(void)
     sndfile_handle = OpenLib(SNDFILE_LIB);
     while(sndfile_handle)
     {
-        LOAD_FUNC(sndfile, sf_close);
-        LOAD_FUNC(sndfile, sf_open_virtual);
-        LOAD_FUNC(sndfile, sf_readf_short);
-        LOAD_FUNC(sndfile, sf_seek);
+        LOAD_FUNC(sndfile_handle, sf_close);
+        LOAD_FUNC(sndfile_handle, sf_open_virtual);
+        LOAD_FUNC(sndfile_handle, sf_readf_short);
+        LOAD_FUNC(sndfile_handle, sf_seek);
         break;
     }
 #endif
@@ -365,25 +369,25 @@ static void init_alure(void)
     fsynth_handle = OpenLib(FLUIDSYNTH_LIB);
     while(fsynth_handle)
     {
-        LOAD_FUNC(fsynth, fluid_settings_setstr);
-        LOAD_FUNC(fsynth, fluid_synth_program_change);
-        LOAD_FUNC(fsynth, fluid_synth_sfload);
-        LOAD_FUNC(fsynth, fluid_settings_setnum);
-        LOAD_FUNC(fsynth, fluid_synth_sysex);
-        LOAD_FUNC(fsynth, fluid_synth_cc);
-        LOAD_FUNC(fsynth, fluid_synth_pitch_bend);
-        LOAD_FUNC(fsynth, fluid_synth_channel_pressure);
-        LOAD_FUNC(fsynth, fluid_synth_write_float);
-        LOAD_FUNC(fsynth, new_fluid_synth);
-        LOAD_FUNC(fsynth, delete_fluid_settings);
-        LOAD_FUNC(fsynth, delete_fluid_synth);
-        LOAD_FUNC(fsynth, fluid_synth_program_reset);
-        LOAD_FUNC(fsynth, fluid_settings_setint);
-        LOAD_FUNC(fsynth, new_fluid_settings);
-        LOAD_FUNC(fsynth, fluid_synth_write_s16);
-        LOAD_FUNC(fsynth, fluid_synth_noteoff);
-        LOAD_FUNC(fsynth, fluid_synth_sfunload);
-        LOAD_FUNC(fsynth, fluid_synth_noteon);
+        LOAD_FUNC(fsynth_handle, fluid_settings_setstr);
+        LOAD_FUNC(fsynth_handle, fluid_synth_program_change);
+        LOAD_FUNC(fsynth_handle, fluid_synth_sfload);
+        LOAD_FUNC(fsynth_handle, fluid_settings_setnum);
+        LOAD_FUNC(fsynth_handle, fluid_synth_sysex);
+        LOAD_FUNC(fsynth_handle, fluid_synth_cc);
+        LOAD_FUNC(fsynth_handle, fluid_synth_pitch_bend);
+        LOAD_FUNC(fsynth_handle, fluid_synth_channel_pressure);
+        LOAD_FUNC(fsynth_handle, fluid_synth_write_float);
+        LOAD_FUNC(fsynth_handle, new_fluid_synth);
+        LOAD_FUNC(fsynth_handle, delete_fluid_settings);
+        LOAD_FUNC(fsynth_handle, delete_fluid_synth);
+        LOAD_FUNC(fsynth_handle, fluid_synth_program_reset);
+        LOAD_FUNC(fsynth_handle, fluid_settings_setint);
+        LOAD_FUNC(fsynth_handle, new_fluid_settings);
+        LOAD_FUNC(fsynth_handle, fluid_synth_write_s16);
+        LOAD_FUNC(fsynth_handle, fluid_synth_noteoff);
+        LOAD_FUNC(fsynth_handle, fluid_synth_sfunload);
+        LOAD_FUNC(fsynth_handle, fluid_synth_noteon);
         break;
     }
 #endif
