@@ -150,7 +150,7 @@ public:
     static void Init()
     {
         fsynth_handle = OpenLib(FLUIDSYNTH_LIB);
-        if(!fsynth_handle)
+        if(!fsynth_handle) return;
 
         LOAD_FUNC(fsynth_handle, fluid_settings_setstr);
         LOAD_FUNC(fsynth_handle, fluid_synth_program_change);
