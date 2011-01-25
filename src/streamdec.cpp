@@ -761,18 +761,14 @@ private:
                 else if(frame->header.bits_per_sample == 24)
                 {
                     if(useFloat)
-                        ((ALfloat*)data)[c] = ((buffer[c][i]>=0) ?
-                                               buffer[c][i]/(float)0x7FFFFF :
-                                               buffer[c][i]/(float)0x800000);
+                        ((ALfloat*)data)[c] = buffer[c][i] * (1.0/8388607.0);
                     else
                         ((ALshort*)data)[c] = buffer[c][i]>>8;
                 }
                 else if(frame->header.bits_per_sample == 32)
                 {
                     if(useFloat)
-                        ((ALfloat*)data)[c] = ((buffer[c][i]>=0) ?
-                                               buffer[c][i]/(float)0x7FFFFFFF :
-                                               buffer[c][i]/(float)0x80000000u);
+                        ((ALfloat*)data)[c] = buffer[c][i] * (1.0/2147483647.0);
                     else
                         ((ALshort*)data)[c] = buffer[c][i]>>16;
                 }
@@ -801,18 +797,14 @@ private:
                     else if(frame->header.bits_per_sample == 24)
                     {
                         if(useFloat)
-                            ((ALfloat*)data)[c] = ((buffer[c][i]>=0) ?
-                                                   buffer[c][i]/(float)0x7FFFFF :
-                                                   buffer[c][i]/(float)0x800000);
+                            ((ALfloat*)data)[c] = buffer[c][i] * (1.0/8388607.0);
                         else
                             ((ALshort*)data)[c] = buffer[c][i]>>8;
                     }
                     else if(frame->header.bits_per_sample == 32)
                     {
                         if(useFloat)
-                            ((ALfloat*)data)[c] = ((buffer[c][i]>=0) ?
-                                                   buffer[c][i]/(float)0x7FFFFFFF :
-                                                   buffer[c][i]/(float)0x80000000u);
+                            ((ALfloat*)data)[c] = buffer[c][i] * (1.0/2147483647.0);
                         else
                             ((ALshort*)data)[c] = buffer[c][i]>>16;
                     }
@@ -1508,9 +1500,7 @@ struct dumbStream : public alureStream {
         else
         {
             for(ALuint i = 0;i < ret;i++)
-                ((ALfloat*)data)[i] = ((samples[0][i]>=0) ?
-                                       samples[0][i]/(float)0x7FFFFF :
-                                       samples[0][i]/(float)0x800000);
+                ((ALfloat*)data)[i] = samples[0][i] * (1.0/8388607.0);
         }
         ret *= ((format==AL_FORMAT_STEREO16) ? sizeof(ALshort) : sizeof(ALfloat));
 
