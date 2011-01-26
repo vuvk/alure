@@ -127,9 +127,10 @@ public:
             if(memcmp(tag, "fmt ", 4) == 0 && length >= 16)
             {
                 /* Data type (should be 1 for PCM data, 3 for float PCM data,
-                 * and 17 for IMA4 data) */
+                 * 7 for muLaw, and 17 for IMA4 data) */
                 int type = read_le16(fstream);
-                if(type != 0x0001 && type != 0x0003 && type != 0x0011)
+                if(type != 0x0001 && type != 0x0003 && type != 0x0007 &&
+                   type != 0x0011)
                     break;
 
                 /* mono or stereo data */
@@ -164,6 +165,24 @@ public:
                     format = GetSampleFormat(channels, sampleSize, false);
                 else if(type == 0x0003)
                     format = GetSampleFormat(channels, sampleSize, true);
+                else if(type == 0x0007)
+                {
+                    if(sampleSize == 8)
+                    {
+                        if(channels == 1)
+                            format = AL_FORMAT_MONO_MULAW;
+                        else if(channels == 2)
+                            format = AL_FORMAT_STEREO_MULAW;
+                        else if(channels == 4)
+                            format = AL_FORMAT_QUAD_MULAW;
+                        else if(channels == 6)
+                            format = AL_FORMAT_51CHN_MULAW;
+                        else if(channels == 7)
+                            format = AL_FORMAT_61CHN_MULAW;
+                        else if(channels == 8)
+                            format = AL_FORMAT_71CHN_MULAW;
+                    }
+                }
                 else if(type == 0x0011 && extrabytes >= 2)
                 {
                     int samples = read_le16(fstream);
