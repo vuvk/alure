@@ -18,6 +18,12 @@
 
 #include <windows.h>
 
+#ifdef _MSC_VER
+ #if _MSC_VER >= 1600
+  #define typeof decltype
+ #endif
+#endif
+
 #else
 
 #ifdef HAVE_DLFCN_H
