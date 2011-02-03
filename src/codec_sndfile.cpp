@@ -146,16 +146,12 @@ private:
         std::istream *stream = static_cast<sndStream*>(user_data)->fstream;
         stream->clear();
 
-        if(whence == SEEK_CUR)
-            stream->seekg(offset, std::ios_base::cur);
-        else if(whence == SEEK_SET)
-            stream->seekg(offset, std::ios_base::beg);
-        else if(whence == SEEK_END)
-            stream->seekg(offset, std::ios_base::end);
-        else
-            return -1;
+        if((whence == SEEK_CUR && stream->seekg(offset, std::ios_base::cur)) ||
+           (whence == SEEK_SET && stream->seekg(offset, std::ios_base::beg)) ||
+           (whence == SEEK_END && stream->seekg(offset, std::ios_base::end)))
+            return stream->tellg();
 
-        return stream->tellg();
+        return -1;
     }
 
     static sf_count_t read(void *ptr, sf_count_t count, void *user_data)
