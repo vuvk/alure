@@ -282,9 +282,10 @@ public:
                 if(!fstream->read(hdr, 4) || memcmp(hdr, "MTrk", 4) != 0)
                     return;
 
-                ALuint len = read_be32(fstream);
+                ALint len = read_be32(fstream);
                 i->data.resize(len);
-                if(!fstream->read(reinterpret_cast<char*>(&i->data[0]), len))
+                if(!fstream->read(reinterpret_cast<char*>(&i->data[0]), len) ||
+                   fstream->gcount() != len)
                     return;
 
                 unsigned long val = i->ReadVarLen();
