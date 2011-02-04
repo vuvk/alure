@@ -59,10 +59,8 @@ static struct MyConstructorClass {
     { alureStream::Clear(); };
 } MyConstructor;
 
-extern "C" BOOL APIENTRY DllMain(HINSTANCE module, DWORD reason, LPVOID reserved)
+extern "C" BOOL APIENTRY DllMain(HINSTANCE module, DWORD reason, LPVOID /*reserved*/)
 {
-    (void)reserved;
-
     // Perform actions based on the reason for calling.
     switch(reason)
     {
