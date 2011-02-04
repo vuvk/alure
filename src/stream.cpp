@@ -427,6 +427,16 @@ ALURE_API ALsizei ALURE_APIENTRY alureBufferDataFromStream(alureStream *stream, 
         return -1;
     }
 
+    ALsizei i;
+    for(i = 0;i < numBufs;i++)
+    {
+        if(!bufs[i] || !alIsBuffer(bufs[i]))
+        {
+            SetError("Invalid buffer ID");
+            return -1;
+        }
+    }
+
     ALenum format;
     ALuint freq, blockAlign;
 
