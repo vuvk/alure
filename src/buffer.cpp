@@ -33,7 +33,7 @@
 #include <memory>
 
 
-bool load_stream(alureStream *_stream, ALuint buffer)
+static bool load_stream(alureStream *_stream, ALuint buffer)
 {
     if(!_stream)
         return false;
