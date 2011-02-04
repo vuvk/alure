@@ -126,7 +126,7 @@ struct customStream : public alureStream {
 
 
 template <typename T>
-alureStream *get_stream_decoder(const T &fdata)
+static alureStream *get_stream_decoder(const T &fdata)
 {
     std::map<ALint,UserCallbacks>::iterator i = InstalledCallbacks.begin();
     while(i != InstalledCallbacks.end() && i->first < 0)
