@@ -169,7 +169,7 @@ static alureStream *get_stream_decoder(const T &fdata)
         i++;
     }
 
-    return new nullStream;
+    return NULL;
 }
 
 alureStream *create_stream(const char *fname)

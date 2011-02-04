@@ -193,11 +193,7 @@ ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromFile(const ALchar *fn
     }
 
     alureStream *stream = create_stream(fname);
-    if(!stream->IsValid())
-    {
-        delete stream;
-        return NULL;
-    }
+    if(!stream) return NULL;
 
     return InitStream(stream, chunkLength, numBufs, bufs);
 }
@@ -250,13 +246,9 @@ ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromMemory(const ALubyte 
     memData.Pos = 0;
 
     alureStream *stream = create_stream(memData);
-    stream->data = streamData;
-    if(!stream->IsValid())
-    {
-        delete stream;
-        return NULL;
-    }
+    if(!stream) return NULL;
 
+    stream->data = streamData;
     return InitStream(stream, chunkLength, numBufs, bufs);
 }
 
@@ -305,11 +297,7 @@ ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromStaticMemory(const AL
     memData.Pos = 0;
 
     alureStream *stream = create_stream(memData);
-    if(!stream->IsValid())
-    {
-        delete stream;
-        return NULL;
-    }
+    if(!stream) return NULL;
 
     return InitStream(stream, chunkLength, numBufs, bufs);
 }
