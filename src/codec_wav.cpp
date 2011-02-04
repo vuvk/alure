@@ -218,3 +218,5 @@ public:
 };
 // Priority = 10, prefer this decoder over external ones
 static DecoderDecl<wavStream,10> wavStream_decoder;
+Decoder &alure_init_wav(void)
+{ return wavStream_decoder; }

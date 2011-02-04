@@ -151,3 +151,5 @@ public:
 };
 // Priority = -1, because mod loading can find false-positives
 static DecoderDecl<modStream,-1> modStream_decoder;
+Decoder &alure_init_modplug(void)
+{ return modStream_decoder; }

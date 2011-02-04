@@ -313,3 +313,5 @@ private:
 // Priority = -2, because mp3 loading can find false-positives, and interferes
 // with mod files
 static DecoderDecl<mp3Stream,-2> mp3Stream_decoder;
+Decoder &alure_init_mpg123(void)
+{ return mp3Stream_decoder; }

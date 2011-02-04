@@ -288,3 +288,5 @@ private:
 };
 // Priority = -1, because mod loading can find false-positives
 static DecoderDecl<dumbStream,-1> dumbStream_decoder;
+Decoder &alure_init_dumb(void)
+{ return dumbStream_decoder; }

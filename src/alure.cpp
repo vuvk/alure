@@ -93,6 +93,33 @@ static struct MyConstructorClass {
 static void init_alure(void)
 {
     InitializeCriticalSection(&cs_StreamPlay);
+
+    // These calls actually just return references to the codecs' Decoder
+    // objects. They aren't really used for anything other than to prevent the
+    // compiler from removing the codec initializers.
+    alure_init_wav();
+    alure_init_aiff();
+#ifdef HAS_VORBISFILE
+    alure_init_vorbisfile();
+#endif
+#ifdef HAS_FLAC
+    alure_init_flac();
+#endif
+#ifdef HAS_SNDFILE
+    alure_init_sndfile();
+#endif
+#ifdef HAS_FLUIDSYNTH
+    alure_init_fluidsynth();
+#endif
+#ifdef HAS_DUMB
+    alure_init_dumb();
+#endif
+#ifdef HAS_MODPLUG
+    alure_init_modplug();
+#endif
+#ifdef HAS_MPG123
+    alure_init_mpg123();
+#endif
 }
 
 static void deinit_alure(void)

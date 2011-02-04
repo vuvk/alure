@@ -363,4 +363,14 @@ private:
     }
 };
 
+Decoder &alure_init_wav(void);
+Decoder &alure_init_aiff(void);
+Decoder &alure_init_vorbisfile(void);
+Decoder &alure_init_flac(void);
+Decoder &alure_init_sndfile(void);
+Decoder &alure_init_fluidsynth(void);
+Decoder &alure_init_dumb(void);
+Decoder &alure_init_modplug(void);
+Decoder &alure_init_mpg123(void);
+
 #endif // MAIN_H
