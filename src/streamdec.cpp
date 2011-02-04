@@ -53,15 +53,6 @@ Decoder::ListType& Decoder::AddList(Decoder::FactoryType func, ALint prio)
 }
 
 
-struct nullStream : public alureStream {
-    virtual bool IsValid() { return false; }
-    virtual bool GetFormat(ALenum*,ALuint*,ALuint*) { return false; }
-    virtual ALuint GetData(ALubyte*,ALuint) { return 0; }
-    virtual bool Rewind() { return false; }
-    nullStream():alureStream(NULL) {}
-};
-
-
 struct customStream : public alureStream {
     void *usrFile;
     ALenum format;
