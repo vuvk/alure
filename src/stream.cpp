@@ -427,8 +427,7 @@ ALURE_API ALsizei ALURE_APIENTRY alureBufferDataFromStream(alureStream *stream, 
         return -1;
     }
 
-    ALsizei i;
-    for(i = 0;i < numBufs;i++)
+    for(ALsizei i = 0;i < numBufs;i++)
     {
         if(!bufs[i] || !alIsBuffer(bufs[i]))
         {
