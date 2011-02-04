@@ -183,6 +183,12 @@ ALURE_API ALboolean ALURE_APIENTRY alureBufferDataFromFile(const ALchar *fname, 
         return AL_FALSE;
     }
 
+    if(!buffer || !alIsBuffer(buffer))
+    {
+        SetError("Invalid buffer ID");
+        return false;
+    }
+
     if(load_stream(create_stream(fname), buffer) == false)
         return AL_FALSE;
     return AL_TRUE;
@@ -205,6 +211,12 @@ ALURE_API ALboolean ALURE_APIENTRY alureBufferDataFromMemory(const ALubyte *fdat
     {
         SetError("Existing OpenAL error");
         return AL_FALSE;
+    }
+
+    if(!buffer || !alIsBuffer(buffer))
+    {
+        SetError("Invalid buffer ID");
+        return false;
     }
 
     if(length < 0)
