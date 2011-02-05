@@ -93,12 +93,12 @@ struct customStream : public alureStream {
     }
 
     customStream(const char *fname, const UserCallbacks &callbacks)
-      : alureStream(NULL), usrFile(NULL), format(0), samplerate(0),
+      : alureStream(NULL), usrFile(NULL), format(AL_NONE), samplerate(0),
         blockAlign(0), cb(callbacks)
     { if(cb.open_file) usrFile = cb.open_file(fname); }
 
     customStream(const MemDataInfo &memData, const UserCallbacks &callbacks)
-      : alureStream(NULL), usrFile(NULL), format(0), samplerate(0),
+      : alureStream(NULL), usrFile(NULL), format(AL_NONE), samplerate(0),
         blockAlign(0), memInfo(memData), cb(callbacks)
     { if(cb.open_mem) usrFile = cb.open_mem(memInfo.Data, memInfo.Length); }
 

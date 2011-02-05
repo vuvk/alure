@@ -64,7 +64,6 @@ static alureStream *InitStream(alureStream *instream, ALsizei chunkLength, ALsiz
 
     if(SizeIsUS)
     {
-        alureUInt64 len64 = chunkLength;
         ALuint framesPerBlock = DetectCompressionRate(format);
         ALuint blockSize = DetectBlockAlignment(format);
         if(framesPerBlock == 0 || blockSize == 0)
@@ -73,6 +72,7 @@ static alureStream *InitStream(alureStream *instream, ALsizei chunkLength, ALsiz
             return NULL;
         }
 
+        alureUInt64 len64 = chunkLength;
         len64 = len64 * freq / 1000000 / framesPerBlock * blockSize;
         if(len64 > 0x7FFFFFFF)
         {
