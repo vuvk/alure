@@ -71,9 +71,11 @@ struct customStream : public alureStream {
         {
             if(!cb.get_fmt || !cb.get_fmt(usrFile, &format, &samplerate, &blockAlign))
                 return false;
+
+            ALuint detected = DetectBlockAlignment(format);
+            if(detected && (blockAlign%detected) != 0)
+                blockAlign = 0;
         }
-        if(DetectBlockAlignment(format) != blockAlign)
-            blockAlign = 0;
 
         *fmt = format;
         *frequency = samplerate;
