@@ -562,11 +562,14 @@ ALURE_API ALboolean ALURE_APIENTRY alureDestroyStream(alureStream *stream, ALsiz
         return AL_FALSE;
     }
 
-    alDeleteBuffers(numBufs, bufs);
-    if(alGetError() != AL_NO_ERROR)
+    if(numBufs > 0)
     {
-        SetError("Buffer deletion failed");
-        return AL_FALSE;
+        alDeleteBuffers(numBufs, bufs);
+        if(alGetError() != AL_NO_ERROR)
+        {
+            SetError("Buffer deletion failed");
+            return AL_FALSE;
+        }
     }
 
     if(stream)
