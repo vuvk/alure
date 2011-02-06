@@ -28,8 +28,7 @@ ENDIF(WIN32)
 
 SET(LIB_MAJOR_VERSION "1")
 SET(LIB_MINOR_VERSION "0")
-SET(LIB_BUILD_VERSION "72")
-SET(LIB_VERSION "${LIB_MAJOR_VERSION}.${LIB_MINOR_VERSION}.${LIB_BUILD_VERSION}")
+SET(LIB_VERSION "${LIB_MAJOR_VERSION}.${LIB_MINOR_VERSION}")
 
 
 INCLUDE_DIRECTORIES(include "${ALURE_BINARY_DIR}")
@@ -454,7 +453,7 @@ IF(BUILD_SHARED)
     #build a shared library
     ADD_LIBRARY(${LIBNAME} SHARED ${ALURE_OBJS})
     SET_TARGET_PROPERTIES(${LIBNAME} PROPERTIES DEFINE_SYMBOL ALURE_BUILD_LIBRARY
-                                                VERSION ${LIB_VERSION}
+                                                VERSION ${LIB_VERSION}.0
                                                 SOVERSION ${LIB_MAJOR_VERSION})
     IF(WIN32)
         SET_TARGET_PROPERTIES(${LIBNAME} PROPERTIES PREFIX "")
@@ -472,7 +471,7 @@ IF(BUILD_STATIC)
     ADD_LIBRARY(${LIBNAME}-static STATIC ${ALURE_OBJS})
     SET_TARGET_PROPERTIES(${LIBNAME}-static PROPERTIES DEFINE_SYMBOL ALURE_BUILD_LIBRARY
                                                        COMPILE_FLAGS -DALURE_STATIC_LIBRARY
-                                                       VERSION ${LIB_VERSION})
+                                                       VERSION ${LIB_VERSION}.0)
     INSTALL(TARGETS ${LIBNAME}-static
             RUNTIME DESTINATION bin
             LIBRARY DESTINATION lib${LIB_SUFFIX}
