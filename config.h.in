@@ -32,6 +32,9 @@
 /* Define if we have fseeko */
 #cmakedefine HAVE_FSEEKO
 
+/* Define if we have _fseeki64 */
+#cmakedefine HAVE__FSEEKI64
+
 /* Define the supported backends */
 #cmakedefine HAS_VORBISFILE
 #cmakedefine HAS_FLAC
