@@ -105,24 +105,27 @@ FileStreamBuf::pos_type FileStreamBuf::seekoff(off_type offset, std::ios_base::s
     if(!usrFile || (mode&std::ios_base::out))
         return traits_type::eof();
 
-    pos_type pos;
+    pos_type pos = traits_type::eof();
     switch(whence)
     {
         case std::ios_base::beg:
-            pos = pos_type(fio.seek(usrFile, offset, SEEK_SET));
+            if(offset == off_type(alureInt64(offset)))
+                pos = pos_type(fio.seek(usrFile, offset, SEEK_SET));
             break;
 
         case std::ios_base::cur:
             offset -= off_type(egptr()-gptr());
-            pos = pos_type(fio.seek(usrFile, offset, SEEK_CUR));
+            if(offset == off_type(alureInt64(offset)))
+                pos = pos_type(fio.seek(usrFile, offset, SEEK_CUR));
             break;
 
         case std::ios_base::end:
-            pos = pos_type(fio.seek(usrFile, offset, SEEK_END));
+            if(offset == off_type(alureInt64(offset)))
+                pos = pos_type(fio.seek(usrFile, offset, SEEK_END));
             break;
 
         default:
-            pos = traits_type::eof();
+            break;
     }
     if(pos >= 0)
         setg(0, 0, 0);
