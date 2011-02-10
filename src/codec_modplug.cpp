@@ -128,18 +128,28 @@ public:
     {
         if(!mod_handle) return;
 
-        std::vector<char> data(16384);
+        std::vector<char> data(1024);
         ALuint total = 0;
-        while(total < 2*1024*1024)
-        {
-            fstream->read(&data[total], data.size()-total);
-            if(fstream->gcount() == 0) break;
-            total += fstream->gcount();
-            data.resize(total*2);
-        }
-        data.resize(total);
 
-        modFile = pModPlug_Load(&data[0], data.size());
+        fstream->read(&data[total], data.size()-total);
+        total += fstream->gcount();
+        if(total < 32) return;
+
+        if(memcmp(&data[0], "Extended Module: ", 17) == 0 || /* XM */
+           (data[28] == 0x1A && data[29] == 0x10) || /* S3M */
+           memcmp(&data[0], "IMPM", 4) == 0) /* IT */
+        {
+            while(1)
+            {
+                data.resize(total*2);
+                fstream->read(&data[total], data.size()-total);
+                if(fstream->gcount() == 0) break;
+                total += fstream->gcount();
+            }
+            data.resize(total);
+
+            modFile = pModPlug_Load(&data[0], data.size());
+        }
     }
 
     virtual ~modStream()

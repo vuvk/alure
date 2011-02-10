@@ -194,7 +194,7 @@ public:
             pdumb_read_it,
             pdumb_read_xm,
             pdumb_read_s3m,
-            pdumb_read_mod,
+            //pdumb_read_mod,
             NULL
         };
 
