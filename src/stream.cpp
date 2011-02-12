@@ -46,7 +46,7 @@ static alureStream *InitStream(alureStream *instream, ALsizei chunkLength, ALsiz
         return NULL;
     }
 
-    if(format == AL_NONE)
+    if(format == AL_NONE || format == -1)
     {
         SetError("No valid format");
         return NULL;
