@@ -27,6 +27,9 @@
 
 #include <string.h>
 #include <assert.h>
+#ifdef _WIN32
+#include <io.h>
+#endif
 
 #include <istream>
 
@@ -232,7 +235,82 @@ public:
 
     virtual bool SetPatchset(const char *sfont)
     {
-        int newid = pfluid_synth_sfload(fluidSynth, sfont, true);
+        /* FluidSynth has no way to load a soundfont using IO callbacks. So we
+         * have to copy the specified file using the callbacks to a regular
+         * file that FluidSynth can open. */
+        int newid = FLUID_FAILED;
+        InStream istream(sfont);
+        if(istream.fail())
+        {
+            SetError("Failed to open file");
+            return false;
+        }
+
+        /* First, get a temp filename */
+        const char *str = getenv("TEMP");
+        if(!str || !str[0]) str = getenv("TMP");
+#ifdef _WIN32
+        if(!str || !str[0]) str = ".";
+#else
+        if(!str || !str[0]) str = "/tmp";
+#endif
+        std::string fname = str;
+        fname += "/alure-sfont-XXXXXX";
+
+        for(size_t i = 0;i < fname.size();i++)
+        {
+            if(fname[i] == '\\')
+                fname[i] = '/';
+        }
+
+        std::vector<char> tmpfname(fname.begin(), fname.end());
+        tmpfname.push_back(0);
+
+        /* Open a temp file */
+        int fd = -1;
+        FILE *file;
+#ifdef _WIN32
+        if(mktemp(&tmpfname[0]) == NULL || (file=fopen(&tmpfname[0], "wb")) == NULL)
+#else
+        if((fd=mkstemp(&tmpfname[0])) == -1 || (file=fdopen(fd, "wb")) == NULL)
+#endif
+        {
+            if(fd >= 0)
+            {
+                close(fd);
+                remove(&tmpfname[0]);
+            }
+            SetError("Failed to create temp file");
+            return false;
+        }
+
+        bool copyok = false;
+        char buf[4096];
+        size_t got;
+        do {
+            istream.read(buf, sizeof(buf));
+            if((got=istream.gcount()) == 0)
+            {
+                copyok = true;
+                break;
+            }
+        } while(fwrite(buf, 1, got, file) == got);
+
+        if(copyok)
+        {
+            fflush(file);
+            newid = pfluid_synth_sfload(fluidSynth, &tmpfname[0], true);
+        }
+
+        fclose(file);
+        remove(&tmpfname[0]);
+
+        if(!copyok)
+        {
+            SetError("Failed to copy file");
+            return false;
+        }
+
         if(newid == FLUID_FAILED)
         {
             SetError("Failed to load soundfont");
