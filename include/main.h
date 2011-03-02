@@ -115,6 +115,9 @@ if(!(p##x))                                                                  \
 #endif
 
 
+extern PFNALCSETTHREADCONTEXTPROC alcSetThreadContext;
+extern PFNALCGETTHREADCONTEXTPROC alcGetThreadContext;
+
 void SetError(const char *err);
 ALuint DetectBlockAlignment(ALenum format);
 ALuint DetectCompressionRate(ALenum format);
