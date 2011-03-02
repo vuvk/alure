@@ -282,7 +282,7 @@ extern "C" {
  * *Version Added*: 1.1
  *
  * See Also:
- * <alureStopSource>, <alurePauseSource>, <alureGetSourceOffset>, <alureUpdate>
+ * <alureStopSource>, <alurePauseSource>, <alureUpdate>
  */
 ALURE_API ALboolean ALURE_APIENTRY alurePlaySourceStream(ALuint source,
     alureStream *stream, ALsizei numBufs, ALsizei loopcount,
