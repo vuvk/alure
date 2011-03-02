@@ -88,6 +88,12 @@ extern "C" {
 #define AL_FORMAT_STEREO_IMA4                    0x1301
 #endif
 
+#ifndef ALC_EXT_thread_local_context
+#define ALC_EXT_thread_local_context 1
+typedef ALCboolean  (ALC_APIENTRY*PFNALCSETTHREADCONTEXTPROC)(ALCcontext *context);
+typedef ALCcontext* (ALC_APIENTRY*PFNALCGETTHREADCONTEXTPROC)(void);
+#endif
+
 #ifdef __cplusplus
 }
 #endif
