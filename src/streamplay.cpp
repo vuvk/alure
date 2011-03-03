@@ -175,7 +175,6 @@ struct AsyncPlayEntry {
 		ALint processed, state;
 
 		alGetSourcei(source, AL_SOURCE_STATE, &state);
-		alGetSourcei(source, AL_BUFFERS_QUEUED, queued);
 		alGetSourcei(source, AL_BUFFERS_PROCESSED, &processed);
 		while(processed > 0)
 		{
@@ -183,7 +182,6 @@ struct AsyncPlayEntry {
 
 			alSourceUnqueueBuffers(source, 1, &buf);
 			processed--;
-			(*queued)--;
 
 			while(!finished)
 			{
@@ -193,7 +191,6 @@ struct AsyncPlayEntry {
 				{
 					alBufferData(buf, stream_format, &stream->dataChunk[0], got, stream_freq);
 					alSourceQueueBuffers(source, 1, &buf);
-					(*queued)++;
 
 					break;
 				}
@@ -208,6 +205,7 @@ struct AsyncPlayEntry {
 			}
 		}
 
+		alGetSourcei(source, AL_BUFFERS_QUEUED, queued);
 		return state;
 	}
 };
