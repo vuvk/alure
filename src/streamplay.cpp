@@ -115,6 +115,32 @@ static ALuint StopThread(ThreadInfo *inf)
 
 #endif
 
+// This object is used to make sure the current context isn't switched out on
+// us by another thread, by setting the current thread context to the current
+// context. The old thread context is then restored when the object goes out
+// of scope.
+// This obviously only works when ALC_EXT_thread_local_context is supported
+struct ProtectContext {
+	ProtectContext()
+	{
+		old_ctx = (alcGetThreadContext ? alcGetThreadContext() : NULL);
+		if(alcSetThreadContext)
+			alcSetThreadContext(alcGetCurrentContext());
+	}
+	~ProtectContext()
+	{
+		if(alcSetThreadContext)
+		{
+			if(alcSetThreadContext(old_ctx) == ALC_FALSE)
+				alcSetThreadContext(NULL);
+		}
+	}
+
+private:
+	ALCcontext *old_ctx;
+};
+#define PROTECT_CONTEXT() ProtectContext _ctx_prot
+
 struct AsyncPlayEntry {
 	ALuint source;
 	alureStream *stream;
@@ -128,11 +154,12 @@ struct AsyncPlayEntry {
 	ALuint stream_freq;
 	ALenum stream_format;
 	ALuint stream_align;
+	ALCcontext *ctx;
 
 	AsyncPlayEntry() : source(0), stream(NULL), loopcount(0), maxloops(0),
 	                   eos_callback(NULL), user_data(NULL), finished(false),
 	                   paused(false), stream_freq(0), stream_format(AL_NONE),
-	                   stream_align(0)
+	                   stream_align(0), ctx(NULL)
 	{ }
 	AsyncPlayEntry(const AsyncPlayEntry &rhs)
 	  : source(rhs.source), stream(rhs.stream), buffers(rhs.buffers),
@@ -140,7 +167,7 @@ struct AsyncPlayEntry {
 	    eos_callback(rhs.eos_callback), user_data(rhs.user_data),
 	    finished(rhs.finished), paused(rhs.paused),
 	    stream_freq(rhs.stream_freq), stream_format(rhs.stream_format),
-	    stream_align(rhs.stream_align)
+	    stream_align(rhs.stream_align), ctx(rhs.ctx)
 	{ }
 
 	ALenum Update(ALint *queued)
@@ -288,6 +315,9 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlaySourceStream(ALuint source,
     alureStream *stream, ALsizei numBufs, ALsizei loopcount,
     void (*eos_callback)(void *userdata, ALuint source), void *userdata)
 {
+	PROTECT_CONTEXT();
+	ALCcontext *current_ctx = alcGetCurrentContext();
+
 	if(alGetError() != AL_NO_ERROR)
 	{
 		SetError("Existing OpenAL error");
@@ -324,7 +354,7 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlaySourceStream(ALuint source,
 			LeaveCriticalSection(&cs_StreamPlay);
 			return AL_FALSE;
 		}
-		if(i->source == source)
+		if(i->source == source && i->ctx == current_ctx)
 		{
 			SetError("Source is already playing");
 			LeaveCriticalSection(&cs_StreamPlay);
@@ -339,6 +369,7 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlaySourceStream(ALuint source,
 	ent.maxloops = loopcount;
 	ent.eos_callback = eos_callback;
 	ent.user_data = userdata;
+	ent.ctx = current_ctx;
 
 	ent.buffers.resize(numBufs);
 	alGenBuffers(ent.buffers.size(), &ent.buffers[0]);
@@ -436,6 +467,9 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlaySourceStream(ALuint source,
 ALURE_API ALboolean ALURE_APIENTRY alurePlaySource(ALuint source,
     void (*callback)(void *userdata, ALuint source), void *userdata)
 {
+	PROTECT_CONTEXT();
+	ALCcontext *current_ctx = alcGetCurrentContext();
+
 	if(alGetError() != AL_NO_ERROR)
 	{
 		SetError("Existing OpenAL error");
@@ -448,7 +482,7 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlaySource(ALuint source,
 	                                    end = AsyncPlayList.end();
 	while(i != end)
 	{
-		if(i->source == source)
+		if(i->source == source && i->ctx == current_ctx)
 		{
 			SetError("Source is already playing");
 			LeaveCriticalSection(&cs_StreamPlay);
@@ -470,6 +504,7 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlaySource(ALuint source,
 		ent.source = source;
 		ent.eos_callback = callback;
 		ent.user_data = userdata;
+		ent.ctx = current_ctx;
 		AsyncPlayList.push_front(ent);
 	}
 
@@ -496,6 +531,9 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlaySource(ALuint source,
  */
 ALURE_API ALboolean ALURE_APIENTRY alureStopSource(ALuint source, ALboolean run_callback)
 {
+	PROTECT_CONTEXT();
+	ALCcontext *current_ctx = alcGetCurrentContext();
+
 	if(alGetError() != AL_NO_ERROR)
 	{
 		SetError("Existing OpenAL error");
@@ -515,7 +553,7 @@ ALURE_API ALboolean ALURE_APIENTRY alureStopSource(ALuint source, ALboolean run_
 	                                    end = AsyncPlayList.end();
 	while(i != end)
 	{
-		if(i->source == source)
+		if(i->source == source && i->ctx == current_ctx)
 		{
 			AsyncPlayEntry ent(*i);
 			AsyncPlayList.erase(i);
@@ -559,6 +597,9 @@ ALURE_API ALboolean ALURE_APIENTRY alureStopSource(ALuint source, ALboolean run_
  */
 ALURE_API ALboolean ALURE_APIENTRY alurePauseSource(ALuint source)
 {
+	PROTECT_CONTEXT();
+	ALCcontext *current_ctx = alcGetCurrentContext();
+
 	if(alGetError() != AL_NO_ERROR)
 	{
 		SetError("Existing OpenAL error");
@@ -578,7 +619,7 @@ ALURE_API ALboolean ALURE_APIENTRY alurePauseSource(ALuint source)
 	                                    end = AsyncPlayList.end();
 	while(i != end)
 	{
-		if(i->source == source)
+		if(i->source == source && i->ctx == current_ctx)
 		{
 			i->paused = true;
 			break;
@@ -605,6 +646,9 @@ ALURE_API ALboolean ALURE_APIENTRY alurePauseSource(ALuint source)
  */
 ALURE_API ALboolean ALURE_APIENTRY alureResumeSource(ALuint source)
 {
+	PROTECT_CONTEXT();
+	ALCcontext *current_ctx = alcGetCurrentContext();
+
 	if(alGetError() != AL_NO_ERROR)
 	{
 		SetError("Existing OpenAL error");
@@ -624,7 +668,7 @@ ALURE_API ALboolean ALURE_APIENTRY alureResumeSource(ALuint source)
 	                                    end = AsyncPlayList.end();
 	while(i != end)
 	{
-		if(i->source == source)
+		if(i->source == source && i->ctx == current_ctx)
 		{
 			i->paused = false;
 			break;
@@ -651,12 +695,26 @@ ALURE_API ALboolean ALURE_APIENTRY alureResumeSource(ALuint source)
  */
 ALURE_API void ALURE_APIENTRY alureUpdate(void)
 {
+	PROTECT_CONTEXT();
+
 	EnterCriticalSection(&cs_StreamPlay);
 restart:
 	std::list<AsyncPlayEntry>::iterator i = AsyncPlayList.begin(),
 	                                    end = AsyncPlayList.end();
 	for(;i != end;i++)
 	{
+		if(alcSetThreadContext)
+		{
+			if(alcSetThreadContext(i->ctx) == ALC_FALSE)
+			{
+				AsyncPlayEntry ent(*i);
+				AsyncPlayList.erase(i);
+				if(ent.eos_callback)
+					ent.eos_callback(ent.user_data, ent.source);
+				goto restart;
+			}
+		}
+
 		if(i->stream == NULL)
 		{
 			ALint state;
