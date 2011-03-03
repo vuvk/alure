@@ -269,13 +269,14 @@ extern "C" {
  * Starts playing a stream, using the specified source ID. A stream can only be
  * played if it is not already playing. You must call <alureUpdate> at regular
  * intervals to keep the stream playing, or else the stream will underrun and
- * cause a break in the playback until an update call can restart it. It also
- * is important that the current context is kept for <alureUpdate> calls,
- * otherwise the method may start calling OpenAL with invalid IDs. Note that
- * checking the state of the specified source is not a good method to determine
- * if a stream is playing. If an underrun occurs, the source will enter a
- * stopped state until it is automatically restarted. Instead, set a flag using
- * the callback to indicate the stream being stopped.
+ * cause a break in the playback until an update call can restart it. It is
+ * also important that the current context is kept for <alureUpdate> calls if
+ * ALC_EXT_thread_local_context is not supported, otherwise the method may
+ * start calling OpenAL with invalid IDs. Note that checking the state of the
+ * specified source is not a good method to determine if a stream is playing.
+ * If an underrun occurs, the source will enter a stopped state until it is
+ * automatically restarted. Instead, set a flag using the callback to indicate
+ * the stream being stopped.
  *
  * Parameters:
  * source - The source ID to play the stream with. Any buffers on the source
@@ -441,10 +442,11 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlaySourceStream(ALuint source,
  *
  * Plays the specified source ID and watches for it to stop. When a source
  * enters an AL_STOPPED state, the specified callback will be called by
- * <alureUpdate> to alert the application. As with <alurePlaySourceStream>, the
- * current context must not be changed while the source is being watched
- * (before the callback is called or <alureStopSource> is called). It also must
- * not be deleted while being watched.
+ * <alureUpdate> to alert the application. As with <alurePlaySourceStream>, if
+ * ALC_EXT_thread_local_context is not supported, the current context must not
+ * be changed while the source is being watched (before the callback is called
+ * or <alureStopSource> is called). It also must not be deleted while being
+ * watched.
  *
  * Parameters:
  * source - The source ID to play. As with <alurePlaySourceStream>, it is valid
