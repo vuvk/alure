@@ -273,7 +273,7 @@ private:
                 dataEnd = fstream->tellg();
                 fstream->seekg(dataStart);
             }
-            return true;
+            return fstream->good();
         }
 
         int type = 0;
@@ -303,7 +303,7 @@ private:
                     dataStart = fstream->tellg();
                     dataEnd = dataStart;
                     dataEnd += length;
-                    return true;
+                    return fstream->good();
                 }
             }
 
