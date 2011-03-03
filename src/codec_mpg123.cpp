@@ -108,6 +108,9 @@ public:
 
     virtual ALuint GetData(ALubyte *data, ALuint bytes)
     {
+        if(!mp3File)
+            return 0;
+
         ALuint amt = 0;
         while(bytes > 0)
         {
@@ -120,10 +123,9 @@ public:
 
             if(ret == MPG123_NEW_FORMAT)
             {
-                long newrate;
-                int newchans, enc;
-                pmpg123_getformat(mp3File, &newrate, &newchans, &enc);
-                continue;
+                pmpg123_delete(mp3File);
+                mp3File = NULL;
+                break;
             }
             if(ret == MPG123_NEED_MORE)
             {
@@ -147,7 +149,7 @@ public:
     virtual bool Rewind()
     {
         fstream->clear();
-        std::istream::pos_type oldpos = fstream->tellg();
+        std::ios::pos_type oldpos = fstream->tellg();
         fstream->seekg(dataStart);
 
         mpg123_handle *newFile = pmpg123_new(NULL, NULL);
@@ -177,7 +179,8 @@ public:
                    pmpg123_format(newFile, samplerate, channels, MPG123_ENC_SIGNED_16) == MPG123_OK)
                 {
                     // All OK
-                    pmpg123_delete(mp3File);
+                    if(mp3File)
+                        pmpg123_delete(mp3File);
                     mp3File = newFile;
                     return true;
                 }
