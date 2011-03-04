@@ -241,6 +241,10 @@ void StopStream(alureStream *stream)
 	{
 		if(i->stream == stream)
 		{
+			ALCcontext *old_ctx = (alcGetThreadContext ?
+			                       alcGetThreadContext() : NULL);
+			if(alcSetThreadContext) alcSetThreadContext(i->ctx);
+
 			AsyncPlayEntry ent(*i);
 			AsyncPlayList.erase(i);
 
@@ -251,6 +255,12 @@ void StopStream(alureStream *stream)
 
 			if(ent.eos_callback)
 				ent.eos_callback(ent.user_data, ent.source);
+
+			if(alcSetThreadContext)
+			{
+				if(alcSetThreadContext(old_ctx) == ALC_FALSE)
+					alcSetThreadContext(NULL);
+			}
 			break;
 		}
 		i++;
