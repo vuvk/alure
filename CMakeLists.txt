@@ -74,6 +74,8 @@ IF(NOT HAVE_FSEEKO)
     CHECK_FUNCTION_EXISTS(_fseeki64 HAVE__FSEEKI64)
 ENDIF(NOT HAVE_FSEEKO)
 
+SET(STATIC_CFLAGS "${STATIC_CFLAGS} -DALURE_STATIC_LIBRARY")
+
 IF(MSVC)
     # ???
 ELSE(MSVC)
@@ -85,6 +87,10 @@ ELSE(MSVC)
         IF(HAVE_GCC_VISIBILITY)
             ADD_DEFINITIONS(-fvisibility=hidden)
         ENDIF(HAVE_GCC_VISIBILITY)
+
+        # Force -fPIC for the static lib, because it causes problems when the
+        # static version is linked to a dynamic lib
+        SET(STATIC_CFLAGS "${STATIC_CFLAGS} -fPIC")
     ENDIF(NOT WIN32)
 
     CHECK_C_COMPILER_FLAG(-Wextra HAVE_WEXTRA)
@@ -470,7 +476,7 @@ IF(BUILD_STATIC)
     #build a static library
     ADD_LIBRARY(${LIBNAME}-static STATIC ${ALURE_OBJS})
     SET_TARGET_PROPERTIES(${LIBNAME}-static PROPERTIES DEFINE_SYMBOL ALURE_BUILD_LIBRARY
-                                                       COMPILE_FLAGS -DALURE_STATIC_LIBRARY
+                                                       COMPILE_FLAGS ${STATIC_CFLAGS}
                                                        VERSION ${LIB_VERSION}.0)
     INSTALL(TARGETS ${LIBNAME}-static
             RUNTIME DESTINATION bin
