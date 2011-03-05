@@ -122,12 +122,19 @@ static ALuint StopThread(ThreadInfo *inf)
 // This obviously only works when ALC_EXT_thread_local_context is supported
 struct ProtectContext {
 	ProtectContext()
+	{ protect(); }
+
+	~ProtectContext()
+	{ unprotect(); }
+
+	void protect()
 	{
 		old_ctx = (alcGetThreadContext ? alcGetThreadContext() : NULL);
 		if(alcSetThreadContext)
 			alcSetThreadContext(alcGetCurrentContext());
 	}
-	~ProtectContext()
+
+	void unprotect()
 	{
 		if(alcSetThreadContext)
 		{
@@ -140,6 +147,8 @@ private:
 	ALCcontext *old_ctx;
 };
 #define PROTECT_CONTEXT() ProtectContext _ctx_prot
+#define DO_PROTECT()      _ctx_prot.protect()
+#define DO_UNPROTECT()    _ctx_prot.unprotect()
 
 struct AsyncPlayEntry {
 	ALuint source;
@@ -241,26 +250,31 @@ void StopStream(alureStream *stream)
 	{
 		if(i->stream == stream)
 		{
-			ALCcontext *old_ctx = (alcGetThreadContext ?
-			                       alcGetThreadContext() : NULL);
-			if(alcSetThreadContext) alcSetThreadContext(i->ctx);
-
 			AsyncPlayEntry ent(*i);
 			AsyncPlayList.erase(i);
+
+			ALCcontext *old_ctx = (alcGetThreadContext ?
+			                       alcGetThreadContext() : NULL);
+			if(alcSetThreadContext)
+			{
+				if(alcSetThreadContext(ent.ctx) == ALC_FALSE)
+					goto ctx_err;
+			}
 
 			alSourceStop(ent.source);
 			alSourcei(ent.source, AL_BUFFER, 0);
 			alDeleteBuffers(ent.buffers.size(), &ent.buffers[0]);
 			alGetError();
 
-			if(ent.eos_callback)
-				ent.eos_callback(ent.user_data, ent.source);
-
 			if(alcSetThreadContext)
 			{
 				if(alcSetThreadContext(old_ctx) == ALC_FALSE)
 					alcSetThreadContext(NULL);
 			}
+
+		ctx_err:
+			if(ent.eos_callback)
+				ent.eos_callback(ent.user_data, ent.source);
 			break;
 		}
 		i++;
@@ -576,7 +590,11 @@ ALURE_API ALboolean ALURE_APIENTRY alureStopSource(ALuint source, ALboolean run_
 			}
 
 			if(run_callback && ent.eos_callback)
+			{
+				DO_UNPROTECT();
 				ent.eos_callback(ent.user_data, ent.source);
+				DO_PROTECT();
+			}
 			break;
 		}
 		i++;
@@ -720,7 +738,11 @@ restart:
 				AsyncPlayEntry ent(*i);
 				AsyncPlayList.erase(i);
 				if(ent.eos_callback)
+				{
+					DO_UNPROTECT();
 					ent.eos_callback(ent.user_data, ent.source);
+					DO_PROTECT();
+				}
 				goto restart;
 			}
 		}
@@ -733,7 +755,9 @@ restart:
 			{
 				AsyncPlayEntry ent(*i);
 				AsyncPlayList.erase(i);
+				DO_UNPROTECT();
 				ent.eos_callback(ent.user_data, ent.source);
+				DO_PROTECT();
 				goto restart;
 			}
 			continue;
