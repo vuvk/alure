@@ -64,8 +64,8 @@ private:
     std::vector<ALubyte> initialData;
 
     ALubyte *outBytes;
+    ALuint outMax;
     ALuint outLen;
-    ALuint outTotal;
 
 public:
     static void Init()
@@ -102,25 +102,25 @@ public:
     virtual ALuint GetData(ALubyte *data, ALuint bytes)
     {
         outBytes = data;
-        outTotal = 0;
-        outLen = bytes;
+        outLen = 0;
+        outMax = bytes;
 
         if(initialData.size() > 0)
         {
             size_t rem = std::min(initialData.size(), (size_t)bytes);
             memcpy(data, &initialData[0], rem);
-            outTotal += rem;
+            outLen += rem;
             initialData.erase(initialData.begin(), initialData.begin()+rem);
         }
 
-        while(outTotal < bytes)
+        while(outLen < outMax)
         {
             if(pFLAC__stream_decoder_process_single(flacFile) == false ||
                pFLAC__stream_decoder_get_state(flacFile) == FLAC__STREAM_DECODER_END_OF_STREAM)
                 break;
         }
 
-        return outTotal;
+        return outLen;
     }
 
     virtual bool Rewind()
@@ -176,8 +176,9 @@ private:
         // depth, and sample rate. It also ensures the file has FLAC data, as
         // the FLAC__stream_decoder_init_* functions can succeed on non-FLAC
         // Ogg files.
+        outBytes = NULL;
+        outMax = 0;
         outLen = 0;
-        outTotal = 0;
         while(initialData.size() == 0)
         {
             if(pFLAC__stream_decoder_process_single(flacFile) == false ||
@@ -190,11 +191,30 @@ private:
         return false;
     }
 
+
+    template<ALuint shift, ALint offset, typename T>
+    static void CopySamples(T *data, const FLAC__int32 *const buffer[], ALuint off, ALuint todo, ALuint channels)
+    {
+        for(ALuint i = 0;i < todo;i++)
+        {
+            for(ALuint c = 0;c < channels;c++)
+                *(data++) = (buffer[c][off+i]>>shift) + offset;
+        }
+    }
+
+    template<ALuint bits>
+    static void CopySamplesFloat(ALfloat *data, const FLAC__int32 *const buffer[], ALuint off, ALuint todo, ALuint channels)
+    {
+        for(ALuint i = 0;i < todo;i++)
+        {
+            for(ALuint c = 0;c < channels;c++)
+                *(data++) = buffer[c][off+i] * (1./((1u<<(bits-1))-1));
+        }
+    }
+
     static FLAC__StreamDecoderWriteStatus WriteCallback(const FLAC__StreamDecoder*, const FLAC__Frame *frame, const FLAC__int32 *const buffer[], void *client_data)
     {
         flacStream *self = static_cast<flacStream*>(client_data);
-        ALubyte *data = self->outBytes + self->outTotal;
-        ALuint i = 0;
 
         if(self->format == AL_NONE)
         {
@@ -215,69 +235,70 @@ private:
             self->samplerate = frame->header.sample_rate;
         }
 
-        const ALboolean useFloat = self->useFloat;
-        while(self->outTotal < self->outLen && i < frame->header.blocksize)
+        ALubyte *data = self->outBytes + self->outLen;
+        ALuint todo = std::min<ALuint>((self->outMax-self->outLen) / self->blockAlign,
+                                       frame->header.blocksize);
+        if(frame->header.bits_per_sample == 8)
+            CopySamples<0,128>((ALubyte*)data, buffer, 0,
+                               todo, frame->header.channels);
+        else if(frame->header.bits_per_sample == 16)
+            CopySamples<0,0>((ALshort*)data, buffer, 0,
+                             todo, frame->header.channels);
+        else if(frame->header.bits_per_sample == 24)
         {
-            for(ALuint c = 0;c < frame->header.channels;c++)
-            {
-                if(frame->header.bits_per_sample == 8)
-                    ((ALubyte*)data)[c] = buffer[c][i]+128;
-                else if(frame->header.bits_per_sample == 16)
-                    ((ALshort*)data)[c] = buffer[c][i];
-                else if(frame->header.bits_per_sample == 24)
-                {
-                    if(useFloat)
-                        ((ALfloat*)data)[c] = buffer[c][i] * (1.0/8388607.0);
-                    else
-                        ((ALshort*)data)[c] = buffer[c][i]>>8;
-                }
-                else if(frame->header.bits_per_sample == 32)
-                {
-                    if(useFloat)
-                        ((ALfloat*)data)[c] = buffer[c][i] * (1.0/2147483647.0);
-                    else
-                        ((ALshort*)data)[c] = buffer[c][i]>>16;
-                }
-            }
-            self->outTotal += self->blockAlign;
-            data += self->blockAlign;
-            i++;
+            if(self->useFloat)
+                CopySamplesFloat<24>((ALfloat*)data, buffer, 0,
+                                     todo, frame->header.channels);
+            else
+                CopySamples<8,0>((ALshort*)data, buffer, 0,
+                                 todo, frame->header.channels);
         }
-
-        if(i < frame->header.blocksize)
+        else if(frame->header.bits_per_sample == 32)
         {
-            ALuint blocklen = (frame->header.blocksize-i) *
-                              self->blockAlign;
+            if(self->useFloat)
+                CopySamplesFloat<32>((ALfloat*)data, buffer, 0,
+                                     todo, frame->header.channels);
+            else
+                CopySamples<16,0>((ALshort*)data, buffer, 0,
+                                  todo, frame->header.channels);
+        }
+        self->outLen += self->blockAlign * todo;
+
+        if(todo < frame->header.blocksize)
+        {
+            ALuint offset = todo;
+            todo = frame->header.blocksize - todo;
+
+            ALuint blocklen = todo * self->blockAlign;
             ALuint start = self->initialData.size();
 
             self->initialData.resize(start+blocklen);
             data = &self->initialData[start];
 
-            do {
-                for(ALuint c = 0;c < frame->header.channels;c++)
-                {
-                    if(frame->header.bits_per_sample == 8)
-                        ((ALubyte*)data)[c] = buffer[c][i]+128;
-                    else if(frame->header.bits_per_sample == 16)
-                        ((ALshort*)data)[c] = buffer[c][i];
-                    else if(frame->header.bits_per_sample == 24)
-                    {
-                        if(useFloat)
-                            ((ALfloat*)data)[c] = buffer[c][i] * (1.0/8388607.0);
-                        else
-                            ((ALshort*)data)[c] = buffer[c][i]>>8;
-                    }
-                    else if(frame->header.bits_per_sample == 32)
-                    {
-                        if(useFloat)
-                            ((ALfloat*)data)[c] = buffer[c][i] * (1.0/2147483647.0);
-                        else
-                            ((ALshort*)data)[c] = buffer[c][i]>>16;
-                    }
-                }
-                data += self->blockAlign;
-                i++;
-            } while(i < frame->header.blocksize);
+            if(frame->header.bits_per_sample == 8)
+                CopySamples<0,128>((ALubyte*)data, buffer, offset,
+                                   todo, frame->header.channels);
+            else if(frame->header.bits_per_sample == 16)
+                CopySamples<0,0>((ALshort*)data, buffer, offset,
+                                 todo, frame->header.channels);
+            else if(frame->header.bits_per_sample == 24)
+            {
+                if(self->useFloat)
+                    CopySamplesFloat<24>((ALfloat*)data, buffer, offset,
+                                         todo, frame->header.channels);
+                else
+                    CopySamples<8,0>((ALshort*)data, buffer, offset,
+                                     todo, frame->header.channels);
+            }
+            else if(frame->header.bits_per_sample == 32)
+            {
+                if(self->useFloat)
+                    CopySamplesFloat<32>((ALfloat*)data, buffer, offset,
+                                         todo, frame->header.channels);
+                else
+                    CopySamples<16,0>((ALshort*)data, buffer, offset,
+                                      todo, frame->header.channels);
+            }
         }
 
         return FLAC__STREAM_DECODER_WRITE_STATUS_CONTINUE;
