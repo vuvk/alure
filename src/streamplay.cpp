@@ -818,7 +818,7 @@ ALURE_API ALboolean ALURE_APIENTRY alureUpdateInterval(ALfloat interval)
 			EnterCriticalSection(&cs_StreamPlay);
 		}
 	}
-	else
+	else if(interval > 0.0f)
 	{
 		if(!PlayThreadHandle)
 			PlayThreadHandle = StartThread(AsyncPlayFunc, NULL);
