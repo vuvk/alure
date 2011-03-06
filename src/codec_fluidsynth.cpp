@@ -527,7 +527,7 @@ private:
                                 break;
                             }
 
-                            if(len > 1 && i->data[len-1] == MIDI_SYSEXEND)
+                            if(i->data[i->Offset+len-1] == MIDI_SYSEXEND)
                             {
                                 char *data = reinterpret_cast<char*>(&i->data[i->Offset]);
                                 pfluid_synth_sysex(fluidSynth, data, len-1, NULL, NULL, NULL, false);
