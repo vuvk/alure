@@ -148,6 +148,7 @@ private:
     fluid_settings_t *fluidSettings;
     fluid_synth_t *fluidSynth;
     int fontID;
+    bool doFontLoad;
 
 public:
     static void Init()
@@ -203,6 +204,14 @@ public:
     virtual ALuint GetData(ALubyte *data, ALuint bytes)
     {
         ALuint ret;
+
+        if(doFontLoad)
+        {
+            doFontLoad = false;
+            const char *soundfont = getenv("FLUID_SOUNDFONT");
+            if(soundfont && soundfont[0])
+                fontID = pfluid_synth_sfload(fluidSynth, soundfont, true);
+        }
 
         if(format == AL_FORMAT_STEREO16)
         {
@@ -320,6 +329,7 @@ public:
         if(fontID != FLUID_FAILED)
             pfluid_synth_sfunload(fluidSynth, fontID, true);
         fontID = newid;
+        doFontLoad = false;
 
         return true;
     }
@@ -327,7 +337,8 @@ public:
     fluidStream(std::istream *_fstream)
       : alureStream(_fstream), Divisions(100),
         format(AL_NONE), sampleRate(48000), samplesPerTick(1.),
-        fluidSettings(NULL), fluidSynth(NULL), fontID(FLUID_FAILED)
+        fluidSettings(NULL), fluidSynth(NULL), fontID(FLUID_FAILED),
+        doFontLoad(true)
     {
         if(!fsynth_handle) return;
 
@@ -617,12 +628,6 @@ private:
             pfluid_settings_setnum(fluidSettings, "synth.sample-rate", (double)sampleRate);
 
             fluidSynth = pnew_fluid_synth(fluidSettings);
-            if(fluidSynth)
-            {
-                const char *soundfont = getenv("FLUID_SOUNDFONT");
-                if(soundfont && soundfont[0])
-                    fontID = pfluid_synth_sfload(fluidSynth, soundfont, true);
-            }
         }
     }
 };
