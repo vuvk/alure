@@ -145,6 +145,7 @@ static void init_alure(void)
 
 static void deinit_alure(void)
 {
+    alureUpdateInterval(0.0f);
     DeleteCriticalSection(&cs_StreamPlay);
 }
 
