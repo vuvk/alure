@@ -369,7 +369,7 @@ ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromCallback(
 
 /* Function: alureGetStreamFrequency
  *
- * Retrieves the frequency used for the given stream.
+ * Retrieves the frequency used by the given stream.
  *
  * Returns:
  * 0 on error.
@@ -400,7 +400,7 @@ ALURE_API ALsizei ALURE_APIENTRY alureGetStreamFrequency(alureStream *stream)
  *
  * Buffers the given buffer objects with the next chunks of data from the
  * stream. The given buffer objects do not need to be ones given by the
- * alureCreateStreamFrom* functions. Requires an active context.
+ * alureCreateStream functions. Requires an active context.
  *
  * Returns:
  * The number of buffers filled with new data, or -1 on error. If the value
@@ -537,7 +537,7 @@ ALURE_API ALboolean ALURE_APIENTRY alureSetStreamPatchset(alureStream *stream, c
  *
  * Closes an opened stream. For convenience, it will also delete the given
  * buffer objects. The given buffer objects do not need to be ones given by the
- * alureCreateStreamFrom* functions. Requires an active context.
+ * alureCreateStream functions. Requires an active context.
  *
  * Returns:
  * AL_FALSE on error.
