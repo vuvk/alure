@@ -462,10 +462,10 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlaySourceStream(ALuint source,
 
 /* Function: alurePlaySource
  *
- * Plays the specified source ID and watches for it to stop. When a source
- * enters an AL_STOPPED state, the specified callback will be called by
- * <alureUpdate> to alert the application. As with <alurePlaySourceStream>, if
- * ALC_EXT_thread_local_context is not supported the current context must not
+ * Plays the specified source ID and watches for it to stop. When the source
+ * enters an AL_STOPPED or AL_INITIAL state, the specified callback will be
+ * called by <alureUpdate> to alert the application. If
+ * ALC_EXT_thread_local_context is not supported, the current context must not
  * be changed while the source is being watched (before the callback is called
  * or <alureStopSource> is called). It also must not be deleted while being
  * watched.
@@ -475,7 +475,7 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlaySourceStream(ALuint source,
  *          to set source properties not related to the playback state (ie. you
  *          may change a source's position, pitch, gain, etc). Pausing a source
  *          and restarting a paused source is allowed, and the callback will
- *          still be invoked when the source naturally reaches an AL_STOPPED
+ *          still be called when the source reaches an AL_STOPPED or AL_INITIAL
  *          state.
  * callback - The callback to be called when the source stops.
  * userdata - An opaque user pointer passed to the callback.
@@ -751,7 +751,7 @@ restart:
 		{
 			ALint state;
 			alGetSourcei(i->source, AL_SOURCE_STATE, &state);
-			if(state != AL_PLAYING && state != AL_PAUSED)
+			if(state == AL_STOPPED || state == AL_INITIAL)
 			{
 				AsyncPlayEntry ent(*i);
 				AsyncPlayList.erase(i);
