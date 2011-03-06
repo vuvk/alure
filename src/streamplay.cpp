@@ -314,7 +314,7 @@ extern "C" {
  * numBufs - The number of buffers used to queue with the OpenAL source. Each
  *           buffer will be filled with the chunk length specified when the
  *           stream was created. This value must be at least 2. More buffers at
- *           a larger size will decrease the time needed between updates, but
+ *           a larger size will increase the time needed between updates, but
  *           at the cost of more memory usage.
  * loopcount - The number of times to loop the stream. When the stream reaches
  *             the end of processing, it will be rewound to continue buffering
@@ -465,7 +465,7 @@ ALURE_API ALboolean ALURE_APIENTRY alurePlaySourceStream(ALuint source,
  * Plays the specified source ID and watches for it to stop. When a source
  * enters an AL_STOPPED state, the specified callback will be called by
  * <alureUpdate> to alert the application. As with <alurePlaySourceStream>, if
- * ALC_EXT_thread_local_context is not supported, the current context must not
+ * ALC_EXT_thread_local_context is not supported the current context must not
  * be changed while the source is being watched (before the callback is called
  * or <alureStopSource> is called). It also must not be deleted while being
  * watched.
