@@ -774,7 +774,11 @@ restart:
 				alSourcei(ent.source, AL_BUFFER, 0);
 				alDeleteBuffers(ent.buffers.size(), &ent.buffers[0]);
 				if(ent.eos_callback)
+				{
+					DO_UNPROTECT();
 					ent.eos_callback(ent.user_data, ent.source);
+					DO_PROTECT();
+				}
 				goto restart;
 			}
 			if(!i->paused)
