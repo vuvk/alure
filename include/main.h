@@ -134,6 +134,7 @@ struct UserCallbacks {
 extern std::map<ALint,UserCallbacks> InstalledCallbacks;
 
 
+void StopStream(alureStream *stream);
 struct alureStream {
     // Local copy of memory data
     ALubyte *data;
@@ -169,7 +170,13 @@ struct alureStream {
     static void Clear(void)
     {
         while(StreamList.size() > 0)
-            alureDestroyStream(*(StreamList.begin()), 0, NULL);
+        {
+            alureStream *stream = *(StreamList.begin());
+            StopStream(stream);
+            std::istream *f = stream->fstream;
+            delete stream;
+            delete f;
+        }
     }
 
     static bool Verify(alureStream *stream)
@@ -182,7 +189,6 @@ private:
     typedef std::list<alureStream*> ListType;
     static ListType StreamList;
 };
-void StopStream(alureStream *stream);
 
 
 struct MemDataInfo {
