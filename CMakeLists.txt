@@ -227,6 +227,17 @@ ELSE(WIN32)
     ENDIF(NOT OPENAL_FOUND)
 ENDIF(WIN32)
 
+# Base source files
+SET(ALURE_OBJS  src/alure.cpp
+                src/buffer.cpp
+                src/istream.cpp
+                src/stream.cpp
+                src/streamdec.cpp
+                src/streamplay.cpp
+                src/codec_wav.cpp
+                src/codec_aiff.cpp
+)
+
 # SndFile support
 IF(SNDFILE)
     PKG_CHECK_MODULES(SNDFILE sndfile)
@@ -249,6 +260,9 @@ IF(SNDFILE)
         INCLUDE_DIRECTORIES(${SNDFILE_INCLUDE_DIRS})
         LINK_DIRECTORIES(${SNDFILE_LIBRARY_DIRS})
     ENDIF(NOT SNDFILE_FOUND)
+    IF(HAS_SNDFILE)
+        SET(ALURE_OBJS ${ALURE_OBJS} src/codec_sndfile.cpp)
+    ENDIF(HAS_SNDFILE)
 ELSE(SNDFILE)
     SET(SNDFILE_LIBRARIES "")
 ENDIF(SNDFILE)
@@ -272,6 +286,9 @@ IF(VORBIS)
         INCLUDE_DIRECTORIES(${VORBISFILE_INCLUDE_DIRS})
         LINK_DIRECTORIES(${VORBISFILE_LIBRARY_DIRS})
     ENDIF(NOT VORBISFILE_FOUND)
+    IF(HAS_VORBISFILE)
+        SET(ALURE_OBJS ${ALURE_OBJS} src/codec_vorbisfile.cpp)
+    ENDIF(HAS_VORBISFILE)
 ELSE(VORBIS)
     SET(VORBISFILE_LIBRARIES "")
 ENDIF(VORBIS)
@@ -295,6 +312,9 @@ IF(FLAC)
     #    INCLUDE_DIRECTORIES(${LIBFLAC_INCLUDE_DIRS})
     #    LINK_DIRECTORIES(${LIBFLAC_LIBRARY_DIRS})
     #ENDIF(NOT LIBFLAC_FOUND)
+    IF(HAS_FLAC)
+        SET(ALURE_OBJS ${ALURE_OBJS} src/codec_flac.cpp)
+    ENDIF(HAS_FLAC)
 ELSE(FLAC)
     SET(LIBFLAC_LIBRARIES "")
 ENDIF(FLAC)
@@ -318,6 +338,9 @@ IF(MPG123)
         INCLUDE_DIRECTORIES(${MPG123_INCLUDE_DIRS})
         LINK_DIRECTORIES(${MPG123_LIBRARY_DIRS})
     ENDIF(NOT MPG123_FOUND)
+    IF(HAS_MPG123)
+        SET(ALURE_OBJS ${ALURE_OBJS} src/codec_mpg123.cpp)
+    ENDIF(HAS_MPG123)
 ELSE(MPG123)
     SET(MPG123_LIBRARIES "")
 ENDIF(MPG123)
@@ -338,6 +361,9 @@ IF(DUMB)
             ENDIF(HAVE_LIBDUMB)
         ENDIF(DYNLOAD OR HAVE_LIBDUMB)
     ENDIF(HAVE_DUMB_H)
+    IF(HAS_DUMB)
+        SET(ALURE_OBJS ${ALURE_OBJS} src/codec_dumb.cpp)
+    ENDIF(HAS_DUMB)
 ELSE(DUMB)
     SET(DUMB_LIBRARIES "")
 ENDIF(DUMB)
@@ -361,6 +387,9 @@ IF(MODPLUG)
         INCLUDE_DIRECTORIES(${MODPLUG_INCLUDE_DIRS})
         LINK_DIRECTORIES(${MODPLUG_LIBRARY_DIRS})
     ENDIF(NOT MODPLUG_FOUND)
+    IF(HAS_MODPLUG)
+        SET(ALURE_OBJS ${ALURE_OBJS} src/codec_modplug.cpp)
+    ENDIF(HAS_MODPLUG)
 ELSE(MODPLUG)
     SET(MODPLUG_LIBRARIES "")
 ENDIF(MODPLUG)
@@ -384,6 +413,9 @@ IF(FLUIDSYNTH)
         INCLUDE_DIRECTORIES(${FLUIDSYNTH_INCLUDE_DIRS})
         LINK_DIRECTORIES(${FLUIDSYNTH_LIBRARY_DIRS})
     ENDIF(NOT FLUIDSYNTH_FOUND)
+    IF(HAS_FLUIDSYNTH)
+        SET(ALURE_OBJS ${ALURE_OBJS} src/codec_fluidsynth.cpp)
+    ENDIF(HAS_FLUIDSYNTH)
 ELSE(FLUIDSYNTH)
     SET(FLUIDSYNTH_LIBRARIES "")
 ENDIF(FLUIDSYNTH)
@@ -423,37 +455,6 @@ ENDIF(BUILD_STATIC)
 
 ADD_DEFINITIONS(-DHAVE_CONFIG_H)
 
-
-SET(ALURE_OBJS  src/alure.cpp
-                src/buffer.cpp
-                src/istream.cpp
-                src/stream.cpp
-                src/streamdec.cpp
-                src/streamplay.cpp
-                src/codec_wav.cpp
-                src/codec_aiff.cpp
-)
-IF(HAS_VORBISFILE)
-    SET(ALURE_OBJS ${ALURE_OBJS} src/codec_vorbisfile.cpp)
-ENDIF(HAS_VORBISFILE)
-IF(HAS_FLAC)
-    SET(ALURE_OBJS ${ALURE_OBJS} src/codec_flac.cpp)
-ENDIF(HAS_FLAC)
-IF(HAS_SNDFILE)
-    SET(ALURE_OBJS ${ALURE_OBJS} src/codec_sndfile.cpp)
-ENDIF(HAS_SNDFILE)
-IF(HAS_FLUIDSYNTH)
-    SET(ALURE_OBJS ${ALURE_OBJS} src/codec_fluidsynth.cpp)
-ENDIF(HAS_FLUIDSYNTH)
-IF(HAS_DUMB)
-    SET(ALURE_OBJS ${ALURE_OBJS} src/codec_dumb.cpp)
-ENDIF(HAS_DUMB)
-IF(HAS_MODPLUG)
-    SET(ALURE_OBJS ${ALURE_OBJS} src/codec_modplug.cpp)
-ENDIF(HAS_MODPLUG)
-IF(HAS_MPG123)
-    SET(ALURE_OBJS ${ALURE_OBJS} src/codec_mpg123.cpp)
-ENDIF(HAS_MPG123)
 
 IF(BUILD_SHARED)
     #build a shared library
