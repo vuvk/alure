@@ -18,6 +18,12 @@
 extern "C" {
 #endif
 
+#define ALURE_VERSION_STRING "1.1"
+
+#define ALURE_VERSION_1_0
+#define ALURE_VERSION_1_1
+
+
 #ifndef ALURE_STATIC_LIBRARY
  #if defined(_WIN32)
   #if defined(ALURE_BUILD_LIBRARY)
