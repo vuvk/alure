@@ -157,6 +157,8 @@ struct alureStream {
     }
     virtual bool SetPatchset(const char*)
     { return true; }
+    virtual alureInt64 GetLength()
+    { return 0; }
 
     alureStream(std::istream *_stream)
       : data(NULL), fstream(_stream)

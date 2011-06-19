@@ -85,6 +85,7 @@ ALURE_API alureStream* ALURE_APIENTRY alureCreateStreamFromCallback(
     ALuint (*callback)(void *userdata, ALubyte *data, ALuint bytes),
     void *userdata, ALenum format, ALuint samplerate,
     ALsizei chunkLength, ALsizei numBufs, ALuint *bufs);
+ALURE_API alureInt64 ALURE_APIENTRY alureGetStreamLength(alureStream *stream);
 ALURE_API ALsizei ALURE_APIENTRY alureGetStreamFrequency(alureStream *stream);
 ALURE_API ALsizei ALURE_APIENTRY alureBufferDataFromStream(alureStream *stream, ALsizei numBufs, ALuint *bufs);
 ALURE_API ALboolean ALURE_APIENTRY alureRewindStream(alureStream *stream);
@@ -137,6 +138,7 @@ typedef alureStream*    (ALURE_APIENTRY *LPALURECREATESTREAMFROMFILE)(const ALch
 typedef alureStream*    (ALURE_APIENTRY *LPALURECREATESTREAMFROMMEMORY)(const ALubyte*,ALuint,ALsizei,ALsizei,ALuint*);
 typedef alureStream*    (ALURE_APIENTRY *LPALURECREATESTREAMFROMSTATICMEMORY)(const ALubyte*,ALuint,ALsizei,ALsizei,ALuint*);
 typedef alureStream*    (ALURE_APIENTRY *LPALURECREATESTREAMFROMCALLBACK)(ALuint(*)(void*,ALubyte*,ALuint),void*,ALenum,ALuint,ALsizei,ALsizei,ALuint*);
+typedef alureInt64      (ALURE_APIENTRY *LPALUREGETSTREAMLENGTH)(alureStream*);
 typedef ALsizei         (ALURE_APIENTRY *LPALUREGETSTREAMFREQUENCY)(alureStream*);
 typedef ALsizei         (ALURE_APIENTRY *LPALUREBUFFERDATAFROMSTREAM)(alureStream*,ALsizei,ALuint*);
 typedef ALboolean       (ALURE_APIENTRY *LPALUREREWINDSTREAM)(alureStream*);
