@@ -48,6 +48,7 @@ MAKE_FUNC(FLAC__stream_decoder_finish);
 MAKE_FUNC(FLAC__stream_decoder_new);
 MAKE_FUNC(FLAC__stream_decoder_seek_absolute);
 MAKE_FUNC(FLAC__stream_decoder_delete);
+MAKE_FUNC(FLAC__stream_decoder_get_total_samples);
 MAKE_FUNC(FLAC__stream_decoder_process_single);
 MAKE_FUNC(FLAC__stream_decoder_init_stream);
 #undef MAKE_FUNC
@@ -78,6 +79,7 @@ public:
         LOAD_FUNC(flac_handle, FLAC__stream_decoder_new);
         LOAD_FUNC(flac_handle, FLAC__stream_decoder_seek_absolute);
         LOAD_FUNC(flac_handle, FLAC__stream_decoder_delete);
+        LOAD_FUNC(flac_handle, FLAC__stream_decoder_get_total_samples);
         LOAD_FUNC(flac_handle, FLAC__stream_decoder_process_single);
         LOAD_FUNC(flac_handle, FLAC__stream_decoder_init_stream);
     }
@@ -133,6 +135,11 @@ public:
 
         SetError("Seek failed");
         return false;
+    }
+
+    virtual alureInt64 GetLength()
+    {
+        return pFLAC__stream_decoder_get_total_samples(flacFile);
     }
 
     flacStream(std::istream *_fstream)
