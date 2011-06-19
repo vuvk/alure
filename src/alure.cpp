@@ -192,23 +192,15 @@ void DeleteCriticalSection(CRITICAL_SECTION *cs)
 
 #endif
 
-#ifndef DYNLOAD
-void *OpenLib(const char*)
-{ return (void*)0xDEADBEEF; }
-void CloseLib(void*)
-{ }
-
-#elif defined(_WIN32)
-
+#ifdef DYNLOAD
+#ifdef _WIN32
 void *OpenLib(const char *libname)
 { return LoadLibraryA(libname); }
 void CloseLib(void *hdl)
 { FreeLibrary((HINSTANCE)hdl); }
 void *GetLibProc(void *hdl, const char *funcname)
 { return (void*)GetProcAddress((HINSTANCE)hdl, funcname); }
-
 #else
-
 void *OpenLib(const char *libname)
 {
     const char *err = dlerror();
@@ -233,6 +225,7 @@ void *GetLibProc(void *hdl, const char *funcname)
 }
 void CloseLib(void *hdl)
 { dlclose(hdl); }
+#endif
 #endif
 
 

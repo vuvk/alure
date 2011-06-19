@@ -61,11 +61,9 @@ static const bool LittleEndian = (endian_test.b[0] != 0);
 static const bool BigEndian = !LittleEndian;
 
 
+#ifdef DYNLOAD
 void *OpenLib(const char *libname);
 void CloseLib(void *handle);
-#ifndef DYNLOAD
-#define LOAD_FUNC(h, x) p##x = x
-#else
 void *GetLibProc(void *handle, const char *funcname);
 
 template<typename T>
