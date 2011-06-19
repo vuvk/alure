@@ -47,6 +47,7 @@ MAKE_FUNC(ov_clear);
 MAKE_FUNC(ov_info);
 MAKE_FUNC(ov_open_callbacks);
 MAKE_FUNC(ov_pcm_seek);
+MAKE_FUNC(ov_pcm_total);
 MAKE_FUNC(ov_read);
 #undef MAKE_FUNC
 
@@ -68,6 +69,7 @@ public:
         LOAD_FUNC(vorbisfile_handle, ov_info);
         LOAD_FUNC(vorbisfile_handle, ov_open_callbacks);
         LOAD_FUNC(vorbisfile_handle, ov_pcm_seek);
+        LOAD_FUNC(vorbisfile_handle, ov_pcm_total);
         LOAD_FUNC(vorbisfile_handle, ov_read);
     }
     static void Deinit()
@@ -153,6 +155,13 @@ public:
 
         SetError("Seek failed");
         return false;
+    }
+
+    virtual alureInt64 GetLength()
+    {
+        ogg_int64_t len = pov_pcm_total(&oggFile, oggBitstream);
+        if(len < 0) return 0;
+        return len;
     }
 
     oggStream(std::istream *_fstream)
