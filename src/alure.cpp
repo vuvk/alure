@@ -150,6 +150,48 @@ static void deinit_alure(void)
 }
 
 
+#ifndef HAVE_WINDOWS_H
+
+void EnterCriticalSection(CRITICAL_SECTION *cs)
+{
+    int ret;
+    ret = pthread_mutex_lock(cs);
+    assert(ret == 0);
+}
+void LeaveCriticalSection(CRITICAL_SECTION *cs)
+{
+    int ret;
+    ret = pthread_mutex_unlock(cs);
+    assert(ret == 0);
+}
+void InitializeCriticalSection(CRITICAL_SECTION *cs)
+{
+    pthread_mutexattr_t attrib;
+    int ret;
+
+    ret = pthread_mutexattr_init(&attrib);
+    assert(ret == 0);
+
+    ret = pthread_mutexattr_settype(&attrib, PTHREAD_MUTEX_RECURSIVE);
+#ifdef HAVE_PTHREAD_NP_H
+    if(ret != 0)
+        ret = pthread_mutexattr_setkind_np(&attrib, PTHREAD_MUTEX_RECURSIVE);
+#endif
+    assert(ret == 0);
+    ret = pthread_mutex_init(cs, &attrib);
+    assert(ret == 0);
+
+    pthread_mutexattr_destroy(&attrib);
+}
+void DeleteCriticalSection(CRITICAL_SECTION *cs)
+{
+    int ret;
+    ret = pthread_mutex_destroy(cs);
+    assert(ret == 0);
+}
+
+#endif
+
 #ifndef DYNLOAD
 void *OpenLib(const char*)
 { return (void*)0xDEADBEEF; }
