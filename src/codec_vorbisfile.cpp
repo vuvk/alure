@@ -33,14 +33,7 @@
 #include <vorbis/vorbisfile.h>
 
 
-#ifdef _WIN32
-#define VORBISFILE_LIB "vorbisfile.dll"
-#elif defined(__APPLE__)
-#define VORBISFILE_LIB "libvorbisfile.3.dylib"
-#else
-#define VORBISFILE_LIB "libvorbisfile.so.3"
-#endif
-
+#ifdef DYNLOAD
 static void *vorbisfile_handle;
 #define MAKE_FUNC(x) static typeof(x)* p##x
 MAKE_FUNC(ov_clear);
@@ -51,6 +44,16 @@ MAKE_FUNC(ov_pcm_total);
 MAKE_FUNC(ov_read);
 #undef MAKE_FUNC
 
+#define ov_clear pov_clear
+#define ov_info pov_info
+#define ov_open_callbacks pov_open_callbacks
+#define ov_pcm_seek pov_pcm_seek
+#define ov_pcm_total pov_pcm_total
+#define ov_read pov_read
+#else
+#define vorbisfile_handle 1
+#endif
+
 
 struct oggStream : public alureStream {
 private:
@@ -60,8 +63,16 @@ private:
     ALenum format;
 
 public:
+#ifdef DYNLOAD
     static void Init()
     {
+#ifdef _WIN32
+#define VORBISFILE_LIB "vorbisfile.dll"
+#elif defined(__APPLE__)
+#define VORBISFILE_LIB "libvorbisfile.3.dylib"
+#else
+#define VORBISFILE_LIB "libvorbisfile.so.3"
+#endif
         vorbisfile_handle = OpenLib(VORBISFILE_LIB);
         if(!vorbisfile_handle) return;
 
@@ -78,6 +89,10 @@ public:
             CloseLib(vorbisfile_handle);
         vorbisfile_handle = NULL;
     }
+#else
+    static void Init() { }
+    static void Deinit() { }
+#endif
 
     virtual bool IsValid()
     { return oggInfo != NULL; }
@@ -97,7 +112,7 @@ public:
         ALuint got = 0;
         while(bytes > 0)
         {
-            int res = pov_read(&oggFile, (char*)&data[got], bytes, BigEndian?1:0, 2, 1, &oggBitstream);
+            int res = ov_read(&oggFile, (char*)&data[got], bytes, BigEndian?1:0, 2, 1, &oggBitstream);
             if(res <= 0)
                 break;
             bytes -= res;
@@ -150,7 +165,7 @@ public:
 
     virtual bool Rewind()
     {
-        if(pov_pcm_seek(&oggFile, 0) == 0)
+        if(ov_pcm_seek(&oggFile, 0) == 0)
             return true;
 
         SetError("Seek failed");
@@ -159,7 +174,7 @@ public:
 
     virtual alureInt64 GetLength()
     {
-        ogg_int64_t len = pov_pcm_total(&oggFile, oggBitstream);
+        ogg_int64_t len = ov_pcm_total(&oggFile, oggBitstream);
         if(len < 0) return 0;
         return len;
     }
@@ -173,18 +188,18 @@ public:
             read, seek, close, tell
         };
 
-        if(pov_open_callbacks(this, &oggFile, NULL, 0, streamIO) == 0)
+        if(ov_open_callbacks(this, &oggFile, NULL, 0, streamIO) == 0)
         {
-            oggInfo = pov_info(&oggFile, -1);
+            oggInfo = ov_info(&oggFile, -1);
             if(!oggInfo)
-                pov_clear(&oggFile);
+                ov_clear(&oggFile);
         }
     }
 
     virtual ~oggStream()
     {
         if(oggInfo)
-            pov_clear(&oggFile);
+            ov_clear(&oggFile);
         oggInfo = NULL;
     }
 
