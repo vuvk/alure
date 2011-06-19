@@ -102,6 +102,13 @@ public:
         return false;
     }
 
+    virtual alureInt64 GetLength()
+    {
+        if(sndInfo.frames == -1)
+            return 0;
+        return sndInfo.frames;
+    }
+
     sndStream(std::istream *_fstream)
       : alureStream(_fstream), sndFile(NULL), format(AL_NONE)
     {
