@@ -80,8 +80,10 @@ if(!(p##x))                                                                  \
 #endif
 
 
-extern PFNALCSETTHREADCONTEXTPROC alcSetThreadContext;
-extern PFNALCGETTHREADCONTEXTPROC alcGetThreadContext;
+extern PFNALCSETTHREADCONTEXTPROC palcSetThreadContext;
+extern PFNALCGETTHREADCONTEXTPROC palcGetThreadContext;
+#define alcSetThreadContext palcSetThreadContext
+#define alcGetThreadContext palcGetThreadContext
 
 void SetError(const char *err);
 ALuint DetectBlockAlignment(ALenum format);

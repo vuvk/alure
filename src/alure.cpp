@@ -43,8 +43,8 @@ std::map<ALint,UserCallbacks> InstalledCallbacks;
 CRITICAL_SECTION cs_StreamPlay;
 alureStream::ListType alureStream::StreamList;
 
-PFNALCSETTHREADCONTEXTPROC alcSetThreadContext;
-PFNALCGETTHREADCONTEXTPROC alcGetThreadContext;
+PFNALCSETTHREADCONTEXTPROC palcSetThreadContext;
+PFNALCGETTHREADCONTEXTPROC palcGetThreadContext;
 
 
 template<typename T>
@@ -129,16 +129,16 @@ static void init_alure(void)
 
     if(alcIsExtensionPresent(NULL, "ALC_EXT_thread_local_context"))
     {
-        LoadALCProc(NULL, "alcSetThreadContext", &alcSetThreadContext);
-        LoadALCProc(NULL, "alcGetThreadContext", &alcGetThreadContext);
-        if(!alcSetThreadContext || !alcGetThreadContext)
+        LoadALCProc(NULL, "alcSetThreadContext", &palcSetThreadContext);
+        LoadALCProc(NULL, "alcGetThreadContext", &palcGetThreadContext);
+        if(!palcSetThreadContext || !palcGetThreadContext)
         {
             fprintf(stderr, "Alure lib: ALC_EXT_thread_local_context advertised, but missing function:\n"
                             "    alcSetThreadContext=%p\n"
                             "    alcGetThreadContext=%p\n",
-                            alcSetThreadContext, alcGetThreadContext);
-            alcSetThreadContext = NULL;
-            alcGetThreadContext = NULL;
+                            palcSetThreadContext, palcGetThreadContext);
+            palcSetThreadContext = NULL;
+            palcGetThreadContext = NULL;
         }
     }
 }
