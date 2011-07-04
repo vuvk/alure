@@ -142,7 +142,7 @@ static void cdda_close(void *instance)
     free(self);
 }
 
-#elif defined(_WIN32)
+#elif defined(HAVE_DDK_NTDDCDRM_H)
 /* Windows implementation for reading CD digital audio */
 #include <windows.h>
 #include <ddk/ntddcdrm.h>
@@ -268,7 +268,7 @@ static const char *cd_device = "(unknown)";
 static void *cdda_open_file(const char *fname)
 {
     if(strncmp(fname, "cdda://", 7) == 0)
-        fprintf(stderr, "CD Digital Audio is not supported on this platform\n");
+        fprintf(stderr, "CD Digital Audio was not compiled for this system\n");
     return NULL;
 }
 
