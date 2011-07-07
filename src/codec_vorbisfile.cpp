@@ -30,7 +30,12 @@
 
 #include <istream>
 
+#ifdef HAS_VORBISIDEC
+#include <vorbis/ivorbiscodec.h>
+#include <vorbis/ivorbisfile.h>
+#else
 #include <vorbis/vorbisfile.h>
+#endif
 
 
 #ifdef DYNLOAD
@@ -66,12 +71,22 @@ public:
 #ifdef DYNLOAD
     static void Init()
     {
+#ifdef HAS_VORBISIDEC
+#ifdef _WIN32
+#define VORBISFILE_LIB "vorbisidec.dll"
+#elif defined(__APPLE__)
+#define VORBISFILE_LIB "libvorbisidec.1.dylib"
+#else
+#define VORBISFILE_LIB "libvorbisidec.so.1"
+#endif
+#else
 #ifdef _WIN32
 #define VORBISFILE_LIB "vorbisfile.dll"
 #elif defined(__APPLE__)
 #define VORBISFILE_LIB "libvorbisfile.3.dylib"
 #else
 #define VORBISFILE_LIB "libvorbisfile.so.3"
+#endif
 #endif
         vorbisfile_handle = OpenLib(VORBISFILE_LIB);
         if(!vorbisfile_handle) return;
@@ -112,7 +127,11 @@ public:
         ALuint got = 0;
         while(bytes > 0)
         {
+#ifdef HAS_VORBISIDEC
+            int res = ov_read(&oggFile, (char*)&data[got], bytes, &oggBitstream);
+#else
             int res = ov_read(&oggFile, (char*)&data[got], bytes, BigEndian?1:0, 2, 1, &oggBitstream);
+#endif
             if(res <= 0)
                 break;
             bytes -= res;
