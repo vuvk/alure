@@ -31,8 +31,8 @@
 #include <istream>
 
 #ifdef HAS_VORBISIDEC
-#include <vorbis/ivorbiscodec.h>
-#include <vorbis/ivorbisfile.h>
+#include <tremor/ivorbiscodec.h>
+#include <tremor/ivorbisfile.h>
 #else
 #include <vorbis/vorbisfile.h>
 #endif
