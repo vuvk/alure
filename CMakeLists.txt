@@ -174,30 +174,16 @@ IF(WIN32)
         SET(XBITS x86)
     ENDIF(CMAKE_SIZEOF_VOID_P MATCHES "8")
 
-    SET(OPENAL_SEARCH_PATHS
-        ENV ALSDK_DIR
-        ENV MINGDIR
-        "C:/Program Files/OpenAL 1.1 SDK"
-        "C:/Program Files (x86)/OpenAL 1.1 SDK"
-        "E:/Programs/Dev/OpenAL"
-        "E:/Program Files (x86)/OpenAL 1.1 SDK" )
-
-    FIND_PATH(OPENAL_INCLUDE_DIR al.h
-              PATHS ${OPENAL_SEARCH_PATHS}
-              PATH_SUFFIXES include include/AL )
-    IF(OPENAL_INCLUDE_DIR)
-        INCLUDE_DIRECTORIES(${OPENAL_INCLUDE_DIR})
-        FIND_LIBRARY(OPENAL_LIBRARIES OpenAL32
-                     PATHS ${OPENAL_SEARCH_PATHS}
-                     PATH_SUFFIXES lib libs/${WIN_TYPE} )
-    ENDIF(OPENAL_INCLUDE_DIR)
-
-    IF(NOT OPENAL_LIBRARIES)
-        MESSAGE(FATAL_ERROR "OpenAL not found!\nPlease try setting the ALSDK_DIR environment variable and try again.")
-    ENDIF(NOT OPENAL_LIBRARIES)
+    FIND_PACKAGE(OpenAL)
+    IF(NOT OPENAL_FOUND)
+        MESSAGE(FATAL_ERROR "OpenAL not found!\nPlease try setting the OPENALDIR environment variable and try again.")
+    ENDIF(NOT OPENAL_FOUND)
 
     MESSAGE(STATUS "OpenAL include: ${OPENAL_INCLUDE_DIR}")
-    MESSAGE(STATUS "OpenAL lib: ${OPENAL_LIBRARIES}")
+    MESSAGE(STATUS "OpenAL lib: ${OPENAL_LIBRARY}")
+
+    INCLUDE_DIRECTORIES(${OPENAL_INCLUDE_DIR})
+    SET(OPENAL_LIBRARIES ${OPENAL_LIBRARY})
 ELSE(WIN32)
     IF(NOT HAVE_DLFCN_H OR NOT HAVE_LIBDL)
         SET(DYNLOAD OFF)
