@@ -16,7 +16,7 @@
 # For details see the accompanying COPYING-CMAKE-SCRIPTS file.
 
 
-include (CheckLibraryExists)
+include (CheckFunctionExists)
 
 find_path(VORBIS_INCLUDE_DIR vorbis/vorbisfile.h)
 find_path(OGG_INCLUDE_DIR ogg/ogg.h)
@@ -38,7 +38,7 @@ if(VORBIS_INCLUDE_DIR AND VORBIS_LIBRARY AND VORBISFILE_LIBRARY AND VORBISENC_LI
 
    set(_CMAKE_REQUIRED_LIBRARIES_TMP ${CMAKE_REQUIRED_LIBRARIES})
    set(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} ${OGGVORBIS_LIBRARIES})
-   check_library_exists(vorbis vorbis_bitrate_addblock "" HAVE_LIBVORBISENC2)
+   check_function_exists(vorbis_bitrate_addblock HAVE_LIBVORBISENC2)
    set(CMAKE_REQUIRED_LIBRARIES ${_CMAKE_REQUIRED_LIBRARIES_TMP})
 
    if(HAVE_LIBVORBISENC2)
