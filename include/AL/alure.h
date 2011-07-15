@@ -24,22 +24,14 @@ extern "C" {
 #define ALURE_VERSION_1_1
 
 
-#ifndef ALURE_STATIC_LIBRARY
- #if defined(_WIN32)
-  #if defined(ALURE_BUILD_LIBRARY)
-   #define ALURE_API __declspec(dllexport)
-  #else
-   #define ALURE_API __declspec(dllimport)
-  #endif
+#ifndef ALURE_API
+ #if defined(ALURE_STATIC_LIBRARY)
+  #define ALURE_API
+ #elif defined(_WIN32)
+  #define ALURE_API __declspec(dllimport)
  #else
-  #if defined(ALURE_BUILD_LIBRARY) && defined(HAVE_GCC_VISIBILITY)
-   #define ALURE_API __attribute__((visibility("protected")))
-  #else
-   #define ALURE_API extern
-  #endif
+  #define ALURE_API extern
  #endif
-#else
- #define ALURE_API
 #endif
 
 #if defined(_WIN32)

@@ -83,11 +83,6 @@ ELSE(MSVC)
         CHECK_C_SOURCE_COMPILES("int foo() __attribute__((constructor));
                                  int main() {return 0;}" HAVE_GCC_CONSTRUCTOR)
 
-        CHECK_C_COMPILER_FLAG(-fvisibility=hidden HAVE_GCC_VISIBILITY)
-        IF(HAVE_GCC_VISIBILITY)
-            ADD_DEFINITIONS(-fvisibility=hidden)
-        ENDIF(HAVE_GCC_VISIBILITY)
-
         # Force -fPIC for the static lib, because it causes problems when the
         # static version is linked to a dynamic lib
         SET(STATIC_CFLAGS "${STATIC_CFLAGS} -fPIC")
@@ -104,6 +99,20 @@ ELSE(MSVC)
         ADD_DEFINITIONS(-funswitch-loops)
     ENDIF(HAVE_FUNSWITCH_LOOPS)
 ENDIF(MSVC)
+
+# Set visibility/export options if available
+SET(EXPORT_DECL "")
+IF(WIN32)
+    SET(EXPORT_DECL "__declspec(dllexport)")
+ELSE(WIN32)
+    CHECK_C_COMPILER_FLAG(-fvisibility=hidden HAVE_VISIBILITY_SWITCH)
+    CHECK_C_SOURCE_COMPILES("int foo() __attribute__((visibility(\"protected\")));
+                             int main() {return 0;}" HAVE_GCC_VISIBILITY)
+    IF(HAVE_VISIBILITY_SWITCH AND HAVE_GCC_VISIBILITY)
+        ADD_DEFINITIONS(-fvisibility=hidden)
+        SET(EXPORT_DECL "__attribute__((visibility(\"protected\")))")
+    ENDIF(HAVE_VISIBILITY_SWITCH AND HAVE_GCC_VISIBILITY)
+ENDIF(WIN32)
 
 
 CHECK_INCLUDE_FILE(windows.h HAVE_WINDOWS_H -D_WIN32_WINNT=0x0500)

@@ -1,3 +1,8 @@
+/* API declaration export attribute */
+#ifndef ALURE_STATIC_LIBRARY
+#define ALURE_API ${EXPORT_DECL}
+#endif
+
 /* Define to the version of the library being built */
 #define ALURE_VER_MAJOR ${LIB_MAJOR_VERSION}
 #define ALURE_VER_MINOR ${LIB_MINOR_VERSION}
