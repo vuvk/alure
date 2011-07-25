@@ -154,19 +154,19 @@ static void close_wrap(void *user_data)
     fclose(f);
 }
 
-ALsizei read_wrap(void *user_data, ALubyte *buf, ALuint bytes)
+static ALsizei read_wrap(void *user_data, ALubyte *buf, ALuint bytes)
 {
     FILE *f = (FILE*)user_data;
     return fread(buf, 1, bytes, f);
 }
 
-ALsizei write_wrap(void *user_data, const ALubyte *buf, ALuint bytes)
+static ALsizei write_wrap(void *user_data, const ALubyte *buf, ALuint bytes)
 {
     FILE *f = (FILE*)user_data;
     return fwrite(buf, 1, bytes, f);
 }
 
-alureInt64 seek_wrap(void *user_data, alureInt64 offset, int whence)
+static alureInt64 seek_wrap(void *user_data, alureInt64 offset, int whence)
 {
     FILE *f = (FILE*)user_data;
 #ifdef HAVE_FSEEKO
