@@ -191,6 +191,7 @@ UserFuncs Funcs = {
     write_wrap,
     seek_wrap
 };
+bool UsingSTDIO = true;
 
 extern "C" {
 
@@ -250,6 +251,7 @@ ALURE_API ALboolean ALURE_APIENTRY alureSetIOCallbacks(
         Funcs.read = read;
         Funcs.write = write;
         Funcs.seek = seek;
+        UsingSTDIO = false;
         return AL_TRUE;
     }
 
@@ -260,6 +262,7 @@ ALURE_API ALboolean ALURE_APIENTRY alureSetIOCallbacks(
         Funcs.read = read_wrap;
         Funcs.write = write_wrap;
         Funcs.seek = seek_wrap;
+        UsingSTDIO = true;
         return AL_TRUE;
     }
 

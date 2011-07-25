@@ -272,6 +272,22 @@ public:
 
     virtual bool SetPatchset(const char *sfont)
     {
+        if(UsingSTDIO)
+        {
+            int newid = fluid_synth_sfload(fluidSynth, sfont, true);
+            if(newid == FLUID_FAILED)
+            {
+                SetError("Failed to load soundfont");
+                return false;
+            }
+
+            if(fontID != FLUID_FAILED)
+                fluid_synth_sfunload(fluidSynth, fontID, true);
+            fontID = newid;
+            doFontLoad = false;
+            return true;
+        }
+
         /* FluidSynth has no way to load a soundfont using IO callbacks. So we
          * have to copy the specified file using the callbacks to a regular
          * file that FluidSynth can open. */

@@ -197,6 +197,7 @@ struct UserFuncs {
     alureInt64 (*seek)(void *f, alureInt64 offset, int whence);
 };
 extern UserFuncs Funcs;
+extern bool UsingSTDIO;
 
 class FileStreamBuf : public std::streambuf {
     void *usrFile;
