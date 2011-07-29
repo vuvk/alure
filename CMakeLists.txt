@@ -455,7 +455,7 @@ ENDIF(BUILD_STATIC)
 
 
 OPTION(BUILD_EXAMPLES   "Build example programs"   ON)
-OPTION(INSTALL_EXAMPLES "Install example programs" OFF)
+OPTION(INSTALL_EXAMPLES "Install example programs" ON)
 
 IF(BUILD_EXAMPLES)
     IF(HAVE_DDK_NTDDCDRM_H)
