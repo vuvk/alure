@@ -18,10 +18,11 @@
 extern "C" {
 #endif
 
-#define ALURE_VERSION_STRING "1.1"
+#define ALURE_VERSION_STRING "1.2"
 
 #define ALURE_VERSION_1_0
 #define ALURE_VERSION_1_1
+#define ALURE_VERSION_1_2
 
 
 #ifndef ALURE_API
