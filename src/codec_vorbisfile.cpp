@@ -73,22 +73,30 @@ public:
     {
 #ifdef HAS_VORBISIDEC
 #ifdef _WIN32
-#define VORBISFILE_LIB "vorbisidec.dll"
+#define VORBISFILE_LIB  "vorbisidec.dll"
+#define VORBISFILE_LIB2 "libvorbisidec.dll"
 #elif defined(__APPLE__)
-#define VORBISFILE_LIB "libvorbisidec.1.dylib"
+#define VORBISFILE_LIB  "libvorbisidec.1.dylib"
+#define VORBISFILE_LIB2 0
 #else
-#define VORBISFILE_LIB "libvorbisidec.so.1"
+#define VORBISFILE_LIB  "libvorbisidec.so.1"
+#define VORBISFILE_LIB2 0
 #endif
 #else
 #ifdef _WIN32
-#define VORBISFILE_LIB "vorbisfile.dll"
+#define VORBISFILE_LIB  "vorbisfile.dll"
+#define VORBISFILE_LIB2 "libvorbisfile.dll"
 #elif defined(__APPLE__)
-#define VORBISFILE_LIB "libvorbisfile.3.dylib"
+#define VORBISFILE_LIB  "libvorbisfile.3.dylib"
+#define VORBISFILE_LIB2 0
 #else
-#define VORBISFILE_LIB "libvorbisfile.so.3"
+#define VORBISFILE_LIB  "libvorbisfile.so.3"
+#define VORBISFILE_LIB2 0
 #endif
 #endif
         vorbisfile_handle = OpenLib(VORBISFILE_LIB);
+        if(!vorbisfile_handle && VORBISFILE_LIB2)
+            vorbisfile_handle = OpenLib(VORBISFILE_LIB2);
         if(!vorbisfile_handle) return;
 
         LOAD_FUNC(vorbisfile_handle, ov_clear);
