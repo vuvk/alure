@@ -129,7 +129,7 @@ ELSE(HAVE_WINDOWS_H)
     CHECK_INCLUDE_FILE(pthread.h HAVE_PTHREAD_H)
     IF(NOT HAVE_PTHREAD_H)
         MESSAGE(FATAL_ERROR "PThreads is required for non-Windows builds!")
-    ENDIF()
+    ENDIF(NOT HAVE_PTHREAD_H)
     # Some systems need pthread_np.h to get recursive mutexes
     CHECK_INCLUDE_FILES("pthread.h;pthread_np.h" HAVE_PTHREAD_NP_H)
 
