@@ -190,7 +190,13 @@ public:
 };
 
 struct UserFuncs {
-    void* (*open)(const char *filename, ALuint mode);
+    bool hasUserdata;
+    void *userdata;
+
+    union {
+        void* (*open)(const char *filename, ALuint mode);
+        void* (*openWithUserdata)(void *userdata, const char *filename, ALuint mode);
+    };
     void (*close)(void *f);
     ALsizei (*read)(void *f, ALubyte *buf, ALuint count);
     ALsizei (*write)(void *f, const ALubyte *buf, ALuint count);
@@ -215,7 +221,7 @@ public:
 
     FileStreamBuf(const char *filename, ALint mode)
       : usrFile(NULL), fio(Funcs)
-    { usrFile = fio.open(filename, mode); }
+    { usrFile = fio.hasUserdata ? fio.openWithUserdata(fio.userdata, filename, mode) : fio.open(filename, mode); }
     virtual ~FileStreamBuf()
     { if(usrFile) fio.close(usrFile); }
 };

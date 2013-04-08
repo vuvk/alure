@@ -185,7 +185,9 @@ static alureInt64 seek_wrap(void *user_data, alureInt64 offset, int whence)
 }
 
 UserFuncs Funcs = {
-    open_wrap,
+    false,
+    NULL,
+    { open_wrap },
     close_wrap,
     read_wrap,
     write_wrap,
@@ -235,6 +237,9 @@ extern "C" {
  * Returns:
  * AL_FALSE on error.
  *
+ * See also:
+ * <alureSetIOCallbacksUserdata>
+ *
  * *Version Added*: 1.1
  */
 ALURE_API ALboolean ALURE_APIENTRY alureSetIOCallbacks(
@@ -246,6 +251,7 @@ ALURE_API ALboolean ALURE_APIENTRY alureSetIOCallbacks(
 {
     if(open && close && read && write && seek)
     {
+        Funcs.hasUserdata = false;
         Funcs.open = open;
         Funcs.close = close;
         Funcs.read = read;
@@ -257,6 +263,7 @@ ALURE_API ALboolean ALURE_APIENTRY alureSetIOCallbacks(
 
     if(!open && !close && !read && !write && !seek)
     {
+        Funcs.hasUserdata = false;
         Funcs.open = open_wrap;
         Funcs.close = close_wrap;
         Funcs.read = read_wrap;
@@ -270,4 +277,86 @@ ALURE_API ALboolean ALURE_APIENTRY alureSetIOCallbacks(
     return AL_FALSE;
 }
 
+/* Function: alureSetIOCallbacksUserdata
+ *
+ * Provides callbacks for alternative methods to handle file I/O. Passing NULL
+ * for all callbacks is a valid way to revert to normal I/O, otherwise they
+ * must all be specified. Changing the callbacks will not affect open files
+ * (they will continue using the callbacks that were set at the time they were
+ * opened).
+ *
+ * Parameters:
+ * userdata - A handle passed through to the open-callback.
+ * open - This callback is called to open the named file. The given mode is the
+ *        access rights the open file should have. Currently, this will always
+ *        be 0 for read-only (applications should check this to make sure, as
+ *        future versions may pass other values for other modes). Upon success,
+ *        a non-NULL handle must be returned which will be used as a unique
+ *        identifier for the file.
+ * close - This callback is called to close an opened file handle. The handle
+ *         will no longer be used after this function.
+ * read - This callback is called when data needs to be read from the given
+ *        handle. Up to the given number of bytes should be copied into 'buf'
+ *        and the number of bytes actually copied should be returned. Returning
+ *        0 means the end of the file has been reached (so non-blocking I/O
+ *        methods should ensure at least 1 byte gets read), and negative
+ *        indicates an error.
+ * write - This callback is called when data needs to be written to the given
+ *         handle. Up to the given number of bytes should be copied from 'buf'
+ *         and the number of bytes actually copied should be returned. A return
+ *         value of 0 means no more data can be written (so non-blocking I/O
+ *         methods should ensure at least 1 byte gets written), and negative
+ *         indicates an error.
+ * seek - This callback is called to reposition the offset of the file handle.
+ *        The given offset is interpreted according to 'whence', which may be
+ *        SEEK_SET (absolute position from the start of the file), SEEK_CUR
+ *        (relative position from the current offset), or SEEK_END (absolute
+ *        position from the end of the file), as defined by standard C. The new
+ *        offset from the beginning of the file should be returned. If the file
+ *        cannot seek, such as when using a FIFO, -1 should be returned.
+ *
+ * Returns:
+ * AL_FALSE on error.
+ *
+ * See also:
+ * <alureSetIOCallbacks>
+ *
+ * *Version Added*: 1.3
+ */
+ALURE_API ALboolean ALURE_APIENTRY alureSetIOCallbacksUserdata(
+      void *userdata,
+      void* (*open)(void *userdata, const char *filename, ALuint mode),
+      void (*close)(void *handle),
+      ALsizei (*read)(void *handle, ALubyte *buf, ALuint bytes),
+      ALsizei (*write)(void *handle, const ALubyte *buf, ALuint bytes),
+      alureInt64 (*seek)(void *handle, alureInt64 offset, int whence))
+{
+    if(open && close && read && write && seek)
+    {
+        Funcs.hasUserdata = true;
+        Funcs.userdata = userdata;
+        Funcs.openWithUserdata = open;
+        Funcs.close = close;
+        Funcs.read = read;
+        Funcs.write = write;
+        Funcs.seek = seek;
+        UsingSTDIO = false;
+        return AL_TRUE;
+    }
+
+    if(!open && !close && !read && !write && !seek)
+    {
+        Funcs.hasUserdata = false;
+        Funcs.open = open_wrap;
+        Funcs.close = close_wrap;
+        Funcs.read = read_wrap;
+        Funcs.write = write_wrap;
+        Funcs.seek = seek_wrap;
+        UsingSTDIO = true;
+        return AL_TRUE;
+    }
+
+    SetError("Missing callback functions");
+    return AL_FALSE;
+}
 } // extern "C"
