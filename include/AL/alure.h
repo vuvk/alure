@@ -111,6 +111,13 @@ ALURE_API ALboolean ALURE_APIENTRY alureSetIOCallbacks(
       ALsizei (*read)(void*,ALubyte*,ALuint),
       ALsizei (*write)(void*,const ALubyte*,ALuint),
       alureInt64 (*seek)(void*,alureInt64,int));
+ALURE_API ALboolean ALURE_APIENTRY alureSetIOCallbacksUserdata(
+      void *userdata,
+      void* (*open)(void*,const char*,ALuint),
+      void (*close)(void*),
+      ALsizei (*read)(void*,ALubyte*,ALuint),
+      ALsizei (*write)(void*,const ALubyte*,ALuint),
+      alureInt64 (*seek)(void*,alureInt64,int));
 
 ALURE_API void* ALURE_APIENTRY alureGetProcAddress(const ALchar *funcname);
 
