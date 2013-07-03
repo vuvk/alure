@@ -72,25 +72,8 @@ public:
             data += got;
             amt += got;
 
-            if(ret == MPG123_NEW_FORMAT)
-            {
-                mpg123_delete(mp3File);
-                mp3File = NULL;
+            if(ret == MPG123_NEW_FORMAT || ret == MPG123_DONE)
                 break;
-            }
-            if(ret == MPG123_NEED_MORE)
-            {
-                unsigned char data[4096];
-                ALint insize = std::min<ALint>(sizeof(data),
-                                               (dataEnd-fstream->tellg()));
-                if(insize > 0)
-                {
-                    fstream->read((char*)data, insize);
-                    insize = fstream->gcount();
-                }
-                if(insize > 0 && mpg123_feed(mp3File, data, insize) == MPG123_OK)
-                    continue;
-            }
             if(got == 0)
                 break;
         }
@@ -99,47 +82,8 @@ public:
 
     virtual bool Rewind()
     {
-        fstream->clear();
-        std::ios::pos_type oldpos = fstream->tellg();
-        fstream->seekg(dataStart);
-
-        mpg123_handle *newFile = mpg123_new(NULL, NULL);
-        if(mpg123_open_feed(newFile) == MPG123_OK)
-        {
-            unsigned char data[4096];
-            long newrate;
-            int newchans;
-            int enc;
-
-            ALuint amt, total = 0;
-            int ret = MPG123_OK;
-            do {
-                amt = std::min<ALint>(sizeof(data),
-                                      (dataEnd-fstream->tellg()));
-                fstream->read((char*)data, amt);
-                amt = fstream->gcount();
-                if(amt == 0)  break;
-                total += amt;
-                ret = mpg123_decode(newFile, data, amt, NULL, 0, NULL);
-            } while(ret == MPG123_NEED_MORE && total < 64*1024);
-
-            if(ret == MPG123_NEW_FORMAT &&
-               mpg123_getformat(newFile, &newrate, &newchans, &enc) == MPG123_OK)
-            {
-                if(mpg123_format_none(newFile) == MPG123_OK &&
-                   mpg123_format(newFile, samplerate, channels, MPG123_ENC_SIGNED_16) == MPG123_OK)
-                {
-                    // All OK
-                    if(mp3File)
-                        mpg123_delete(mp3File);
-                    mp3File = newFile;
-                    return true;
-                }
-            }
-            mpg123_delete(newFile);
-        }
-
-        fstream->seekg(oldpos);
+        if(mpg123_seek(mp3File, 0, SEEK_SET) >= 0)
+            return true;
         SetError("Restart failed");
         return false;
     }
@@ -152,34 +96,22 @@ public:
             return;
 
         mp3File = mpg123_new(NULL, NULL);
-        if(mpg123_open_feed(mp3File) == MPG123_OK)
+        if(mpg123_replace_reader_handle(mp3File, read, lseek, NULL) == MPG123_OK &&
+           mpg123_open_handle(mp3File, this) == MPG123_OK)
         {
-            unsigned char data[4096];
             int enc;
 
-            ALuint amt, total = 0;
-            int ret = MPG123_OK;
-            do {
-                amt = std::min<ALint>(sizeof(data),
-                                      (dataEnd-fstream->tellg()));
-                fstream->read((char*)data, amt);
-                amt = fstream->gcount();
-                if(amt == 0)  break;
-                total += amt;
-                ret = mpg123_decode(mp3File, data, amt, NULL, 0, NULL);
-            } while(ret == MPG123_NEED_MORE && total < 64*1024);
-
-            if(ret == MPG123_NEW_FORMAT &&
-               mpg123_getformat(mp3File, &samplerate, &channels, &enc) == MPG123_OK)
+            if(mpg123_getformat(mp3File, &samplerate, &channels, &enc) == MPG123_OK)
             {
-                format = GetSampleFormat(channels, 16, false);
                 if(mpg123_format_none(mp3File) == MPG123_OK &&
                    mpg123_format(mp3File, samplerate, channels, MPG123_ENC_SIGNED_16) == MPG123_OK)
                 {
+                    format = GetSampleFormat(channels, 16, false);
                     // All OK
                     return;
                 }
             }
+            mpg123_close(mp3File);
         }
         mpg123_delete(mp3File);
         mp3File = NULL;
@@ -188,8 +120,11 @@ public:
     virtual ~mp3Stream()
     {
         if(mp3File)
+        {
+            mpg123_close(mp3File);
             mpg123_delete(mp3File);
-        mp3File = NULL;
+            mp3File = NULL;
+        }
     }
 
 private:
@@ -260,6 +195,45 @@ private:
         }
 
         return false;
+    }
+
+    static ssize_t read(void *handle, void *buffer, size_t bytes)
+    {
+        mp3Stream *self = reinterpret_cast<mp3Stream*>(handle);
+        std::istream *fstream = self->fstream;
+        fstream->clear();
+
+        std::ios::pos_type rem = self->dataEnd - fstream->tellg();
+
+        fstream->read(reinterpret_cast<char*>(buffer),
+                      std::min<std::ios::pos_type>(bytes, rem));
+        return fstream->gcount();
+    }
+
+    static off_t lseek(void *handle, off_t offset, int whence)
+    {
+        mp3Stream *self = reinterpret_cast<mp3Stream*>(handle);
+        std::istream *fstream = self->fstream;
+        fstream->clear();
+
+        if(whence == SEEK_END)
+        {
+            offset = -offset;
+            if(offset >= 0)
+                offset = (self->dataEnd - self->dataStart) - offset;
+        }
+        else if(whence == SEEK_CUR)
+            offset = offset + fstream->tellg() - self->dataStart;
+        else if(whence != SEEK_SET)
+            return -1;
+
+        if(offset >= 0 && std::ios::pos_type(offset) <= (self->dataEnd - self->dataStart))
+        {
+            if(fstream->seekg(std::ios::pos_type(offset) + self->dataStart))
+                return offset;
+        }
+
+        return -1;
     }
 };
 // Priority = -2, because mp3 loading can find false-positives, and interferes
