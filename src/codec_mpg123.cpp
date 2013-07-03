@@ -33,38 +33,6 @@
 #include <mpg123.h>
 
 
-#ifdef DYNLOAD
-static void *mp123_handle;
-#define MAKE_FUNC(x) static typeof(x)* p##x
-MAKE_FUNC(mpg123_read);
-MAKE_FUNC(mpg123_init);
-MAKE_FUNC(mpg123_open_feed);
-MAKE_FUNC(mpg123_new);
-MAKE_FUNC(mpg123_delete);
-MAKE_FUNC(mpg123_feed);
-MAKE_FUNC(mpg123_exit);
-MAKE_FUNC(mpg123_getformat);
-MAKE_FUNC(mpg123_format_none);
-MAKE_FUNC(mpg123_decode);
-MAKE_FUNC(mpg123_format);
-#undef MAKE_FUNC
-
-#define mpg123_read pmpg123_read
-#define mpg123_init pmpg123_init
-#define mpg123_open_feed pmpg123_open_feed
-#define mpg123_new pmpg123_new
-#define mpg123_delete pmpg123_delete
-#define mpg123_feed pmpg123_feed
-#define mpg123_exit pmpg123_exit
-#define mpg123_getformat pmpg123_getformat
-#define mpg123_format_none pmpg123_format_none
-#define mpg123_decode pmpg123_decode
-#define mpg123_format pmpg123_format
-#else
-#define mp123_handle 1
-#endif
-
-
 struct mp3Stream : public alureStream {
 private:
     mpg123_handle *mp3File;
@@ -75,50 +43,8 @@ private:
     std::ios::pos_type dataEnd;
 
 public:
-#ifdef DYNLOAD
-    static void Init()
-    {
-#ifdef _WIN32
-#define MPG123_LIB "libmpg123.dll"
-#define MPG123_LIB2 "libmpg123-0.dll"
-#elif defined(__APPLE__)
-#define MPG123_LIB "libmpg123.0.dylib"
-#define MPG123_LIB2 0
-#else
-#define MPG123_LIB "libmpg123.so.0"
-#define MPG123_LIB2 0
-#endif
-        mp123_handle = OpenLib(MPG123_LIB);
-        if(!mp123_handle && MPG123_LIB2)
-            mp123_handle = OpenLib(MPG123_LIB2);
-        if(!mp123_handle) return;
-
-        LOAD_FUNC(mp123_handle, mpg123_read);
-        LOAD_FUNC(mp123_handle, mpg123_init);
-        LOAD_FUNC(mp123_handle, mpg123_open_feed);
-        LOAD_FUNC(mp123_handle, mpg123_new);
-        LOAD_FUNC(mp123_handle, mpg123_delete);
-        LOAD_FUNC(mp123_handle, mpg123_feed);
-        LOAD_FUNC(mp123_handle, mpg123_exit);
-        LOAD_FUNC(mp123_handle, mpg123_getformat);
-        LOAD_FUNC(mp123_handle, mpg123_format_none);
-        LOAD_FUNC(mp123_handle, mpg123_decode);
-        LOAD_FUNC(mp123_handle, mpg123_format);
-        mpg123_init();
-    }
-    static void Deinit()
-    {
-        if(mp123_handle)
-        {
-            mpg123_exit();
-            CloseLib(mp123_handle);
-        }
-        mp123_handle = NULL;
-    }
-#else
-    static void Init() { }
-    static void Deinit() { }
-#endif
+    static void Init() { mpg123_init(); }
+    static void Deinit() { mpg123_exit(); }
 
     virtual bool IsValid()
     { return mp3File != NULL; }
@@ -222,8 +148,6 @@ public:
       : alureStream(_fstream), mp3File(NULL), format(AL_NONE),
         dataStart(0), dataEnd(0)
     {
-        if(!mp123_handle) return;
-
         if(!FindDataChunk())
             return;
 

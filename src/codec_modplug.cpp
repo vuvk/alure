@@ -33,58 +33,14 @@
 #include <libmodplug/modplug.h>
 
 
-#ifdef DYNLOAD
-static void *mod_handle;
-#define MAKE_FUNC(x) static typeof(x)* p##x
-MAKE_FUNC(ModPlug_Load);
-MAKE_FUNC(ModPlug_Unload);
-MAKE_FUNC(ModPlug_Read);
-MAKE_FUNC(ModPlug_SeekOrder);
-#undef MAKE_FUNC
-
-#define ModPlug_Load pModPlug_Load
-#define ModPlug_Unload pModPlug_Unload
-#define ModPlug_Read pModPlug_Read
-#define ModPlug_SeekOrder pModPlug_SeekOrder
-#else
-#define mod_handle 1
-#endif
-
-
 struct modStream : public alureStream {
 private:
     ModPlugFile *modFile;
     int lastOrder;
 
 public:
-#ifdef DYNLOAD
-    static void Init()
-    {
-#ifdef _WIN32
-#define MODPLUG_LIB "libmodplug.dll"
-#elif defined(__APPLE__)
-#define MODPLUG_LIB "libmodplug.1.dylib"
-#else
-#define MODPLUG_LIB "libmodplug.so.1"
-#endif
-        mod_handle = OpenLib(MODPLUG_LIB);
-        if(!mod_handle) return;
-
-        LOAD_FUNC(mod_handle, ModPlug_Load);
-        LOAD_FUNC(mod_handle, ModPlug_Unload);
-        LOAD_FUNC(mod_handle, ModPlug_Read);
-        LOAD_FUNC(mod_handle, ModPlug_SeekOrder);
-    }
-    static void Deinit()
-    {
-        if(mod_handle)
-            CloseLib(mod_handle);
-        mod_handle = NULL;
-    }
-#else
     static void Init() { }
     static void Deinit() { }
-#endif
 
     virtual bool IsValid()
     { return modFile != NULL; }
@@ -139,8 +95,6 @@ public:
     modStream(std::istream *_fstream)
       : alureStream(_fstream), modFile(NULL), lastOrder(0)
     {
-        if(!mod_handle) return;
-
         std::vector<char> data(1024);
         ALuint total = 0;
 

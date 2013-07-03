@@ -33,32 +33,6 @@
 #include <FLAC/all.h>
 
 
-#ifdef DYNLOAD
-static void *flac_handle;
-#define MAKE_FUNC(x) static typeof(x)* p##x
-MAKE_FUNC(FLAC__stream_decoder_get_state);
-MAKE_FUNC(FLAC__stream_decoder_finish);
-MAKE_FUNC(FLAC__stream_decoder_new);
-MAKE_FUNC(FLAC__stream_decoder_seek_absolute);
-MAKE_FUNC(FLAC__stream_decoder_delete);
-MAKE_FUNC(FLAC__stream_decoder_get_total_samples);
-MAKE_FUNC(FLAC__stream_decoder_process_single);
-MAKE_FUNC(FLAC__stream_decoder_init_stream);
-#undef MAKE_FUNC
-
-#define FLAC__stream_decoder_get_state pFLAC__stream_decoder_get_state
-#define FLAC__stream_decoder_finish pFLAC__stream_decoder_finish
-#define FLAC__stream_decoder_new pFLAC__stream_decoder_new
-#define FLAC__stream_decoder_seek_absolute pFLAC__stream_decoder_seek_absolute
-#define FLAC__stream_decoder_delete pFLAC__stream_decoder_delete
-#define FLAC__stream_decoder_get_total_samples pFLAC__stream_decoder_get_total_samples
-#define FLAC__stream_decoder_process_single pFLAC__stream_decoder_process_single
-#define FLAC__stream_decoder_init_stream pFLAC__stream_decoder_init_stream
-#else
-#define flac_handle 1
-#endif
-
-
 struct flacStream : public alureStream {
 private:
     FLAC__StreamDecoder *flacFile;
@@ -74,39 +48,8 @@ private:
     ALuint outLen;
 
 public:
-#ifdef DYNLOAD
-    static void Init()
-    {
-#ifdef _WIN32
-#define FLAC_LIB "libFLAC.dll"
-#elif defined(__APPLE__)
-#define FLAC_LIB "libFLAC.8.dylib"
-#else
-#define FLAC_LIB "libFLAC.so.8"
-#endif
-
-        flac_handle = OpenLib(FLAC_LIB);
-        if(!flac_handle) return;
-
-        LOAD_FUNC(flac_handle, FLAC__stream_decoder_get_state);
-        LOAD_FUNC(flac_handle, FLAC__stream_decoder_finish);
-        LOAD_FUNC(flac_handle, FLAC__stream_decoder_new);
-        LOAD_FUNC(flac_handle, FLAC__stream_decoder_seek_absolute);
-        LOAD_FUNC(flac_handle, FLAC__stream_decoder_delete);
-        LOAD_FUNC(flac_handle, FLAC__stream_decoder_get_total_samples);
-        LOAD_FUNC(flac_handle, FLAC__stream_decoder_process_single);
-        LOAD_FUNC(flac_handle, FLAC__stream_decoder_init_stream);
-    }
-    static void Deinit()
-    {
-        if(flac_handle)
-            CloseLib(flac_handle);
-        flac_handle = NULL;
-    }
-#else
     static void Init() { }
     static void Deinit() { }
-#endif
 
     virtual bool IsValid()
     { return flacFile != NULL; }
@@ -164,8 +107,6 @@ public:
       : alureStream(_fstream), flacFile(NULL), format(AL_NONE), samplerate(0),
         blockAlign(0), useFloat(AL_FALSE)
     {
-        if(!flac_handle) return;
-
         flacFile = FLAC__stream_decoder_new();
         if(flacFile)
         {

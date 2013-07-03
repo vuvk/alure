@@ -61,25 +61,6 @@ static const bool LittleEndian = (endian_test.b[0] != 0);
 static const bool BigEndian = !LittleEndian;
 
 
-#ifdef DYNLOAD
-void *OpenLib(const char *libname);
-void CloseLib(void *handle);
-void *GetLibProc(void *handle, const char *funcname);
-
-template<typename T>
-void LoadFunc(void *handle, const char *funcname, T **funcptr)
-{ *funcptr = reinterpret_cast<T*>(GetLibProc(handle, funcname)); }
-
-#define LOAD_FUNC(h, x) LoadFunc((h), #x, &(p##x));                          \
-if(!(p##x))                                                                  \
-{                                                                            \
-    CloseLib((h));                                                           \
-    (h) = NULL;                                                              \
-    return;                                                                  \
-}
-#endif
-
-
 extern PFNALCSETTHREADCONTEXTPROC palcSetThreadContext;
 extern PFNALCGETTHREADCONTEXTPROC palcGetThreadContext;
 #define alcSetThreadContext palcSetThreadContext

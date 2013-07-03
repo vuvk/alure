@@ -38,54 +38,6 @@
 #include <fluidsynth.h>
 
 
-#ifdef DYNLOAD
-static void *fsynth_handle;
-#define MAKE_FUNC(x) static typeof(x)* p##x
-MAKE_FUNC(fluid_settings_setstr);
-MAKE_FUNC(fluid_synth_program_change);
-MAKE_FUNC(fluid_synth_sfload);
-MAKE_FUNC(fluid_settings_setnum);
-MAKE_FUNC(fluid_synth_sysex);
-MAKE_FUNC(fluid_synth_cc);
-MAKE_FUNC(fluid_synth_pitch_bend);
-MAKE_FUNC(fluid_synth_channel_pressure);
-MAKE_FUNC(fluid_synth_write_float);
-MAKE_FUNC(new_fluid_synth);
-MAKE_FUNC(delete_fluid_settings);
-MAKE_FUNC(delete_fluid_synth);
-MAKE_FUNC(fluid_synth_program_reset);
-MAKE_FUNC(fluid_settings_setint);
-MAKE_FUNC(new_fluid_settings);
-MAKE_FUNC(fluid_synth_write_s16);
-MAKE_FUNC(fluid_synth_noteoff);
-MAKE_FUNC(fluid_synth_sfunload);
-MAKE_FUNC(fluid_synth_noteon);
-#undef MAKE_FUNC
-
-#define fluid_settings_setstr pfluid_settings_setstr
-#define fluid_synth_program_change pfluid_synth_program_change
-#define fluid_synth_sfload pfluid_synth_sfload
-#define fluid_settings_setnum pfluid_settings_setnum
-#define fluid_synth_sysex pfluid_synth_sysex
-#define fluid_synth_cc pfluid_synth_cc
-#define fluid_synth_pitch_bend pfluid_synth_pitch_bend
-#define fluid_synth_channel_pressure pfluid_synth_channel_pressure
-#define fluid_synth_write_float pfluid_synth_write_float
-#define new_fluid_synth pnew_fluid_synth
-#define delete_fluid_settings pdelete_fluid_settings
-#define delete_fluid_synth pdelete_fluid_synth
-#define fluid_synth_program_reset pfluid_synth_program_reset
-#define fluid_settings_setint pfluid_settings_setint
-#define new_fluid_settings pnew_fluid_settings
-#define fluid_synth_write_s16 pfluid_synth_write_s16
-#define fluid_synth_noteoff pfluid_synth_noteoff
-#define fluid_synth_sfunload pfluid_synth_sfunload
-#define fluid_synth_noteon pfluid_synth_noteon
-#else
-#define fsynth_handle 1
-#endif
-
-
 struct fluidStream : public alureStream {
 private:
     static const ALubyte MIDI_CHANNEL_MASK = 0x0F;
@@ -169,49 +121,8 @@ private:
     bool doFontLoad;
 
 public:
-#ifdef DYNLOAD
-    static void Init()
-    {
-#ifdef _WIN32
-#define FLUIDSYNTH_LIB "libfluidsynth.dll"
-#elif defined(__APPLE__)
-#define FLUIDSYNTH_LIB "libfluidsynth.1.dylib"
-#else
-#define FLUIDSYNTH_LIB "libfluidsynth.so.1"
-#endif
-        fsynth_handle = OpenLib(FLUIDSYNTH_LIB);
-        if(!fsynth_handle) return;
-
-        LOAD_FUNC(fsynth_handle, fluid_settings_setstr);
-        LOAD_FUNC(fsynth_handle, fluid_synth_program_change);
-        LOAD_FUNC(fsynth_handle, fluid_synth_sfload);
-        LOAD_FUNC(fsynth_handle, fluid_settings_setnum);
-        LOAD_FUNC(fsynth_handle, fluid_synth_sysex);
-        LOAD_FUNC(fsynth_handle, fluid_synth_cc);
-        LOAD_FUNC(fsynth_handle, fluid_synth_pitch_bend);
-        LOAD_FUNC(fsynth_handle, fluid_synth_channel_pressure);
-        LOAD_FUNC(fsynth_handle, fluid_synth_write_float);
-        LOAD_FUNC(fsynth_handle, new_fluid_synth);
-        LOAD_FUNC(fsynth_handle, delete_fluid_settings);
-        LOAD_FUNC(fsynth_handle, delete_fluid_synth);
-        LOAD_FUNC(fsynth_handle, fluid_synth_program_reset);
-        LOAD_FUNC(fsynth_handle, fluid_settings_setint);
-        LOAD_FUNC(fsynth_handle, new_fluid_settings);
-        LOAD_FUNC(fsynth_handle, fluid_synth_write_s16);
-        LOAD_FUNC(fsynth_handle, fluid_synth_noteoff);
-        LOAD_FUNC(fsynth_handle, fluid_synth_sfunload);
-        LOAD_FUNC(fsynth_handle, fluid_synth_noteon);
-    }
-    static void Deinit()
-    {
-        if(fsynth_handle)
-            CloseLib(fsynth_handle);
-        fsynth_handle = NULL;
-    }
-#else
     static void Init() { }
     static void Deinit() { }
-#endif
 
     virtual bool IsValid()
     { return fluidSynth != NULL; }
@@ -386,8 +297,6 @@ public:
         fluidSettings(NULL), fluidSynth(NULL), fontID(FLUID_FAILED),
         doFontLoad(true)
     {
-        if(!fsynth_handle) return;
-
         ALCdevice *device = alcGetContextsDevice(alcGetCurrentContext());
         if(device) alcGetIntegerv(device, ALC_FREQUENCY, 1, &sampleRate);
 

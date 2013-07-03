@@ -33,46 +33,6 @@
 #include <dumb.h>
 
 
-#ifdef DYNLOAD
-static void *dumb_handle;
-#define MAKE_FUNC(x) static typeof(x)* p##x
-MAKE_FUNC(dumbfile_open_ex);
-MAKE_FUNC(dumbfile_close);
-MAKE_FUNC(dumb_read_mod);
-MAKE_FUNC(dumb_read_s3m);
-MAKE_FUNC(dumb_read_xm);
-MAKE_FUNC(dumb_read_it);
-MAKE_FUNC(dumb_silence);
-MAKE_FUNC(duh_sigrenderer_generate_samples);
-MAKE_FUNC(duh_get_it_sigrenderer);
-MAKE_FUNC(duh_end_sigrenderer);
-MAKE_FUNC(unload_duh);
-MAKE_FUNC(dumb_it_start_at_order);
-MAKE_FUNC(dumb_it_set_loop_callback);
-MAKE_FUNC(dumb_it_sr_get_speed);
-MAKE_FUNC(dumb_it_sr_set_speed);
-#undef MAKE_FUNC
-
-#define dumbfile_open_ex pdumbfile_open_ex
-#define dumbfile_close pdumbfile_close
-#define dumb_read_mod pdumb_read_mod
-#define dumb_read_s3m pdumb_read_s3m
-#define dumb_read_xm pdumb_read_xm
-#define dumb_read_it pdumb_read_it
-#define dumb_silence pdumb_silence
-#define duh_sigrenderer_generate_samples pduh_sigrenderer_generate_samples
-#define duh_get_it_sigrenderer pduh_get_it_sigrenderer
-#define duh_end_sigrenderer pduh_end_sigrenderer
-#define unload_duh punload_duh
-#define dumb_it_start_at_order pdumb_it_start_at_order
-#define dumb_it_set_loop_callback pdumb_it_set_loop_callback
-#define dumb_it_sr_get_speed pdumb_it_sr_get_speed
-#define dumb_it_sr_set_speed pdumb_it_sr_set_speed
-#else
-#define dumb_handle 1
-#endif
-
-
 struct dumbStream : public alureStream {
 private:
     DUMBFILE_SYSTEM vfs;
@@ -85,46 +45,8 @@ private:
     ALCint samplerate;
 
 public:
-#ifdef DYNLOAD
-    static void Init()
-    {
-#ifdef _WIN32
-#define DUMB_LIB "libdumb.dll"
-#elif defined(__APPLE__)
-#define DUMB_LIB "libdumb.dylib"
-#else
-#define DUMB_LIB "libdumb.so"
-#endif
-
-        dumb_handle = OpenLib(DUMB_LIB);
-        if(!dumb_handle) return;
-
-        LOAD_FUNC(dumb_handle, dumbfile_open_ex);
-        LOAD_FUNC(dumb_handle, dumbfile_close);
-        LOAD_FUNC(dumb_handle, dumb_read_mod);
-        LOAD_FUNC(dumb_handle, dumb_read_s3m);
-        LOAD_FUNC(dumb_handle, dumb_read_xm);
-        LOAD_FUNC(dumb_handle, dumb_read_it);
-        LOAD_FUNC(dumb_handle, dumb_silence);
-        LOAD_FUNC(dumb_handle, duh_sigrenderer_generate_samples);
-        LOAD_FUNC(dumb_handle, duh_get_it_sigrenderer);
-        LOAD_FUNC(dumb_handle, duh_end_sigrenderer);
-        LOAD_FUNC(dumb_handle, unload_duh);
-        LOAD_FUNC(dumb_handle, dumb_it_start_at_order);
-        LOAD_FUNC(dumb_handle, dumb_it_set_loop_callback);
-        LOAD_FUNC(dumb_handle, dumb_it_sr_get_speed);
-        LOAD_FUNC(dumb_handle, dumb_it_sr_set_speed);
-    }
-    static void Deinit()
-    {
-        if(dumb_handle)
-            CloseLib(dumb_handle);
-        dumb_handle = NULL;
-    }
-#else
     static void Init() { }
     static void Deinit() { }
-#endif
 
     virtual bool IsValid()
     { return renderer != NULL; }
@@ -209,8 +131,6 @@ public:
       : alureStream(_fstream), dumbFile(NULL), duh(NULL), renderer(NULL),
         lastOrder(0), format(AL_NONE), samplerate(48000)
     {
-        if(!dumb_handle) return;
-
         ALCdevice *device = alcGetContextsDevice(alcGetCurrentContext());
         if(device) alcGetIntegerv(device, ALC_FREQUENCY, 1, &samplerate);
 

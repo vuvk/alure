@@ -33,24 +33,6 @@
 #include <sndfile.h>
 
 
-#ifdef DYNLOAD
-static void *sndfile_handle;
-#define MAKE_FUNC(x) static typeof(x)* p##x
-MAKE_FUNC(sf_close);
-MAKE_FUNC(sf_open_virtual);
-MAKE_FUNC(sf_readf_short);
-MAKE_FUNC(sf_seek);
-#undef MAKE_FUNC
-
-#define sf_close psf_close
-#define sf_open_virtual psf_open_virtual
-#define sf_readf_short psf_readf_short
-#define sf_seek psf_seek
-#else
-#define sndfile_handle 1
-#endif
-
-
 struct sndStream : public alureStream {
 private:
     SNDFILE *sndFile;
@@ -58,34 +40,8 @@ private:
     ALenum format;
 
 public:
-#ifdef DYNLOAD
-    static void Init()
-    {
-#ifdef _WIN32
-#define SNDFILE_LIB "libsndfile-1.dll"
-#elif defined(__APPLE__)
-#define SNDFILE_LIB "libsndfile.1.dylib"
-#else
-#define SNDFILE_LIB "libsndfile.so.1"
-#endif
-        sndfile_handle = OpenLib(SNDFILE_LIB);
-        if(!sndfile_handle) return;
-
-        LOAD_FUNC(sndfile_handle, sf_close);
-        LOAD_FUNC(sndfile_handle, sf_open_virtual);
-        LOAD_FUNC(sndfile_handle, sf_readf_short);
-        LOAD_FUNC(sndfile_handle, sf_seek);
-    }
-    static void Deinit()
-    {
-        if(sndfile_handle)
-            CloseLib(sndfile_handle);
-        sndfile_handle = NULL;
-    }
-#else
     static void Init() { }
     static void Deinit() { }
-#endif
 
     virtual bool IsValid()
     { return sndFile != NULL; }
@@ -126,8 +82,6 @@ public:
       : alureStream(_fstream), sndFile(NULL), format(AL_NONE)
     {
         memset(&sndInfo, 0, sizeof(sndInfo));
-
-        if(!sndfile_handle) return;
 
         static SF_VIRTUAL_IO streamIO = {
             get_filelen, seek,
