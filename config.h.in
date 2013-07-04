@@ -19,9 +19,6 @@
 /* Define if we have pthread_np.h */
 #cmakedefine HAVE_PTHREAD_NP_H
 
-/* Define if we have dlfcn.h */
-#cmakedefine HAVE_DLFCN_H
-
 /* Define if we have sys/types.h */
 #cmakedefine HAVE_SYS_TYPES_H
 
