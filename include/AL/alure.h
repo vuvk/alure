@@ -7,7 +7,10 @@
 #endif
 
 #if defined(__cplusplus)
+struct alureStream;
 extern "C" {
+#else
+typedef struct alureStream alureStream;
 #endif
 
 #define ALURE_VERSION_STRING "1.2"
@@ -40,8 +43,6 @@ extern "C" {
  typedef int64_t alureInt64;
  typedef uint64_t alureUInt64;
 #endif
-
-typedef struct alureStream alureStream;
 
 ALURE_API void ALURE_APIENTRY alureGetVersion(ALuint *major, ALuint *minor);
 ALURE_API const ALchar* ALURE_APIENTRY alureGetErrorString(void);
