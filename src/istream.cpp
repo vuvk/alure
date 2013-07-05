@@ -36,107 +36,162 @@
 #include <iostream>
 
 
-MemStreamBuf::int_type MemStreamBuf::underflow()
-{
-    if(gptr() == egptr())
-    {
-        char_type *data = (char_type*)memInfo.Data;
-        setg(data, data + memInfo.Pos, data + memInfo.Length);
-        memInfo.Pos = memInfo.Length;
-    }
-    if(gptr() == egptr())
-        return traits_type::eof();
-    return (*gptr())&0xFF;
-}
+class MemStreamBuf : public std::streambuf {
+    MemDataInfo memInfo;
 
-MemStreamBuf::pos_type MemStreamBuf::seekoff(off_type offset, std::ios_base::seekdir whence, std::ios_base::openmode mode)
-{
-    if((mode&std::ios_base::out))
-        return traits_type::eof();
-
-    pos_type pos;
-    switch(whence)
+    virtual int_type underflow()
     {
-        case std::ios_base::beg:
-            pos = pos_type(offset);
-            break;
-        case std::ios_base::cur:
-            pos = pos_type(memInfo.Pos) - pos_type(egptr()-gptr());
-            pos += offset;
-            break;
-        case std::ios_base::end:
-            pos = memInfo.Length + pos_type(offset);
-            break;
-        default:
+        if(gptr() == egptr())
+        {
+            char_type *data = (char_type*)memInfo.Data;
+            setg(data, data + memInfo.Pos, data + memInfo.Length);
+            memInfo.Pos = memInfo.Length;
+        }
+        if(gptr() == egptr())
             return traits_type::eof();
+        return (*gptr())&0xFF;
     }
 
-    return seekpos(pos, mode);
-}
-
-MemStreamBuf::pos_type MemStreamBuf::seekpos(pos_type pos, std::ios_base::openmode mode)
-{
-    if((mode&std::ios_base::out))
-        return traits_type::eof();
-
-    if(pos < 0 || pos > pos_type(memInfo.Length) || pos != pos_type(size_t(pos)))
-        return traits_type::eof();
-    memInfo.Pos = pos;
-
-    setg(0, 0, 0);
-    return pos;
-}
-
-
-int FileStreamBuf::underflow()
-{
-    if(usrFile && gptr() == egptr())
+    virtual pos_type seekoff(off_type offset, std::ios_base::seekdir whence, std::ios_base::openmode mode = std::ios_base::in | std::ios_base::out)
     {
-        ALsizei amt = fio.read(usrFile, reinterpret_cast<ALubyte*>(&buffer[0]), sizeof(buffer));
-        if(amt >= 0) setg(buffer, buffer, buffer+amt);
+        if((mode&std::ios_base::out))
+            return traits_type::eof();
+
+        pos_type pos;
+        switch(whence)
+        {
+            case std::ios_base::beg:
+                pos = pos_type(offset);
+                break;
+            case std::ios_base::cur:
+                pos = pos_type(memInfo.Pos) - pos_type(egptr()-gptr());
+                pos += offset;
+                break;
+            case std::ios_base::end:
+                pos = memInfo.Length + pos_type(offset);
+                break;
+            default:
+                return traits_type::eof();
+        }
+
+        return seekpos(pos, mode);
     }
-    if(gptr() == egptr())
-        return traits_type::eof();
-    return (*gptr())&0xFF;
-}
 
-FileStreamBuf::pos_type FileStreamBuf::seekoff(off_type offset, std::ios_base::seekdir whence, std::ios_base::openmode mode)
-{
-    if(!usrFile || (mode&std::ios_base::out))
-        return traits_type::eof();
-
-    pos_type pos = traits_type::eof();
-    switch(whence)
+    virtual pos_type seekpos(pos_type pos, std::ios_base::openmode mode = std::ios_base::in | std::ios_base::out)
     {
-        case std::ios_base::beg:
-            if(offset == off_type(alureInt64(offset)))
-                pos = pos_type(fio.seek(usrFile, offset, SEEK_SET));
-            break;
+        if((mode&std::ios_base::out))
+            return traits_type::eof();
 
-        case std::ios_base::cur:
-            offset -= off_type(egptr()-gptr());
-            if(offset == off_type(alureInt64(offset)))
-                pos = pos_type(fio.seek(usrFile, offset, SEEK_CUR));
-            break;
+        if(pos < 0 || pos > pos_type(memInfo.Length) || pos != pos_type(size_t(pos)))
+            return traits_type::eof();
+        memInfo.Pos = pos;
 
-        case std::ios_base::end:
-            if(offset == off_type(alureInt64(offset)))
-                pos = pos_type(fio.seek(usrFile, offset, SEEK_END));
-            break;
-
-        default:
-            break;
-    }
-    if(pos >= 0)
         setg(0, 0, 0);
-    return pos;
+        return pos;
+    }
+
+public:
+    MemStreamBuf(const MemDataInfo &data)
+      : memInfo(data)
+    {
+        memInfo.Pos /= sizeof(char_type);
+        memInfo.Length /= sizeof(char_type);
+    }
+    virtual ~MemStreamBuf() { }
+};
+
+class FileStreamBuf : public std::streambuf {
+    void *usrFile;
+    UserFuncs fio;
+
+    char buffer[4096];
+
+    virtual int_type underflow()
+    {
+        if(usrFile && gptr() == egptr())
+        {
+            ALsizei amt = fio.read(usrFile, reinterpret_cast<ALubyte*>(&buffer[0]), sizeof(buffer));
+            if(amt >= 0) setg(buffer, buffer, buffer+amt);
+        }
+        if(gptr() == egptr())
+            return traits_type::eof();
+        return (*gptr())&0xFF;
+    }
+
+    virtual pos_type seekoff(off_type offset, std::ios_base::seekdir whence, std::ios_base::openmode mode = std::ios_base::in | std::ios_base::out)
+    {
+        if(!usrFile || (mode&std::ios_base::out))
+            return traits_type::eof();
+
+        pos_type pos = traits_type::eof();
+        switch(whence)
+        {
+            case std::ios_base::beg:
+                if(offset == off_type(alureInt64(offset)))
+                    pos = pos_type(fio.seek(usrFile, offset, SEEK_SET));
+                break;
+
+            case std::ios_base::cur:
+                offset -= off_type(egptr()-gptr());
+                if(offset == off_type(alureInt64(offset)))
+                    pos = pos_type(fio.seek(usrFile, offset, SEEK_CUR));
+                break;
+
+            case std::ios_base::end:
+                if(offset == off_type(alureInt64(offset)))
+                    pos = pos_type(fio.seek(usrFile, offset, SEEK_END));
+                break;
+
+            default:
+                break;
+        }
+        if(pos >= 0)
+            setg(0, 0, 0);
+        return pos;
+    }
+
+    virtual pos_type seekpos(pos_type pos, std::ios_base::openmode mode = std::ios_base::in | std::ios_base::out)
+    {
+        if(pos != pos_type(off_type(pos)))
+            return traits_type::eof();
+        return seekoff(off_type(pos), std::ios_base::beg, mode);
+    }
+
+public:
+    bool IsOpen()
+    {
+        return usrFile != NULL;
+    }
+
+    FileStreamBuf(const char *filename, ALint mode)
+      : usrFile(NULL), fio(Funcs)
+    {
+        usrFile = fio.hasUserdata ? fio.openWithUserdata(fio.userdata, filename, mode)
+                                  : fio.open(filename, mode);
+    }
+    virtual ~FileStreamBuf()
+    {
+        if(usrFile)
+            fio.close(usrFile);
+    }
+};
+
+
+InStream::InStream(const char *filename)
+  : std::istream(new FileStreamBuf(filename, 0))
+{
+    if(!(static_cast<FileStreamBuf*>(rdbuf())->IsOpen()))
+        clear(failbit);
 }
 
-FileStreamBuf::pos_type FileStreamBuf::seekpos(pos_type pos, std::ios_base::openmode mode)
+InStream::InStream(const MemDataInfo &memInfo)
+  : std::istream(new MemStreamBuf(memInfo))
 {
-    if(pos != pos_type(off_type(pos)))
-        return traits_type::eof();
-    return seekoff(off_type(pos), std::ios_base::beg, mode);
+}
+
+InStream::~InStream()
+{
+    delete rdbuf();
 }
 
 

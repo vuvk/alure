@@ -131,35 +131,6 @@ private:
 };
 
 
-struct MemDataInfo {
-    const ALubyte *Data;
-    size_t Length;
-    size_t Pos;
-
-    MemDataInfo() : Data(NULL), Length(0), Pos(0)
-    { }
-    MemDataInfo(const MemDataInfo &inf) : Data(inf.Data), Length(inf.Length),
-                                          Pos(inf.Pos)
-    { }
-};
-
-class MemStreamBuf : public std::streambuf {
-    MemDataInfo memInfo;
-
-    virtual int_type underflow();
-    virtual pos_type seekoff(off_type offset, std::ios_base::seekdir whence, std::ios_base::openmode mode = std::ios_base::in | std::ios_base::out);
-    virtual pos_type seekpos(pos_type pos, std::ios_base::openmode mode = std::ios_base::in | std::ios_base::out);
-
-public:
-    MemStreamBuf(const MemDataInfo &data)
-      : memInfo(data)
-    {
-        memInfo.Pos /= sizeof(char_type);
-        memInfo.Length /= sizeof(char_type);
-    }
-    virtual ~MemStreamBuf() { }
-};
-
 struct UserFuncs {
     bool hasUserdata;
     void *userdata;
@@ -176,40 +147,21 @@ struct UserFuncs {
 extern UserFuncs Funcs;
 extern bool UsingSTDIO;
 
-class FileStreamBuf : public std::streambuf {
-    void *usrFile;
-    UserFuncs fio;
 
-    char buffer[4096];
+struct MemDataInfo {
+    const ALubyte *Data;
+    size_t Length;
+    size_t Pos;
 
-    virtual int_type underflow();
-    virtual pos_type seekoff(off_type offset, std::ios_base::seekdir whence, std::ios_base::openmode mode = std::ios_base::in | std::ios_base::out);
-    virtual pos_type seekpos(pos_type pos, std::ios_base::openmode mode = std::ios_base::in | std::ios_base::out);
-
-public:
-    bool IsOpen()
-    { return usrFile != NULL; }
-
-    FileStreamBuf(const char *filename, ALint mode)
-      : usrFile(NULL), fio(Funcs)
-    { usrFile = fio.hasUserdata ? fio.openWithUserdata(fio.userdata, filename, mode) : fio.open(filename, mode); }
-    virtual ~FileStreamBuf()
-    { if(usrFile) fio.close(usrFile); }
+    MemDataInfo() : Data(NULL), Length(0), Pos(0)
+    { }
 };
 
 class InStream : public std::istream {
 public:
-    InStream(const char *filename)
-      : std::istream(new FileStreamBuf(filename, 0))
-    {
-        if(!(static_cast<FileStreamBuf*>(rdbuf())->IsOpen()))
-            clear(failbit);
-    }
-    InStream(const MemDataInfo &memInfo)
-      : std::istream(new MemStreamBuf(memInfo))
-    { }
-    virtual ~InStream()
-    { delete rdbuf(); }
+    InStream(const char *filename);
+    InStream(const MemDataInfo &memInfo);
+    virtual ~InStream();
 };
 
 
