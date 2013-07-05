@@ -180,7 +180,7 @@ class FileStreamBuf : public std::streambuf {
     void *usrFile;
     UserFuncs fio;
 
-    char buffer[1024];
+    char buffer[4096];
 
     virtual int_type underflow();
     virtual pos_type seekoff(off_type offset, std::ios_base::seekdir whence, std::ios_base::openmode mode = std::ios_base::in | std::ios_base::out);
