@@ -101,7 +101,7 @@ public:
                 // Vorbis : FL, FC, FR,  SL, SR, RC, LFE
                 swap(samples[i+1], samples[i+2]);
                 swap(samples[i+3], samples[i+6]);
-                swap(samples[i+4], samples[i+6]);
+                swap(samples[i+4], samples[i+5]);
                 swap(samples[i+5], samples[i+6]);
             }
         }
