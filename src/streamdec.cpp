@@ -46,7 +46,7 @@ Decoder::ListType& Decoder::AddList(Decoder::FactoryType func, ALint prio)
     static ListType FuncList;
     if(func)
     {
-        assert(SearchSecond(FuncList.begin(), FuncList.end(), func) == FuncList.end());
+        assert(std::find_if(FuncList.begin(), FuncList.end(), FindSecond(func)) == FuncList.end());
         FuncList.insert(std::make_pair(prio, func));
     }
     return FuncList;
