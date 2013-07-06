@@ -63,8 +63,8 @@ public:
         fstream->read(reinterpret_cast<char*>(data), rem*blockAlign);
 
         std::streamsize got = fstream->gcount();
-        got -= got%blockAlign;
         remLen -= got;
+        got -= got%blockAlign;
 
         if(BigEndian && sampleSize == 16)
         {
