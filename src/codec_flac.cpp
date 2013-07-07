@@ -332,5 +332,3 @@ private:
 };
 // Priority = 1, so it's preferred over libsndfile
 static DecoderDecl<flacStream,1> flacStream_decoder;
-Decoder &alure_init_flac(void)
-{ return flacStream_decoder; }

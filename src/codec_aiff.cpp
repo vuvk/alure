@@ -164,5 +164,3 @@ public:
 };
 // Priority = 9, prefer this decoder over external ones (but not the wave decoder)
 static DecoderDecl<aiffStream,9> aiffStream_decoder;
-Decoder &alure_init_aiff(void)
-{ return aiffStream_decoder; }

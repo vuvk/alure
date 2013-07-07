@@ -573,5 +573,3 @@ private:
     }
 };
 static DecoderDecl<fluidStream,0> fluidStream_decoder;
-Decoder &alure_init_fluidsynth(void)
-{ return fluidStream_decoder; }

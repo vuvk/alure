@@ -147,5 +147,3 @@ private:
     }
 };
 static DecoderDecl<sndStream,0> sndStream_decoder;
-Decoder &alure_init_sndfile(void)
-{ return sndStream_decoder; }

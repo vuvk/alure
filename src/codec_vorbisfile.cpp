@@ -203,5 +203,3 @@ private:
 };
 // Priority = 2, so it's preferred over libsndfile and libFLAC
 static DecoderDecl<oggStream,2> oggStream_decoder;
-Decoder &alure_init_vorbisfile(void)
-{ return oggStream_decoder; }
