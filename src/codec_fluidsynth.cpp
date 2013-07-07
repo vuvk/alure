@@ -562,7 +562,7 @@ private:
         fluidSettings = new_fluid_settings();
         if(fluidSettings)
         {
-            fluid_settings_setnum(fluidSettings, "synth.gain", 0.5);
+            fluid_settings_setnum(fluidSettings, "synth.gain", 1.0);
             fluid_settings_setstr(fluidSettings, "synth.reverb.active", "yes");
             fluid_settings_setstr(fluidSettings, "synth.chorus.active", "yes");
             fluid_settings_setint(fluidSettings, "synth.polyphony", 256);
