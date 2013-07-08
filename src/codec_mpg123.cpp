@@ -38,7 +38,6 @@ private:
     mpg123_handle *mp3File;
     long samplerate;
     int channels;
-    ALenum format;
     std::ios::pos_type dataStart;
     std::ios::pos_type dataEnd;
 
@@ -51,7 +50,7 @@ public:
 
     virtual bool GetFormat(ALenum *fmt, ALuint *frequency, ALuint *blockalign)
     {
-        *fmt = format;
+        *fmt = GetSampleFormat(channels, 16, false);
         *frequency = samplerate;
         *blockalign = channels*2;
         return true;
@@ -89,8 +88,7 @@ public:
     }
 
     mp3Stream(std::istream *_fstream)
-      : alureStream(_fstream), mp3File(NULL), format(AL_NONE),
-        dataStart(0), dataEnd(0)
+      : alureStream(_fstream), mp3File(NULL), dataStart(0), dataEnd(0)
     {
         if(!FindDataChunk())
             return;
@@ -106,7 +104,6 @@ public:
                 if(mpg123_format_none(mp3File) == MPG123_OK &&
                    mpg123_format(mp3File, samplerate, channels, MPG123_ENC_SIGNED_16) == MPG123_OK)
                 {
-                    format = GetSampleFormat(channels, 16, false);
                     // All OK
                     return;
                 }
