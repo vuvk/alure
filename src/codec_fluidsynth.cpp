@@ -468,11 +468,9 @@ private:
                                 break;
                             }
 
-                            if(i->data[i->Offset+len-1] == MIDI_SYSEXEND)
-                            {
-                                char *data = reinterpret_cast<char*>(&i->data[i->Offset]);
-                                fluid_synth_sysex(fluidSynth, data, len-1, NULL, NULL, NULL, false);
-                            }
+                            char *data = reinterpret_cast<char*>(&i->data[i->Offset]);
+                            fluid_synth_sysex(fluidSynth, data, len, NULL, NULL, NULL, false);
+
                             i->Offset += len;
                             break;
                         }
