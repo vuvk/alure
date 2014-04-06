@@ -80,6 +80,13 @@ public:
         return amt;
     }
 
+    virtual alureInt64 GetLength()
+    {
+        alureInt64 len = mpg123_length(mp3File);
+        if(len < 0) return 0;
+        return len;
+    }
+
     virtual bool Rewind()
     {
         if(mpg123_seek(mp3File, 0, SEEK_SET) >= 0)
